@@ -10,7 +10,7 @@ release:
     name: rago
 
 builds:
-  - main: ./cmd/rag
+  - main: ./cmd/rag/main.go
     binary: rago
     goos:
       - linux
@@ -21,7 +21,7 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
 
 checksum:
   algorithm: sha256
