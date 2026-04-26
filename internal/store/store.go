@@ -7,6 +7,7 @@ import (
 )
 
 type VectorStore interface {
-	createCollection(ctx context.Context, name string, size int) error
-	upsertDocuments(ctx context.Context, collection string, docs []schema.Document, vector [][]float32) error
+	CreateCollection(ctx context.Context, name string, size int) error
+	UpsertDocuments(ctx context.Context, collection string, docs []schema.Document, vectors [][]float32) error
+	Search(ctx context.Context, collection string, queryVector []float32, limit int) ([]schema.Document, error)
 }
