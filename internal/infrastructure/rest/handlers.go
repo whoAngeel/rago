@@ -33,6 +33,8 @@ func requestLogger(logger ports.Logger) gin.HandlerFunc {
 			"incoming request",
 			"method", c.Request.Method,
 			"path", path,
+			"status", c.Writer.Status(),
+			"ip", c.ClientIP(),
 			"latency", time.Since(start),
 		)
 	}
