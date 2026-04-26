@@ -21,7 +21,7 @@ func main() {
 	cfg, _ := config.Load()
 	log := logger.New(cfg.Env)
 
-	log.Info("App starting", "env", cfg.Env, "port", cfg.Port)
+	log.Info("App starting", "mode", cfg.Env, "port", cfg.Port)
 
 	router := rest.NewRouter(log)
 	server := rest.NewServer(cfg.Host, cfg.Port, router, log)

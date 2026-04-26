@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/whoAngeel/rago/internal/core/ports"
 )
@@ -14,6 +16,10 @@ func NewRouter(logger ports.Logger) http.Handler {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(requestLogger(logger))
+	r.Use(cors.Default())
+	r.Use(requestid.New(
+		requestid.WithCustomHeaderStrKey("X-Request-ID"),
+	))
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -34,7 +40,8 @@ func requestLogger(logger ports.Logger) gin.HandlerFunc {
 			"method", c.Request.Method,
 			"path", path,
 			"status", c.Writer.Status(),
-			"ip", c.ClientIP(),
+			"trace_id", requestid.Get(c),
+			// "ip", c.ClientIP(),
 			"latency", time.Since(start),
 		)
 	}
