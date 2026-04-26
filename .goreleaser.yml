@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+version: 2
+
+project_name: rago
+
+release:
+  github:
+    owner: whoAngeel
+    name: rago
+
+builds:
+  - main: ./cmd/rag
+    binary: rago
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+
+checksum:
+  algorithm: sha256
+
+changelog:
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
