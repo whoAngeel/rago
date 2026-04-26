@@ -5,11 +5,10 @@ import (
 	"fmt"
 
 	"github.com/tmc/langchaingo/schema"
-	"github.com/tmc/langchaingo/textsplitter"
 )
 
 type Processor struct {
-	Splitter *textsplitter.RecursiveCharacter
+	Splitter *Splitter
 }
 
 func (p *Processor) PrepareDocuments(
