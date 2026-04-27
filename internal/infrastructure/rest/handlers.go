@@ -2,7 +2,6 @@ package rest
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
@@ -10,7 +9,11 @@ import (
 	"github.com/whoAngeel/rago/internal/core/ports"
 )
 
-func NewRouter(logger ports.Logger) http.Handler {
+type Handlers struct {
+	AskHandler *AskHandler
+}
+
+func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
@@ -25,24 +28,17 @@ func NewRouter(logger ports.Logger) http.Handler {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	setupRoutes(r, handlers.AskHandler)
+
 	return r
 }
 
-func requestLogger(logger ports.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		start := time.Now()
-		path := c.Request.URL.Path
-
-		c.Next()
-
-		logger.Info(
-			"incoming request",
-			"method", c.Request.Method,
-			"path", path,
-			"status", c.Writer.Status(),
-			"trace_id", requestid.Get(c),
-			// "ip", c.ClientIP(),
-			"latency", time.Since(start),
-		)
+func setupRoutes(
+	router *gin.Engine,
+	askHandler *AskHandler,
+) {
+	v1 := router.Group("/api/v1")
+	{
+		v1.POST("/ask", askHandler.Ask)
 	}
 }
