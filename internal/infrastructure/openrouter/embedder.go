@@ -3,6 +3,8 @@ package openrouter
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms/openai"
@@ -13,7 +15,15 @@ type EmbedderAdapter struct {
 }
 
 func NewEmbedderAdapter(apiKey, baseUrl, model string) (*EmbedderAdapter, error) {
-	llm, err := openai.New(openai.WithToken(apiKey), openai.WithBaseURL(baseUrl), openai.WithEmbeddingModel(model))
+	httpClient := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+	llm, err := openai.New(
+		openai.WithToken(apiKey),
+		openai.WithBaseURL(baseUrl),
+		openai.WithEmbeddingModel(model),
+		openai.WithHTTPClient(httpClient),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating openai client: %w", err)
 	}

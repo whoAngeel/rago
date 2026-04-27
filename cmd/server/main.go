@@ -52,6 +52,10 @@ func main() {
 			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
 			log,
 		),
+		IngestHandler: rest.NewIngestHandler(
+			application.NewIngestUsecase(vStore, embedder, log, *cfg),
+			log,
+		),
 	})
 	server := rest.NewServer(cfg.Host, cfg.Port, router, log)
 

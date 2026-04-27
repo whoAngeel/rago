@@ -10,7 +10,8 @@ import (
 )
 
 type Handlers struct {
-	AskHandler *AskHandler
+	AskHandler    *AskHandler
+	IngestHandler *IngestHandler
 }
 
 func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
@@ -28,7 +29,7 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	setupRoutes(r, handlers.AskHandler)
+	setupRoutes(r, handlers.AskHandler, handlers.IngestHandler)
 
 	return r
 }
@@ -36,9 +37,11 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 func setupRoutes(
 	router *gin.Engine,
 	askHandler *AskHandler,
+	ingestHandler *IngestHandler,
 ) {
 	v1 := router.Group("/api/v1")
 	{
 		v1.POST("/ask", askHandler.Ask)
+		v1.POST("/ingest", ingestHandler.Ingest)
 	}
 }
