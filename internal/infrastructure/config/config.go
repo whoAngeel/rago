@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -11,6 +12,15 @@ import (
 type Config struct {
 	Host string
 	Port string
+
+	QdrantHost string
+	QdrantPort int
+
+	OpenRouterKey     string
+	OpenRouterBaseUrl string
+	Model             string
+	EmbeddingModel    string
+	EmbeddingDim      int
 
 	Env string
 
@@ -23,9 +33,25 @@ func Load() (*Config, error) {
 		Host: getEnv("HOST", "0.0.0.0"),
 		Port: getEnv("PORT", "4000"),
 
+		QdrantHost: getEnv("QDRANT_HOST", "localhost"),
+		QdrantPort: getEnvAsInt("QDRANT_PORT", 6334),
+
+		OpenRouterKey:     getEnv("OPEN_ROUTER_API", ""),
+		OpenRouterBaseUrl: getEnv("OPEN_ROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+		Model:             getEnv("LLM_MODEL", "google/gemini-2.5-flash"),
+		EmbeddingModel:    getEnv("EMBEDDING_MODEL", "text-embedding-3-small"),
+		EmbeddingDim:      getEnvAsInt("EMBEDDING_DIMENSION", 1536),
+
 		Env: getEnv("ENV", "development"),
 
 		MaxUploadSize: getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
+	}
+
+	if cfg.OpenRouterKey == "" {
+		return nil, fmt.Errorf("API KEY is required")
+	}
+	if cfg.QdrantHost == "" {
+		return nil, fmt.Errorf("QDRANT HOST is required")
 	}
 
 	return cfg, nil
