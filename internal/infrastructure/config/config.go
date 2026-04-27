@@ -13,8 +13,9 @@ type Config struct {
 	Host string
 	Port string
 
-	QdrantHost string
-	QdrantPort int
+	QdrantHost       string
+	QdrantPort       int
+	QdrantCollection string
 
 	OpenRouterKey     string
 	OpenRouterBaseUrl string
@@ -33,8 +34,9 @@ func Load() (*Config, error) {
 		Host: getEnv("HOST", "0.0.0.0"),
 		Port: getEnv("PORT", "4000"),
 
-		QdrantHost: getEnv("QDRANT_HOST", "localhost"),
-		QdrantPort: getEnvAsInt("QDRANT_PORT", 6334),
+		QdrantHost:       getEnv("QDRANT_HOST", "localhost"),
+		QdrantPort:       getEnvAsInt("QDRANT_PORT", 6334),
+		QdrantCollection: getEnv("QDRANT_COLLECTION", "default"),
 
 		OpenRouterKey:     getEnv("OPEN_ROUTER_API", ""),
 		OpenRouterBaseUrl: getEnv("OPEN_ROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
