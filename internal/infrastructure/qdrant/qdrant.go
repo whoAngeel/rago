@@ -6,6 +6,7 @@ import (
 
 	"github.com/qdrant/go-client/qdrant"
 	"github.com/tmc/langchaingo/schema"
+	"github.com/whoAngeel/rago/internal/core/ports"
 )
 
 type QdrantAdapter struct {
@@ -92,7 +93,7 @@ func (qa *QdrantAdapter) UpsertDocuments(
 
 }
 
-func (qa *QdrantAdapter) Search(ctx context.Context, collection string, queryVector []float32, limit int) ([]schema.Document, error) {
+func (qa *QdrantAdapter) Search(ctx context.Context, collection string, queryVector []float32, limit int) ([]ports.SearchResult, error) {
 	pointsClient := qa.client.GetPointsClient()
 	searchResult, err := pointsClient.Search(ctx, &qdrant.SearchPoints{
 		CollectionName: collection,
@@ -108,14 +109,17 @@ func (qa *QdrantAdapter) Search(ctx context.Context, collection string, queryVec
 		return nil, fmt.Errorf("error searching: %w", err)
 	}
 
-	docs := make([]schema.Document, len(searchResult.Result))
+	results := make([]ports.SearchResult, len(searchResult.Result))
 	for i, result := range searchResult.Result {
-		docs[i] = schema.Document{
-			PageContent: extractPageContent(result.Payload),
-			Metadata:    extractMetadata(result.Payload),
+		results[i] = ports.SearchResult{
+			Document: schema.Document{
+				PageContent: extractPageContent(result.Payload),
+				Metadata:    extractMetadata(result.Payload),
+			},
+			Score: float32(result.Score),
 		}
 	}
-	return docs, nil
+	return results, nil
 }
 
 func (qa *QdrantAdapter) GetPointsCount(ctx context.Context, collection string) (uint64, error) {
@@ -130,6 +134,11 @@ func (qa *QdrantAdapter) GetPointsCount(ctx context.Context, collection string) 
 		return 0, nil
 	}
 	return info.GetResult().GetPointsCount(), nil
+}
+
+func (qa *QdrantAdapter) DeleteCollection(ctx context.Context, collection string) error {
+	// TODO: implement delete collection
+	return nil
 }
 
 func formatPayload(doc schema.Document) map[string]*qdrant.Value {
