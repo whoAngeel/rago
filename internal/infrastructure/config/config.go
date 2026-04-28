@@ -13,6 +13,8 @@ type Config struct {
 	Host string
 	Port string
 
+	DatabaseUrl string
+
 	QdrantHost       string
 	QdrantPort       int
 	QdrantCollection string
@@ -22,6 +24,8 @@ type Config struct {
 	Model             string
 	EmbeddingModel    string
 	EmbeddingDim      int
+
+	Secret string
 
 	Env string
 
@@ -33,6 +37,8 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Host: getEnv("HOST", "0.0.0.0"),
 		Port: getEnv("PORT", "4000"),
+
+		DatabaseUrl: getEnv("DATABASE_URL", ""),
 
 		QdrantHost:       getEnv("QDRANT_HOST", "localhost"),
 		QdrantPort:       getEnvAsInt("QDRANT_PORT", 6334),
@@ -46,6 +52,8 @@ func Load() (*Config, error) {
 
 		Env: getEnv("ENV", "development"),
 
+		Secret: getEnv("JWTSECRET", ""),
+
 		MaxUploadSize: getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
 	}
 
@@ -54,6 +62,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.QdrantHost == "" {
 		return nil, fmt.Errorf("QDRANT HOST is required")
+	}
+	if cfg.DatabaseUrl == "" {
+		return nil, fmt.Errorf("DATABASE URL is required")
 	}
 
 	return cfg, nil
