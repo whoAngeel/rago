@@ -80,7 +80,14 @@ func main() {
 			log,
 		),
 		AuthHandler: rest.NewAuthHandler(
-			application.NewAuthUseCase(userRepo, sessionRepo, cfg.Secret, log),
+			application.NewAuthUseCase(
+				userRepo,
+				sessionRepo,
+				cfg.Secret,
+				log,
+				cfg.AccessTokenExpiration,
+				cfg.RefreshTokenExpiration,
+			),
 			log,
 		),
 	})
