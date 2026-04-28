@@ -46,7 +46,7 @@ func setupRoutes(
 		v1.POST("/ask", askHandler.Ask)
 		v1.POST("/ingest", ingestHandler.Ingest)
 
-		authGroup := router.Group("auth/")
+		authGroup := v1.Group("/auth")
 		{
 			authGroup.POST("/register", authHandler.Register)
 		}

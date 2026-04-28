@@ -10,11 +10,16 @@ import (
 	"time"
 
 	"github.com/whoAngeel/rago/internal/application"
+	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
 	"github.com/whoAngeel/rago/internal/infrastructure/openrouter"
+	"github.com/whoAngeel/rago/internal/infrastructure/postgres"
 	"github.com/whoAngeel/rago/internal/infrastructure/qdrant"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
+	gormPostgres "gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 )
 
 func main() {
@@ -28,6 +33,20 @@ func main() {
 	log := logger.New(cfg.Env)
 
 	log.Info("App starting", "mode", cfg.Env, "port", cfg.Port)
+
+	gormDB, err := gorm.Open(gormPostgres.Open(cfg.DatabaseUrl), &gorm.Config{
+		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
+	})
+	gormDB.AutoMigrate(&domain.User{}, &domain.Session{})
+
+	// seed roles
+	var roleCount int64
+	gormDB.Model(&domain.Role{}).Count(&roleCount)
+	if roleCount == 0 {
+		gormDB.Create(&[]domain.Role{
+			{Name: "admin"}, {Name: "viewer"}, {Name: "editor"},
+		})
+	}
 
 	// Inicializar servicios
 	vStore, err := qdrant.NewQdrantAdapter(cfg.QdrantHost, cfg.QdrantPort)
@@ -47,6 +66,10 @@ func main() {
 		log.Fatal("error initializing embedder", "error", err)
 	}
 
+	// inicializar repositories
+	userRepo := postgres.NewUserRepository(gormDB)
+	sessionRepo := postgres.NewSessionRepository(gormDB)
+
 	router := rest.NewRouter(log, &rest.Handlers{
 		AskHandler: rest.NewAskHandler(
 			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
@@ -54,6 +77,10 @@ func main() {
 		),
 		IngestHandler: rest.NewIngestHandler(
 			application.NewIngestUsecase(vStore, embedder, log, *cfg),
+			log,
+		),
+		AuthHandler: rest.NewAuthHandler(
+			application.NewAuthUseCase(userRepo, sessionRepo, cfg.Secret, log),
 			log,
 		),
 	})

@@ -24,9 +24,9 @@ func NewAuthHandler(uc *application.AuthUsecase, log ports.Logger) *AuthHandler 
 
 type RegisterRequest struct {
 	Name     string `json:"name"`
-	Email    string `json:"email,required"`
-	Password string `json:"password,required"`
-	Role     string `json:"role,default=viewer"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Role     string `json:"role"`
 }
 
 type RegisterResponse struct {
@@ -40,14 +40,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("invalid request body")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	err := h.usecase.Register(ctx, req.Name, req.Email, req.Password, req.Role)
 	if err != nil {
 		h.logger.Error("Error register user", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Error register user"})
+		RespondError(c, 400, "Error register user", err.Error())
 		return
 	}
 
