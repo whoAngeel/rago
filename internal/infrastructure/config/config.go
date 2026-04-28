@@ -25,7 +25,9 @@ type Config struct {
 	EmbeddingModel    string
 	EmbeddingDim      int
 
-	Secret string
+	Secret                 string
+	RefreshTokenExpiration time.Duration
+	AccessTokenExpiration  time.Duration
 
 	Env string
 
@@ -52,7 +54,9 @@ func Load() (*Config, error) {
 
 		Env: getEnv("ENV", "development"),
 
-		Secret: getEnv("JWTSECRET", ""),
+		Secret:                 getEnv("JWTSECRET", ""),
+		AccessTokenExpiration:  getEnvAsDuration("JWT_ACCESS_EXPIRATION", "15m"),
+		RefreshTokenExpiration: getEnvAsDuration("JWT_REFRESH_TOKEN_EXPIRATION", "720h"),
 
 		MaxUploadSize: getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
 	}
