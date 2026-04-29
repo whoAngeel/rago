@@ -1,9 +1,12 @@
 package ports
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type BlobStorage interface {
-	Save(filename string, reader io.Reader) (path string, err error)
-	Get(path string) (io.ReadCloser, error)
-	Delete(path string) error
+	Save(ctx context.Context, filename string, reader io.Reader) (path string, err error)
+	Get(ctx context.Context, path string) (io.ReadCloser, error)
+	Delete(ctx context.Context, path string) error
 }

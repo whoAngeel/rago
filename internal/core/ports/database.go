@@ -17,3 +17,9 @@ type SessionRepository interface {
 	FindByRefreshToken(ctx context.Context, refreshToken string) (*domain.Session, error)
 	Revoke(ctx context.Context, refreshToken string) error
 }
+
+type DocumentRepository interface {
+	CreateDocument(ctx context.Context, doc *domain.Document) (*domain.Document, error)
+	FindDocumentByUserID(ctx context.Context, userID int) ([]*domain.Document, error)
+	UpdateDocumentStatus(ctx context.Context, id int, status string) error
+}
