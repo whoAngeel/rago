@@ -5,25 +5,16 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  deploy:
     runs-on: self-hosted
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Docker image
+        run: docker build -t rago:latest .
 
-      - name: Build and push Docker image
+      - name: Deploy
+        working-directory: ~/rago
         run: |
-          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/${REPO}:${{ github.sha }} -t ghcr.io/${REPO}:latest .
-          docker push ghcr.io/${REPO}:${{ github.sha }}
-          docker push ghcr.io/${REPO}:latest
+          docker compose up -d --remove-orphans
+          docker image prune -f

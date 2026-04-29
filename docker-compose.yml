@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/whoangeel/rago:latest
+    image: rago:latest
     restart: unless-stopped
     ports:
       - "4000:4000"
