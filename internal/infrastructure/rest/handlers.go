@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/whoAngeel/rago/internal/core/ports"
+	"github.com/whoAngeel/rago/internal/infrastructure/rest/middleware"
 )
 
 type Handlers struct {
@@ -20,7 +21,7 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(requestLogger(logger))
+	r.Use(middleware.RequestLogger(logger))
 	r.Use(cors.Default())
 	r.Use(requestid.New(
 		requestid.WithCustomHeaderStrKey("X-Request-ID"),
@@ -43,8 +44,6 @@ func setupRoutes(
 ) {
 	v1 := router.Group("/api/v1")
 	{
-		v1.POST("/ask", askHandler.Ask)
-		v1.POST("/ingest", ingestHandler.Ingest)
 
 		authGroup := v1.Group("/auth")
 		{
@@ -52,6 +51,12 @@ func setupRoutes(
 			authGroup.POST("/login", authHandler.Login)
 			authGroup.POST("/refresh", authHandler.Refresh)
 			authGroup.POST("/logout", authHandler.Logout)
+		}
+		protected := v1.Group("")
+		{
+			protected.Use(middleware.AuthMiddleware())
+			protected.POST("/ask", askHandler.Ask)
+			protected.POST("/ingest", ingestHandler.Ingest)
 		}
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/postgres"
 	"github.com/whoAngeel/rago/internal/infrastructure/qdrant"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
+	"github.com/whoAngeel/rago/internal/infrastructure/rest/middleware"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -92,6 +93,7 @@ func main() {
 		),
 	})
 	server := rest.NewServer(cfg.Host, cfg.Port, router, log)
+	middleware.InitJWTSecret(cfg.Secret)
 
 	serverErr := make(chan error, 1)
 	go func() {
