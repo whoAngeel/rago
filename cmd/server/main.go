@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error connecting to database", "error", err)
 	}
-	gormDB.AutoMigrate(&domain.User{}, &domain.Session{}, &domain.Document{})
+	gormDB.AutoMigrate(&domain.Role{}, &domain.User{}, &domain.Session{}, &domain.Document{})
 
 	// seed roles
 	var roleCount int64
