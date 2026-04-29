@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+*.md
+docs/
+uploads/
+.agents/
+.vscode/
+.idea/
+docker-compose.yml
+.air.toml

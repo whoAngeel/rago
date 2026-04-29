@@ -2,7 +2,7 @@ name: Deploy to Homelab
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
@@ -10,11 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Build Go binary
+        run: CGO_ENABLED=0 go build -o server ./cmd/server/
+
       - name: Build Docker image
         run: docker build -t rago:latest .
 
-      - name: Deploy
+      - name: Sync compose and deploy
         run: |
+          cp docker-compose.yml /home/whoangel/rago/
           cd /home/whoangel/rago
           docker compose up -d --remove-orphans
           docker image prune -f
