@@ -14,7 +14,7 @@ jobs:
         run: docker build -t rago:latest .
 
       - name: Deploy
-        working-directory: ~/rago
         run: |
+          cd /home/whoangel/rago
           docker compose up -d --remove-orphans
           docker image prune -f

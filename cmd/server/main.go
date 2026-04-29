@@ -38,6 +38,9 @@ func main() {
 	gormDB, err := gorm.Open(gormPostgres.Open(cfg.DatabaseUrl), &gorm.Config{
 		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
 	})
+	if err != nil {
+		log.Fatal("error connecting to database", "error", err)
+	}
 	gormDB.AutoMigrate(&domain.User{}, &domain.Session{})
 
 	// seed roles
