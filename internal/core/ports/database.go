@@ -21,5 +21,5 @@ type SessionRepository interface {
 type DocumentRepository interface {
 	CreateDocument(ctx context.Context, doc *domain.Document) (*domain.Document, error)
 	FindDocumentByUserID(ctx context.Context, userID int) ([]*domain.Document, error)
-	UpdateDocumentStatus(ctx context.Context, id int, status string) error
+	UpdateDocumentStatus(ctx context.Context, id int, status domain.DocumentStatus) error
 }

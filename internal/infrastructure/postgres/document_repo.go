@@ -30,6 +30,6 @@ func (r *DocumentRepository) FindDocumentByUserID(ctx context.Context, userID in
 	return docs, err
 }
 
-func (r *DocumentRepository) UpdateDocumentStatus(ctx context.Context, id int, status string) error {
+func (r *DocumentRepository) UpdateDocumentStatus(ctx context.Context, id int, status domain.DocumentStatus) error {
 	return r.db.WithContext(ctx).Model(&domain.Document{}).Where("id = ?", id).Update("status", status).Error
 }

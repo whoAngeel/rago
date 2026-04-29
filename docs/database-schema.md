@@ -13,8 +13,9 @@ erDiagram
     roles {
         int id PK
         string name UK "admin, editor, viewer"
-        text description
         timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at "soft delete"
     }
 
     users {
@@ -46,7 +47,6 @@ erDiagram
         bigint size
         timestamp created_at
         timestamp updated_at
-        timestamp deleted_at "soft delete"
     }
 
     chat_sessions {
@@ -75,8 +75,9 @@ erDiagram
 | ----------- | ------------- | -------------------- | ------------------------- |
 | `id`        | int (SERIAL)  | PK                   | Auto-increment            |
 | `name`      | string (50)   | UNIQUE, NOT NULL     | `admin`, `editor`, `viewer` |
-| `description` | text        |                      | Role description          |
 | `created_at`| timestamp     | NOT NULL, DEFAULT NOW|                           |
+| `updated_at`| timestamp     | DEFAULT NOW          |                           |
+| `deleted_at`| timestamp NULL| INDEX                |                           |
 
 Seed: `admin` (id=1), `editor` (id=2), `viewer` (id=3)
 
@@ -105,18 +106,19 @@ Seed: `admin` (id=1), `editor` (id=2), `viewer` (id=3)
 
 ### `documents`
 
-| Column          | Type           | Constraints                          | Description                         |
-| --------------- | -------------- | ------------------------------------ | ----------------------------------- |
-| `id`            | int (SERIAL)   | PK                                   |                                     |
-| `user_id`       | int            | FK → users(id), **CASCADE on delete**|                                     |
-| `filename`      | text           | NOT NULL                             | Original filename                   |
-| `file_path`     | text           |                                      | Physical path in BlobStorage        |
-| `content_type`  | text           |                                      | MIME type                           |
-| `status`        | text           | DEFAULT `'pending'`                  | `pending`, `processing`, `completed`, `failed` |
-| `size`          | bigint         |                                      | File size in bytes                  |
-| `created_at`    | timestamp      | NOT NULL, DEFAULT NOW                |                                     |
-| `updated_at`    | timestamp NULL |                                      |                                     |
-| `deleted_at`    | timestamp NULL | INDEX                                | Soft delete (GORM)                  |
+| Column          | Type             | Constraints                          | Description                         |
+| --------------- | ---------------- | ------------------------------------ | ----------------------------------- |
+| `id`            | int (SERIAL)     | PK                                   |                                     |
+| `user_id`       | int              | FK → users(id), **CASCADE on delete**|                                     |
+| `filename`      | text             | NOT NULL                             | Original filename                   |
+| `file_path`     | text             |                                      | Physical path in BlobStorage        |
+| `content_type`  | text             |                                      | MIME type, used to select parser    |
+| `status`        | DocumentStatus   | DEFAULT `'pending'`                  | `pending`, `processing`, `completed`, `failed` |
+| `size`          | bigint           |                                      | File size in bytes                  |
+| `created_at`    | timestamp        | NOT NULL, DEFAULT NOW                |                                     |
+| `updated_at`    | timestamp NULL   |                                      |                                     |
+
+Hard delete. Fuentes huérfanas en `chat_messages.sources` manejadas en frontend.
 
 ### `chat_sessions` *(Roadmap 1.6)*
 
@@ -124,7 +126,7 @@ Seed: `admin` (id=1), `editor` (id=2), `viewer` (id=3)
 | ------------ | -------------- | ------------------------------------ | -------------------- |
 | `id`         | int (SERIAL)   | PK                                   |                      |
 | `user_id`    | int            | FK → users(id), **CASCADE on delete**|                      |
-| `title`      | string (255)   |                                      | Session title        |
+| `title`      | string (255)   |                                      | Auto-generado del primer mensaje, editable vía PATCH |
 | `created_at` | timestamp      | NOT NULL, DEFAULT NOW                |                      |
 | `updated_at` | timestamp      | DEFAULT NOW                          |                      |
 
@@ -137,6 +139,19 @@ Seed: `admin` (id=1), `editor` (id=2), `viewer` (id=3)
 | `role`        | string (20)    | NOT NULL                                  | `user` or `assistant`    |
 | `content`     | text           | NOT NULL                                  | Message body             |
 | `sources`     | jsonb          |                                           | Citations / document refs|
+
+#### Estructura de `sources`
+
+```json
+[
+  {
+    "document_id": 5,
+    "chunk_id": "qdrant_point_abc",
+    "page": 3,
+    "text_preview": "..."
+  }
+]
+```
 | `created_at`  | timestamp      | NOT NULL, DEFAULT NOW                     |                          |
 
 ## Constraints Summary
