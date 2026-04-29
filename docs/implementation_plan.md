@@ -63,6 +63,69 @@
 
 ---
 
+---
+
+## Puertos del Sistema (Arquitectura Hexagonal)
+
+Los puertos son las interfaces que definen cómo la aplicación se comunica con el mundo exterior, sin depender de implementaciones concretas.
+
+### VectorStore (`internal/core/ports/vector.store.go`)
+
+Interfaz para operations con la base de datos vectorial (Qdrant).
+
+| Método | Arguments | Returns | Descripción |
+|--------|-----------|---------|-------------|
+| `CreateCollection` | `ctx context.Context`, `name string` (nombre de colección), `size int` (dimensión de vectores, ej: 1536) | `error` | Crea una nuova colección en Qdrant. El `name` debe ser único. El `size` debe coincidir con la dimensión del modelo de embeddings. |
+| `UpsertDocuments` | `ctx context.Context`, `collection string` (nombre), `docs []schema.Document` (documentos con content/metadata), `vectors [][]float32` (embeddings alineados con docs) | `error` | Inserta o actualiza documentos con sus vectores asociados. Cada documento en `docs` debe tener对应的vector en `vectors` en el mismo índice. |
+| `Search` | `ctx context.Context`, `collection string` (nombre), `queryVector []float32` (vector de búsqueda), `limit int` (número máximo de resultados) | `([]SearchResult, error)` | Busca los `limit` documentos más similares al `queryVector` usando cosine similarity. Retorna slice de SearchResult con Document y score. |
+| `GetPointsCount` | `ctx context.Context`, `collection string` | `(int64, error)` | Retorna el número total de puntos/documentos en la colección. |
+| `DeleteCollection` | `ctx context.Context`, `collection string` | `error` | Elimina una colección completa. Debe manejar el caso de colección no existente. |
+
+**Tipos auxiliares a crear:**
+```go
+type SearchResult struct {
+    Document schema.Document
+    Score    float32
+}
+```
+
+---
+
+### LLMProvider (`internal/core/ports/llm.provider.go`)
+
+Interfaz para interacting con modelos de lenguaje y embeddings.
+
+| Método | Arguments | Returns | Descripción |
+|--------|-----------|---------|-------------|
+| `GenerateAnswer` | `ctx context.Context`, `prompt string` (prompt completo con contexto + pregunta) | `(string, error)` | Genera una respuesta usando el LLM. El prompt ya debe contener el contexto recuperado + la pregunta del usuario. Retorna el texto de la respuesta generada. |
+| `EmbedText` | `ctx context.Context`, `text string` | `([]float32, error)` | Convierte un texto en un vector de embedding. El vector retornado debe tener la dimensión configurada (ej: 1536 para text-embedding-3-small). |
+
+**Notas de implementación:**
+- Para `EmbedText`: el `[]float32` retornado debe tener exactamente la dimensión configurada en `EMBEDDING_DIMENSION`.
+- Para `GenerateAnswer`: considera agregar un método `GenerateAnswerWithOptions(ctx, prompt, options)` que acepte parámetros como temperature, max_tokens.
+
+---
+
+### Logger (`internal/core/ports/logger.go`)
+
+Interfaz para logging estructurado.
+
+| Método | Arguments | Returns | Descripción |
+|--------|-----------|---------|-------------|
+| `Debug` | `msg string`, `args ...any` | - | Loggear mensaje de debug. Args son key-value pairs para contexto adicional. |
+| `Info` | `msg string`, `args ...any` | - | Loggear mensaje informativo. |
+| `Warn` | `msg string`, `args ...any` | - | Loggear warning (no fatal pero requiere atención). |
+| `Error` | `msg string`, `args ...any` | - | Loggear error (operación falló). |
+| `Fatal` | `msg string`, `args ...any` | - | Loggear error fatal y terminar programa. Equivalente a Error + os.Exit(1). |
+| `With` | `args ...any` | `Logger` | Retorna una nueva instancia de Logger con el contexto agregado included en todos los logs subsecuentes. |
+
+**Notas de implementación:**
+- Implementar como wrapper alrededor de charmbracelet/log ozer.
+- El método `With` debe retornar una nueva implementación (no mutar la actual) para evitar side effects.
+- Formato recomendado: `logger.With("request_id", id).Info("request started")`.
+
+---
+
 ## Estado Actual:
 
 | Componente | Estado |
