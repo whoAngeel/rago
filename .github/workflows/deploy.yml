@@ -23,9 +23,10 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} -t ghcr.io/${{ github.repository }}:latest .
-          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}:latest
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ghcr.io/${REPO}:${{ github.sha }} -t ghcr.io/${REPO}:latest .
+          docker push ghcr.io/${REPO}:${{ github.sha }}
+          docker push ghcr.io/${REPO}:latest
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
