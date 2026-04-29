@@ -5,9 +5,8 @@ on:
     branches: [ main ]
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: homelab
+  build:
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -28,16 +27,3 @@ jobs:
           docker build -t ghcr.io/${REPO}:${{ github.sha }} -t ghcr.io/${REPO}:latest .
           docker push ghcr.io/${REPO}:${{ github.sha }}
           docker push ghcr.io/${REPO}:latest
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HOMELAB_HOST }}
-          port: ${{ secrets.HOMELAB_PORT }}
-          username: ${{ secrets.HOMELAB_USER }}
-          key: ${{ secrets.HOMELAB_SSH_KEY }}
-          script: |
-            cd ~/rago
-            docker compose pull app
-            docker compose up -d --remove-orphans
-            docker image prune -f
