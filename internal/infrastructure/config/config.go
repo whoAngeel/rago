@@ -29,6 +29,13 @@ type Config struct {
 	RefreshTokenExpiration time.Duration
 	AccessTokenExpiration  time.Duration
 
+	// minio
+	MinioEndpoint string
+	MinioRootUser string
+	MinioRootPass string
+	MinioBucket   string
+	MinioUseSSL   bool
+
 	Env string
 
 	MaxUploadSize int64
@@ -57,6 +64,12 @@ func Load() (*Config, error) {
 		Secret:                 getEnv("JWTSECRET", ""),
 		AccessTokenExpiration:  getEnvAsDuration("JWT_ACCESS_EXPIRATION", "15m"),
 		RefreshTokenExpiration: getEnvAsDuration("JWT_REFRESH_TOKEN_EXPIRATION", "720h"),
+
+		MinioEndpoint: getEnv("MINIO_ENDPOINT", ""),
+		MinioRootUser: getEnv("MINIO_ROOT_USER", ""),
+		MinioRootPass: getEnv("MINIO_ROOT_PASS", ""),
+		MinioBucket:   getEnv("MINIO_BUCKET", "rago"),
+		MinioUseSSL:   getEnvAsBool("MINIO_USE_SSL", false),
 
 		MaxUploadSize: getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
 	}
