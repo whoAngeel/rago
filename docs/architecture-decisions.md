@@ -91,7 +91,51 @@ Estructura de cada referencia:
 
 ---
 
-## 3. Tables Status
+## 3. Storage Decisions
+
+### 3.1 Backend de Almacenamiento
+- **MinIO** como único BlobStorage (ya montado en homelab)
+- No hay LocalFS como fallback
+- La interfaz `BlobStorage` se implementa como `MinioAdapter`
+- MinIO es S3-compatible, futuro cambio a S3 requiere mínimo código
+
+### 3.2 Bucket Strategy
+- **Un solo bucket** para todos los usuarios (ej: `rago-documents`)
+- Organización por prefijo: `{user_id}/`
+- No se crean buckets por usuario
+
+### 3.3 Object Key Pattern
+- Formato: `{user_id}/{document_id}/{filename}`
+- Ej: `42/123/reporte.pdf`
+- `document_id` es el ID autoincremental de la BD
+
+### 3.4 Upload Strategy
+- Stream directo del request body a MinIO (sin buffer completo en memoria)
+- Si falla, el registro en BD queda con estado `FAILED`
+- Cleanup de objetos parciales: worker o rutina de limpieza
+
+### 3.5 Deduplicación
+- **Sin deduplicación** por ahora
+- Cada upload genera un nuevo archivo en MinIO, incluso si el contenido es idéntico
+
+### 3.6 Cleanup de Archivos Huérfanos
+- **Borrado sincrónico**: al hacer `DELETE /documents/:id`
+- Primero se borra de MinIO, luego de la BD
+- Si el borrado de MinIO falla, la transacción de BD no se hace
+
+### 3.7 Tamaño Máximo de Archivo
+- Configurable por variable de entorno: `MAX_FILE_SIZE`
+- Default: 50MB (52428800 bytes)
+
+### 3.8 Validación de Tipo de Archivo
+- **Validar por extensión** en el endpoint antes de guardar en MinIO
+- Extensiones soportadas: PDF, DOCX, XLSX, CSV, JSON, TXT (extensible)
+- Validación de magic bytes no se necesita por ahora
+- Si alguien sube un archivo con extensión válida pero contenido corrupto, el worker lo marca como `FAILED`
+
+---
+
+## 4. Tables Status
 
 ### Existing (implemented)
 - `roles` — Con gorm.Model
@@ -105,7 +149,7 @@ Estructura de cada referencia:
 
 ---
 
-## 4. Key Files
+## 5. Key Files
 
 | File | Purpose |
 |---|---|
