@@ -2,8 +2,10 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"io"
 
+	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 )
 
@@ -30,10 +32,76 @@ func (i *IngestDocumentUsecase) Upload(
 	userId int,
 	filename string,
 	fileReader io.Reader,
-) error {
-	return nil
+	size int64,
+	contentType string,
+) (*domain.Document, error) {
+	doc := &domain.Document{
+		Filename:    filename,
+		UserID:      userId,
+		Status:      domain.StatusPending,
+		ContentType: contentType,
+		Size:        size,
+	}
+	document, err := i.DocRepo.CreateDocument(ctx, doc)
+	if err != nil {
+		return nil, err
+	}
+
+	objectKey := fmt.Sprintf("%d/%d/%s", userId, document.ID, filename)
+	_, err = i.BlobStorage.Upload(ctx, objectKey, fileReader)
+	if err != nil {
+		i.DocRepo.UpdateDocumentStatus(ctx, document.ID, domain.StatusFailed)
+		return nil, err
+	}
+	document.FilePath = objectKey
+	_, err = i.DocRepo.UpdateDocument(ctx, document)
+	return doc, nil
+
 }
 
-func (i *IngestDocumentUsecase) ProcessDocument(ctxt context.Context, docID int) error {
-	return nil
+func (i *IngestDocumentUsecase) Process(ctx context.Context, docID int) error {
+	doc, err := i.DocRepo.FindByID(ctx, docID)
+	if err != nil {
+		return err
+	}
+
+	if err := i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusProcessing); err != nil {
+		return err
+	}
+
+	file, err := i.BlobStorage.Download(ctx, doc.FilePath)
+	if err != nil {
+		return err
+	}
+
+	content, err := io.ReadAll(file)
+	file.Close()
+	if err != nil {
+		i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusFailed)
+		return err
+	}
+
+	if err := i.IngestUC.Execute(ctx, doc.Filename, string(content)); err != nil {
+		i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusFailed)
+		return err
+	}
+
+	return i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusCompleted)
+
+}
+
+func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID int) error {
+	doc, err := i.DocRepo.FindByID(ctx, docID)
+	if err != nil {
+		return err
+	}
+	if err := i.BlobStorage.Delete(ctx, doc.FilePath); err != nil {
+		return err
+	}
+
+	return i.DocRepo.DeleteDocument(ctx, doc.ID)
+}
+
+func (i *IngestDocumentUsecase) GetUsersDocuments(ctx context.Context, userID int) ([]*domain.Document, error) {
+	return i.DocRepo.FindDocumentByUserID(ctx, userID)
 }

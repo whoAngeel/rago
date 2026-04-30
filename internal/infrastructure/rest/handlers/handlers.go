@@ -68,6 +68,7 @@ func setupRoutes(
 			documentGroup := protected.Group("/documents")
 			{
 				documentGroup.GET("/", docHandler.List)
+				documentGroup.POST("/", docHandler.Upload)
 			}
 		}
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,7 +23,6 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/storage"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	gormLogger "gorm.io/gorm/logger"
 )
 
 func main() {
@@ -38,12 +38,22 @@ func main() {
 	log.Info("App starting...", "mode", cfg.Env, "port", cfg.Port)
 
 	gormDB, err := gorm.Open(gormPostgres.Open(cfg.DatabaseUrl), &gorm.Config{
-		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
+		// Logger: gormLogger.Default.LogMode(gormLogger.Silent),
 	})
 	if err != nil {
 		log.Fatal("error connecting to database", "error", err)
 	}
-	gormDB.AutoMigrate(&domain.Role{}, &domain.User{}, &domain.Session{}, &domain.Document{})
+	models := []interface{}{
+		&domain.Role{},
+		&domain.User{},
+		&domain.Session{},
+		&domain.Document{},
+	}
+	for _, model := range models {
+		if err := gormDB.AutoMigrate(model); err != nil {
+			log.Warn("migration warning", "model", fmt.Sprintf("%T", model), "error", err)
+		}
+	}
 
 	// seed roles
 	var roleCount int64
@@ -117,6 +127,7 @@ func main() {
 				ingestUC,
 			),
 			log,
+			*cfg,
 		),
 	})
 	server := rest.NewServer(cfg.Host, cfg.Port, router, log)
