@@ -84,6 +84,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DATABASE URL is required")
 	}
 
+	if cfg.MinioEndpoint == "" {
+		return nil, fmt.Errorf("MINIO ENDPOINT is required")
+	}
+
 	return cfg, nil
 }
 

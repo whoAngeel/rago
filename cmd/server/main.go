@@ -35,7 +35,7 @@ func main() {
 	}
 	log := logger.New(cfg.Env)
 
-	log.Info("App starting", "mode", cfg.Env, "port", cfg.Port)
+	log.Info("App starting...", "mode", cfg.Env, "port", cfg.Port)
 
 	gormDB, err := gorm.Open(gormPostgres.Open(cfg.DatabaseUrl), &gorm.Config{
 		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
@@ -70,6 +70,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error initializing minio storage", "error", err)
 	}
+	log.Info("MINIO started")
 
 	llm, err := openrouter.NewOpenRouterAdapter(
 		cfg.OpenRouterKey, cfg.OpenRouterBaseUrl, cfg.Model,

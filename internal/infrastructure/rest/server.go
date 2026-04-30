@@ -29,7 +29,7 @@ func NewServer(host, port string, router http.Handler, logger ports.Logger) *Ser
 }
 
 func (s *Server) Start() error {
-	s.logger.Info("server starting at", "addr", s.server.Addr)
+	s.logger.Info("server started at", "addr", s.server.Addr)
 	return s.server.ListenAndServe()
 }
 
