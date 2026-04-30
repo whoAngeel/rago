@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -98,4 +99,22 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		Filename: file.Filename,
 		Status:   string(doc.Status),
 	})
+}
+
+func (h *DocumentHandler) Delete(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, 400, "Invalid document ID", err.Error())
+		return
+	}
+
+	if err := h.usecase.DeleteDocument(ctx, id); err != nil {
+		rest.RespondError(c, 500, "Delete failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
 }

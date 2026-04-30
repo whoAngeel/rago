@@ -69,6 +69,7 @@ func setupRoutes(
 			{
 				documentGroup.GET("/", docHandler.List)
 				documentGroup.POST("/", docHandler.Upload)
+				documentGroup.DELETE("/:id", docHandler.Delete)
 			}
 		}
 
