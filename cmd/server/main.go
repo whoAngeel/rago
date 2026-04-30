@@ -19,6 +19,7 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest/handlers"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest/middleware"
+	"github.com/whoAngeel/rago/internal/infrastructure/storage"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -59,6 +60,17 @@ func main() {
 		log.Fatal("error initializing qdrant", "error", err)
 	}
 
+	minio, err := storage.NewMinioAdapter(
+		cfg.MinioEndpoint,
+		cfg.MinioRootUser,
+		cfg.MinioRootPass,
+		cfg.MinioBucket,
+		cfg.MinioUseSSL,
+	)
+	if err != nil {
+		log.Fatal("error initializing minio storage", "error", err)
+	}
+
 	llm, err := openrouter.NewOpenRouterAdapter(
 		cfg.OpenRouterKey, cfg.OpenRouterBaseUrl, cfg.Model,
 	)
@@ -74,14 +86,16 @@ func main() {
 	// inicializar repositories
 	userRepo := postgres.NewUserRepository(gormDB)
 	sessionRepo := postgres.NewSessionRepository(gormDB)
+	docRepo := postgres.NewDocumentRepository(gormDB)
 
+	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(
 			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
 			log,
 		),
 		IngestHandler: handlers.NewIngestHandler(
-			application.NewIngestUsecase(vStore, embedder, log, *cfg),
+			ingestUC,
 			log,
 		),
 		AuthHandler: handlers.NewAuthHandler(
@@ -92,6 +106,14 @@ func main() {
 				log,
 				cfg.AccessTokenExpiration,
 				cfg.RefreshTokenExpiration,
+			),
+			log,
+		),
+		DocumentHandler: handlers.NewDocumentHandler(
+			application.NewIngestDocumentUsecase(
+				docRepo,
+				minio,
+				ingestUC,
 			),
 			log,
 		),

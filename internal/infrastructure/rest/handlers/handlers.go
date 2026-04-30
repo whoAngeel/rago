@@ -11,9 +11,10 @@ import (
 )
 
 type Handlers struct {
-	AskHandler    *AskHandler
-	IngestHandler *IngestHandler
-	AuthHandler   *AuthHandler
+	AskHandler      *AskHandler
+	IngestHandler   *IngestHandler
+	AuthHandler     *AuthHandler
+	DocumentHandler *DocumentHandler
 }
 
 func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
@@ -31,7 +32,13 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	setupRoutes(r, handlers.AskHandler, handlers.IngestHandler, handlers.AuthHandler)
+	setupRoutes(
+		r,
+		handlers.AskHandler,
+		handlers.IngestHandler,
+		handlers.AuthHandler,
+		handlers.DocumentHandler,
+	)
 
 	return r
 }
@@ -41,6 +48,7 @@ func setupRoutes(
 	askHandler *AskHandler,
 	ingestHandler *IngestHandler,
 	authHandler *AuthHandler,
+	docHandler *DocumentHandler,
 ) {
 	v1 := router.Group("/api/v1")
 	{
@@ -57,6 +65,11 @@ func setupRoutes(
 			protected.Use(middleware.AuthMiddleware())
 			protected.POST("/ask", askHandler.Ask)
 			protected.POST("/ingest", ingestHandler.Ingest)
+			documentGroup := protected.Group("/documents")
+			{
+				documentGroup.GET("/", docHandler.List)
+			}
 		}
+
 	}
 }
