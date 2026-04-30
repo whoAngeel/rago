@@ -53,3 +53,4 @@ go.work
 .claude/skills/improve-codebase-architecture/SKILL.md
 .claude/skills/write-a-skill/SKILL.md
 .claude/skills/zoom-out/SKILL.md
+tmp/build-errors.log
