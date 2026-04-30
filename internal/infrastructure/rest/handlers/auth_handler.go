@@ -1,4 +1,4 @@
-package rest
+package handlers
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/whoAngeel/rago/internal/application"
 	"github.com/whoAngeel/rago/internal/core/ports"
+	"github.com/whoAngeel/rago/internal/infrastructure/rest"
 )
 
 type AuthHandler struct {
@@ -40,14 +41,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("invalid request body")
-		RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		rest.RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	err := h.usecase.Register(ctx, req.Name, req.Email, req.Password, req.Role)
 	if err != nil {
 		h.logger.Error("Error register user", "error", err)
-		RespondError(c, 400, "Error register user", err.Error())
+		rest.RespondError(c, 400, "Error register user", err.Error())
 		return
 	}
 
@@ -70,14 +71,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("invalid request body")
-		RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		rest.RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	loginResult, err := h.usecase.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		h.logger.Error("Error on login", "error", err)
-		RespondError(c, http.StatusBadRequest, "Error login", err.Error())
+		rest.RespondError(c, http.StatusBadRequest, "Error login", err.Error())
 		return
 	}
 
@@ -97,14 +98,14 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("invalid request body")
-		RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		rest.RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	result, err := h.usecase.Refresh(ctx, req.RefreshToken)
 	if err != nil {
 		h.logger.Error("Error refresh token", "error", err)
-		RespondError(c, http.StatusInternalServerError, "Error refresh token", err.Error())
+		rest.RespondError(c, http.StatusInternalServerError, "Error refresh token", err.Error())
 		return
 	}
 
@@ -117,13 +118,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		RespondError(c, 400, "refresh_token required", err.Error())
+		rest.RespondError(c, 400, "refresh_token required", err.Error())
 		return
 	}
 
 	if err := h.usecase.Logout(ctx, req.RefreshToken); err != nil {
 		h.logger.Error("Error logout", "error", err)
-		RespondError(c, 500, "Error logout", err.Error())
+		rest.RespondError(c, 500, "Error logout", err.Error())
 		return
 	}
 

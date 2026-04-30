@@ -17,6 +17,7 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/postgres"
 	"github.com/whoAngeel/rago/internal/infrastructure/qdrant"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
+	"github.com/whoAngeel/rago/internal/infrastructure/rest/handlers"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest/middleware"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -74,16 +75,16 @@ func main() {
 	userRepo := postgres.NewUserRepository(gormDB)
 	sessionRepo := postgres.NewSessionRepository(gormDB)
 
-	router := rest.NewRouter(log, &rest.Handlers{
-		AskHandler: rest.NewAskHandler(
+	router := handlers.NewRouter(log, &handlers.Handlers{
+		AskHandler: handlers.NewAskHandler(
 			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
 			log,
 		),
-		IngestHandler: rest.NewIngestHandler(
+		IngestHandler: handlers.NewIngestHandler(
 			application.NewIngestUsecase(vStore, embedder, log, *cfg),
 			log,
 		),
-		AuthHandler: rest.NewAuthHandler(
+		AuthHandler: handlers.NewAuthHandler(
 			application.NewAuthUseCase(
 				userRepo,
 				sessionRepo,
