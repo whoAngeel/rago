@@ -11,8 +11,8 @@ import (
 )
 
 type Handlers struct {
-	AskHandler      *AskHandler
-	IngestHandler   *IngestHandler
+	AskHandler *AskHandler
+	// IngestHandler   *IngestHandler
 	AuthHandler     *AuthHandler
 	DocumentHandler *DocumentHandler
 }
@@ -35,7 +35,7 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 	setupRoutes(
 		r,
 		handlers.AskHandler,
-		handlers.IngestHandler,
+		// handlers.IngestHandler,
 		handlers.AuthHandler,
 		handlers.DocumentHandler,
 	)
@@ -46,7 +46,7 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 func setupRoutes(
 	router *gin.Engine,
 	askHandler *AskHandler,
-	ingestHandler *IngestHandler,
+	// ingestHandler *IngestHandler,
 	authHandler *AuthHandler,
 	docHandler *DocumentHandler,
 ) {
@@ -64,7 +64,7 @@ func setupRoutes(
 		{
 			protected.Use(middleware.AuthMiddleware())
 			protected.POST("/ask", askHandler.Ask)
-			protected.POST("/ingest", ingestHandler.Ingest)
+			// protected.POST("/ingest", ingestHandler.Ingest)
 			documentGroup := protected.Group("/documents")
 			{
 				documentGroup.GET("/", docHandler.List)

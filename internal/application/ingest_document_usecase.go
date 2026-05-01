@@ -59,36 +59,36 @@ func (i *IngestDocumentUsecase) Upload(
 
 }
 
-func (i *IngestDocumentUsecase) Process(ctx context.Context, docID int) error {
-	doc, err := i.DocRepo.FindByID(ctx, docID)
-	if err != nil {
-		return err
-	}
+// func (i *IngestDocumentUsecase) Process(ctx context.Context, docID int) error {
+// 	doc, err := i.DocRepo.FindByID(ctx, docID)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	if err := i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusProcessing); err != nil {
-		return err
-	}
+// 	if err := i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusProcessing); err != nil {
+// 		return err
+// 	}
 
-	file, err := i.BlobStorage.Download(ctx, doc.FilePath)
-	if err != nil {
-		return err
-	}
+// 	file, err := i.BlobStorage.Download(ctx, doc.FilePath)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	content, err := io.ReadAll(file)
-	file.Close()
-	if err != nil {
-		i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusFailed)
-		return err
-	}
+// 	content, err := io.ReadAll(file)
+// 	file.Close()
+// 	if err != nil {
+// 		i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusFailed)
+// 		return err
+// 	}
 
-	if err := i.IngestUC.Execute(ctx, doc.Filename, string(content)); err != nil {
-		i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusFailed)
-		return err
-	}
+// 	if err := i.IngestUC.Execute(ctx, doc.Filename, string(content)); err != nil {
+// 		i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusFailed)
+// 		return err
+// 	}
 
-	return i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusCompleted)
+// 	return i.DocRepo.UpdateDocumentStatus(ctx, doc.ID, domain.StatusCompleted)
 
-}
+// }
 
 func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID int) error {
 	doc, err := i.DocRepo.FindByID(ctx, docID)
