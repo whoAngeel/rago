@@ -93,12 +93,26 @@ func (qa *QdrantAdapter) UpsertDocuments(
 
 }
 
-func (qa *QdrantAdapter) Search(ctx context.Context, collection string, queryVector []float32, limit int) ([]ports.SearchResult, error) {
+func (qa *QdrantAdapter) Search(ctx context.Context, collection string, queryVector []float32, userID int, limit int) ([]ports.SearchResult, error) {
 	pointsClient := qa.client.GetPointsClient()
 	searchResult, err := pointsClient.Search(ctx, &qdrant.SearchPoints{
 		CollectionName: collection,
 		Vector:         queryVector,
 		Limit:          uint64(limit),
+		Filter: &qdrant.Filter{
+			Must: []*qdrant.Condition{{
+				ConditionOneOf: &qdrant.Condition_Field{
+					Field: &qdrant.FieldCondition{
+						Key: "user_id",
+						Match: &qdrant.Match{
+							MatchValue: &qdrant.Match_Keyword{
+								Keyword: fmt.Sprintf("%d", userID),
+							},
+						},
+					},
+				},
+			}},
+		},
 		WithPayload: &qdrant.WithPayloadSelector{
 			SelectorOptions: &qdrant.WithPayloadSelector_Enable{
 				Enable: true,

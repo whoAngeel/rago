@@ -44,7 +44,8 @@ func (h *AskHandler) Ask(c *gin.Context) {
 
 	h.logger.Debug("BODY", "body", req)
 
-	answer, err := h.usecase.Execute(ctx, req.Question)
+	userID := c.GetInt("user_id")
+	answer, err := h.usecase.Execute(ctx, userID, req.Question)
 	if err != nil {
 		h.logger.Error("error asking", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{

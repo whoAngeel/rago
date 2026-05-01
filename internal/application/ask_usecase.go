@@ -34,7 +34,7 @@ func NewAskUsecase(
 	}
 }
 
-func (au *AskUsecase) Execute(ctx context.Context, question string) (string, error) {
+func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) (string, error) {
 	// au.Logger.Info("Pregunta", "question", question)
 	au.Logger.Info("Embedding question", "question", question)
 	queryVector, err := au.Embedder.EmbedText(ctx, question)
@@ -47,7 +47,7 @@ func (au *AskUsecase) Execute(ctx context.Context, question string) (string, err
 		au.Logger.Warn("Collection may already exist", "error", err)
 	}
 
-	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, defaultLimit)
+	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, defaultLimit)
 	if err != nil {
 		return "", fmt.Errorf("error searching: %w", err)
 	}
