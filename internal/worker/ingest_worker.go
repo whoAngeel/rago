@@ -113,10 +113,10 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		return
 	}
 
-	stepID := w.startStep(ctx, doc.ID, "download")
+	stepID, start := w.startStep(ctx, doc.ID, "download")
 	reader, err := w.BlobStorage.Download(ctx, doc.FilePath)
 	if err != nil {
-		w.finishStep(ctx, stepID, time.Now(), err)
+		w.finishStep(ctx, stepID, start, err)
 		w.handleDocumentError(ctx, doc, fmt.Errorf("download: %w", err))
 		return
 	}
@@ -124,23 +124,23 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 
 	rawBytes, err := io.ReadAll(reader)
 	if err != nil {
-		w.finishStep(ctx, stepID, time.Now(), err)
+		w.finishStep(ctx, stepID, start, err)
 		w.handleDocumentError(ctx, doc, fmt.Errorf("reading file: %w", err))
 		return
 	}
-	w.finishStep(ctx, stepID, time.Now(), nil)
+	w.finishStep(ctx, stepID, start, nil)
 
-	stepID = w.startStep(ctx, doc.ID, "parse")
+	stepID, start = w.startStep(ctx, doc.ID, "parse")
 	text, err := w.Parser.Parse(ctx, bytes.NewReader(rawBytes), doc.ContentType)
-	w.finishStep(ctx, stepID, time.Now(), err)
+	w.finishStep(ctx, stepID, start, err)
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parsing: %w", err))
 		return
 	}
 
-	stepID = w.startStep(ctx, doc.ID, "chunk")
+	stepID, start = w.startStep(ctx, doc.ID, "chunk")
 	chunks, err := w.Chunker.Chunk(text)
-	w.finishStep(ctx, stepID, time.Now(), err)
+	w.finishStep(ctx, stepID, start, err)
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("chunking: %w", err))
 		return
@@ -151,9 +151,10 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		return
 	}
 
-	stepID = w.startStep(ctx, doc.ID, "ingest")
-	err = w.IngestUC.Execute(ctx, doc, nil, chunks)
-	w.finishStep(ctx, stepID, time.Now(), err)
+	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string, start time.Time, err error) {
+		stepID, _ := w.startStep(ctx, doc.ID, stepName)
+		w.finishStep(ctx, stepID, start, err)
+	})
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("ingest: %w", err))
 		return
@@ -169,7 +170,8 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	log.Info("document processed successfully")
 }
 
-func (w *IngestWorker) startStep(ctx context.Context, docID int, stepName string) int {
+func (w *IngestWorker) startStep(ctx context.Context, docID int, stepName string) (int, time.Time) {
+	start := time.Now()
 	step := &domain.ProcessingStep{
 		DocumentID: docID,
 		StepName:   stepName,
@@ -177,9 +179,9 @@ func (w *IngestWorker) startStep(ctx context.Context, docID int, stepName string
 	}
 	if err := w.DocRepo.CreateProcessingStep(ctx, step); err != nil {
 		w.logger.Warn("failed to create processing step", "step", stepName, "doc_id", docID, "error", err)
-		return 0
+		return 0, start
 	}
-	return step.ID
+	return step.ID, start
 }
 
 func (w *IngestWorker) finishStep(ctx context.Context, stepID int, start time.Time, err error) {

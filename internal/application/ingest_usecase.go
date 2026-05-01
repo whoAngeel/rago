@@ -3,12 +3,15 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
+
+type StepFunc func(stepName string, start time.Time, err error)
 
 type IngestUsecase struct {
 	VectorStore ports.VectorStore
@@ -31,15 +34,18 @@ func NewIngestUsecase(
 	}
 }
 
-func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, metadata map[string]any, chunks []string) error {
+func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, metadata map[string]any, chunks []string, recordStep StepFunc) error {
 
 	var allDocs []schema.Document
 	var allVectors [][]float32
+	var embedErr error
 
+	embedStart := time.Now()
 	for _, chunk := range chunks {
 		vectors, err := iu.Embedder.EmbedText(ctx, chunk)
 		if err != nil {
 			iu.Logger.Warn("Error embedding text", "error", err)
+			embedErr = err
 			continue
 		}
 		allVectors = append(allVectors, vectors)
@@ -48,11 +54,15 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 			Metadata:    buildMetadata(doc, metadata),
 		})
 	}
+	recordStep("embed", embedStart, embedErr)
+
 	if len(allDocs) == 0 {
 		return fmt.Errorf("no chunks embedded")
 	}
 
+	upsertStart := time.Now()
 	err := iu.VectorStore.UpsertDocuments(ctx, iu.config.QdrantCollection, allDocs, allVectors)
+	recordStep("upsert", upsertStart, err)
 	if err != nil {
 		return fmt.Errorf("error upserting: %w", err)
 	}
