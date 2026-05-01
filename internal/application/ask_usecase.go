@@ -61,7 +61,7 @@ func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) 
 		context += r.Document.PageContent + "\n"
 	}
 	prompt := fmt.Sprintf("Contexto: %s\n\nPregunta: %s\n\nResponde basándote solo en el contexto.", context, question)
-	au.Logger.Info("Generating answer", "prompt", prompt)
+	au.Logger.Info("Generating answer", "prompt", prompt[50:])
 
 	answer, err := au.LLMProvider.GenerateAnswer(ctx, prompt)
 	if err != nil {

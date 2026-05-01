@@ -31,7 +31,7 @@ type askResponse struct {
 }
 
 func (h *AskHandler) Ask(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
 	defer cancel()
 
 	var req askRequest
