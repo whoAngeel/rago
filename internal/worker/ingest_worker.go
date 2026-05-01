@@ -45,7 +45,7 @@ func NewIngestWorker(
 	maxRetries int,
 	config config.Config,
 ) *IngestWorker {
-	log := logger.New(config.Env).With("ingest_worker")
+	log := logger.New(config.Env).With()
 	return &IngestWorker{
 		DocRepo:      docRepo,
 		BlobStorage:  blobStorage,

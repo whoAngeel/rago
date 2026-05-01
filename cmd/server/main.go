@@ -26,6 +26,7 @@ import (
 	"github.com/whoAngeel/rago/internal/worker"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 )
 
 func main() {
@@ -41,7 +42,7 @@ func main() {
 	log.Info("App starting...", "mode", cfg.Env, "port", cfg.Port)
 
 	gormDB, err := gorm.Open(gormPostgres.Open(cfg.DatabaseUrl), &gorm.Config{
-		// Logger: gormLogger.Default.LogMode(gormLogger.Silent),
+		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
 	})
 	if err != nil {
 		log.Fatal("error connecting to database", "error", err)
