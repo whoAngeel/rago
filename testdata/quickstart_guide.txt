@@ -1,0 +1,35 @@
+QUICK START GUIDE - Project RAGO
+
+Welcome to RAGO! This guide will help you get up and running in under 5 minutes.
+
+PREREQUISITES
+- Go 1.21 or later
+- Docker and Docker Compose
+- PostgreSQL 15+
+- Qdrant (for vector storage)
+
+STEP 1: CLONE THE REPOSITORY
+  git clone https://github.com/whoangel/rago.git
+  cd rago
+
+STEP 2: SET UP ENVIRONMENT VARIABLES
+  cp .env.example .env
+  # Edit .env with your configuration
+
+STEP 3: START DEPENDENCIES
+  docker compose up -d postgres qdrant
+
+STEP 4: RUN MIGRATIONS
+  go run cmd/server/main.go
+  # AutoMigrate runs automatically on startup
+
+STEP 5: START THE SERVER
+  go run cmd/server/main.go
+  # Server starts on http://localhost:8080
+
+COMMON ISSUES
+- Database connection errors: Check your DATABASE_URL in .env
+- Qdrant errors: Ensure Qdrant is running and accessible
+- Port conflicts: Change PORT in .env if 8080 is in use
+
+That's it! You're ready to use RAGO.

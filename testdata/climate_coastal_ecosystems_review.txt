@@ -1,0 +1,140 @@
+CLIMATE CHANGE IMPACT ON COASTAL ECOSYSTEMS
+A Review of Current Research (2020-2026)
+
+INTRODUCTION
+
+Coastal ecosystems are among the most vulnerable natural environments to the effects of
+climate change. Rising sea levels, increasing ocean temperatures, acidification, and more
+frequent extreme weather events are reshaping these critical habitats at an unprecedented
+rate. This review synthesizes findings from over 200 peer-reviewed studies published
+between 2020 and 2026.
+
+SEA LEVEL RISE AND COASTAL EROSION
+
+Global mean sea level has risen approximately 3.6 millimeters per year since 2006, an
+acceleration from the 2.1 millimeters per year observed between 1993 and 2006. This
+acceleration is primarily driven by two factors:
+
+1. Thermal Expansion - As ocean water warms, it expands. This accounts for approximately
+   42% of observed sea level rise since 2006.
+
+2. Ice Sheet Mass Loss - The Greenland and Antarctic ice sheets have lost an estimated
+   428 billion tons of ice per year between 2010 and 2019. This accounts for
+   approximately 34% of observed sea level rise.
+
+3. Glacier Retreat - Mountain glaciers worldwide have contributed approximately 22% of
+   observed sea level rise.
+
+The impact on coastal erosion is measurable and significant. Shorelines worldwide are
+retreating at an average rate of 0.5 meters per year, with some regions experiencing
+rates exceeding 5 meters per year. Vulnerable areas include:
+
+- Small island nations (Maldives, Tuvalu, Kiribati)
+- Low-lying river deltas (Mekong Delta, Nile Delta, Mississippi Delta)
+- Coastal cities built on soft sediment (Miami, Jakarta, Dhaka)
+
+OCEAN ACIDIFICATION
+
+The ocean has absorbed approximately 30% of all CO2 emissions from human activities since
+the Industrial Revolution. This absorption has lowered the ocean's pH by 0.1 units,
+representing a 26% increase in acidity.
+
+Effects on Marine Organisms:
+
+Coral Reefs:
+Coral reefs are particularly sensitive to acidification. Lower pH levels reduce the
+availability of carbonate ions needed by corals to build their calcium carbonate skeletons.
+Studies show that coral calcification rates have declined by approximately 14% since 1990.
+Combined with coral bleaching events caused by rising water temperatures, this has led to
+widespread reef degradation. The Great Barrier Reef has experienced five mass bleaching
+events since 2016.
+
+Shellfish and Mollusks:
+Oysters, clams, mussels, and other calcifying organisms face similar challenges. Larval
+stages are particularly vulnerable, with mortality rates increasing by 40-80% under
+experimental acidification conditions. The Pacific Northwest oyster industry has already
+experienced significant losses, prompting the development of acidification monitoring
+systems at hatcheries.
+
+Plankton:
+Pteropods (sea butterflies) are tiny swimming snails that form a critical part of the
+marine food web. Their shells have shown visible dissolution in waters off the coast of
+Antarctica and the Pacific Northwest. Declines in pteropod populations could cascade up
+the food chain, affecting fish, seabirds, and marine mammals.
+
+WETLAND LOSS AND MIGRATION
+
+Coastal wetlands (salt marshes, mangroves, and seagrass beds) provide essential ecosystem
+services including storm surge protection, carbon sequestration, and nursery habitats for
+fish species.
+
+Current State:
+- Global mangrove coverage has declined by approximately 20% since 1980
+- Salt marshes are being lost at a rate of 1-2% per year
+- Seagrass meadows have declined by approximately 30% over the past century
+
+Wetland Migration:
+In theory, wetlands can migrate inland as sea levels rise. However, this natural process
+is blocked in many areas by human infrastructure (seawalls, roads, buildings). This
+phenomenon, known as "coastal squeeze," results in the complete loss of wetland habitat
+rather than its relocation. Studies estimate that 40-70% of coastal wetlands could be lost
+by 2100 under high-emission scenarios.
+
+CARBON SEQUESTRATION IMPACTS
+
+Coastal ecosystems are disproportionately important for carbon storage. Although they cover
+less than 2% of the ocean surface, coastal wetlands sequester approximately 50% of all
+carbon buried in ocean sediments. This is known as "blue carbon."
+
+Estimated Carbon Stocks:
+- Mangroves: 1,023 metric tons of carbon per hectare
+- Salt marshes: 593 metric tons of carbon per hectare
+- Seagrass meadows: 194 metric tons of carbon per hectare
+
+When these ecosystems are degraded or destroyed, stored carbon is released back into the
+atmosphere, creating a positive feedback loop that accelerates climate change. Estimates
+suggest that blue carbon emissions from wetland degradation account for 3-19% of global
+deforestation emissions.
+
+ADAPTATION STRATEGIES
+
+Several approaches are being implemented or studied to mitigate the impacts of climate
+change on coastal ecosystems:
+
+Living Shorelines:
+Replacing seawalls and bulkheads with natural buffers (oyster reefs, marsh plantings,
+beach nourishment) that absorb wave energy and provide habitat. These approaches have
+shown 60-80% effectiveness in reducing erosion while supporting biodiversity.
+
+Managed Retreat:
+Relocating infrastructure and communities away from vulnerable coastlines to allow natural
+processes to continue. While politically challenging, this approach has been implemented
+in several communities, including Staten Island (New York) and Isle de Jean Charles
+(Louisiana).
+
+Assisted Evolution:
+Coral restoration programs are experimenting with breeding heat-tolerant coral strains,
+transplanting resilient colonies, and using 3D-printed reef structures to accelerate
+recovery. Early results are promising, with survival rates of 70-85% for selectively bred
+corals under heat stress conditions.
+
+Policy Interventions:
+The Paris Agreement's 1.5°C target is critical for coastal ecosystem survival. Limiting
+warming to 1.5°C rather than 2°C could save approximately 70-90% of coral reefs, compared
+to virtually complete loss at 2°C of warming.
+
+CONCLUSION
+
+The evidence is clear and consistent: climate change is profoundly altering coastal
+ecosystems worldwide. The rate and magnitude of change exceed the natural adaptive capacity
+of many species and habitats. While some adaptation strategies show promise, they are not
+substitutes for meaningful reductions in greenhouse gas emissions. The window for effective
+action is narrowing, but the scientific consensus indicates that every fraction of a degree
+of warming avoided translates to measurable ecological benefits.
+
+REFERENCES (Selected)
+- IPCC Sixth Assessment Report (2021-2023)
+- NOAA State of the Coast Report (2025)
+- Nature Climate Change, Vol. 14, pp. 234-248 (2024)
+- Global Biogeochemical Cycles, Vol. 38 (2024)
+- Proceedings of the National Academy of Sciences, Vol. 121 (2024)
