@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/tmc/langchaingo/schema"
+	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
@@ -30,23 +31,48 @@ func NewIngestUsecase(
 	}
 }
 
-func (iu *IngestUsecase) Execute(ctx context.Context, filename, content string) error {
-	docs :=
-		[]schema.Document{{
-			PageContent: content,
-			Metadata:    map[string]any{"source": filename},
-		}}
-	// embed
-	vectors, err := iu.Embedder.EmbedText(ctx, content)
-	if err != nil {
-		return fmt.Errorf("error embedding: %w", err)
+func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, metadata map[string]any, chunks []string) error {
+
+	var allDocs []schema.Document
+	var allVectors [][]float32
+
+	for _, chunk := range chunks {
+		vectors, err := iu.Embedder.EmbedText(ctx, chunk)
+		if err != nil {
+			iu.Logger.Warn("Error embedding text", "error", err)
+			continue
+		}
+		allVectors = append(allVectors, vectors)
+		allDocs = append(allDocs, schema.Document{
+			PageContent: chunk,
+			Metadata:    buildMetadata(doc, metadata),
+		})
+	}
+	if len(allDocs) == 0 {
+		return fmt.Errorf("no chunks embedded")
 	}
 
-	err = iu.VectorStore.UpsertDocuments(ctx, iu.config.QdrantCollection, docs, [][]float32{vectors})
+	err := iu.VectorStore.UpsertDocuments(ctx, iu.config.QdrantCollection, allDocs, allVectors)
 	if err != nil {
 		return fmt.Errorf("error upserting: %w", err)
 	}
 
-	iu.Logger.Info("document ingested", "filename", filename)
+	iu.Logger.Info("document ingested", "filename", doc.Filename)
 	return nil
+}
+
+func buildMetadata(doc *domain.Document, metadata map[string]any) map[string]any {
+	merged := map[string]any{
+		"source":       doc.Filename,
+		"user_id":      doc.UserID,
+		"content_type": doc.ContentType,
+		"document_id":  doc.ID,
+	}
+
+	// Merge: sobrescribe si hay claves repetidas
+	for k, v := range metadata {
+		merged[k] = v
+	}
+
+	return merged
 }
