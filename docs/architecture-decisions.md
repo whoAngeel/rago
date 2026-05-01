@@ -135,7 +135,80 @@ Estructura de cada referencia:
 
 ---
 
-## 4. Tables Status
+## 5. Worker & Ingestion Decisions (Phase 1.4)
+
+### 5.1 Queue Mechanism
+- **PostgreSQL-based queue** con `FOR UPDATE SKIP LOCKED`
+- No se necesita Redis, RabbitMQ u otra infra nueva
+- Persistente por naturaleza (si el server se reinicia, los docs siguen en BD)
+- Soporta múltiples workers sin race conditions
+
+### 5.2 Worker Pool Concurrency
+- **Pool de goroutines** procesando docs en paralelo
+- Default: **3 workers concurrentes**, configurable por `WORKER_CONCURRENCY`
+- I/O bound (descarga MinIO + HTTP embeddings), así que concurrency va bien
+
+### 5.3 Retry Strategy
+- **Contador de reintentos** con `RetryCount` y `MaxRetries = 3`
+- Campos agregados a `Document`: `retry_count int`, `error_message string`
+- Si falla, incrementa `retry_count`. Si supera 3, se queda en `failed`
+- No hay backoff exponencial en esta fase
+
+### 5.4 Parser Location
+- **En `infrastructure/parser/`**, no en `core/`
+- `core` queda limpio (solo `domain/` y `ports/`)
+- Todos los parsers (plaintext, PDF, DOCX, etc.) viven en `infrastructure/parser/`
+
+### 5.5 Recovery de Stuck Documents
+- Docs en `processing` por más de **5 minutos** se recuperan a `pending`
+- Query: `WHERE status = 'pending' OR (status = 'processing' AND updated_at < NOW() - 5 min)`
+- No requiere reset manual al arranque
+
+### 5.6 Chunking Strategy
+- **Chunking semántico**: split por párrafo/oración con fallback a token limit
+- Párrafos completos se agrupan hasta llenar `CHUNK_SIZE`
+- Párrafo más largo que `CHUNK_SIZE` → split por oración
+- Fallback: split por caracteres
+- Configurable: `CHUNK_SIZE` (default 512), `CHUNK_OVERLAP` (default 50)
+- Sienta bases para chunking doc-aware en 1.5
+
+### 5.7 Metadata Injection al Vector Store
+- Se pasa `*domain.Document` completo al `IngestUsecase`
+- El usecase extrae `user_id`, `filename`, `content_type` para metadata
+- Así no hay que cambiar firmas cada vez que se necesita un nuevo campo
+- Metadata en Qdrant: `{"user_id": N, "source": "filename", "content_type": "..."}`
+
+### 5.8 Worker Logging
+- **Structured JSON** con duración por documento
+- Ej: `{"level":"info","doc_id":42,"status":"completed","duration_ms":3421,"user_id":5}`
+- Counter de docs procesados en memoria (gratis y útil)
+
+### 5.9 Document Progress Fields
+Campos agregados a `Document` para frontend:
+| Campo | Tipo | Uso |
+|-------|------|-----|
+| `ProcessingStartedAt` | `*time.Time` | Cuándo el worker empezó |
+| `ErrorMessage` | `string` | Qué falló (último intento) |
+| `RetryCount` | `int` | Cuántos reintentos |
+
+### 5.10 Granularidad por Paso - Tabla `processing_steps`
+Tabla separada para tracking detallado de cada etapa:
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | int (PK) | Auto-increment |
+| `document_id` | int (FK) | → documents, CASCADE |
+| `step_name` | string | "download", "parse", "chunk", "embed", "upsert" |
+| `status` | string | "started", "completed", "failed" |
+| `error_message` | string NULL | Error si falló |
+| `duration_ms` | int NULL | Duración del paso |
+| `created_at` | timestamp | Cuando se registró |
+
+El frontend hace polling de steps para mostrar progress bar real.
+
+---
+
+## 6. Tables Status
 
 ### Existing (implemented)
 - `roles` — Con gorm.Model

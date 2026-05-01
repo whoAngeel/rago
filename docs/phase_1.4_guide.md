@@ -8,11 +8,15 @@ Aislar el procesamiento pesado (descargar archivo, extraer texto, hacer chunks, 
 | Fuente | Decisión |
 |--------|----------|
 | Roadmap 1.4 | Worker Pool con goroutines + channels |
-| Roadmap 1.4 | Polling de documentos `PENDING` |
-| ADR 3.3 | Object key: `{user_id}/{document_id}/{filename}` |
-| ADR 3.4 | Stream directo a MinIO (ya implementado en Upload handler) |
-| ADR 1.6 | ContentType como selector de parser (futuro 1.5) |
-| ADR 1.4 | FK documents.user_id → CASCADE (ya aplicado) |
+| Architecture 5.1 | PG Queue con `FOR UPDATE SKIP LOCKED` |
+| Architecture 5.2 | Pool de 3 goroutines (`WORKER_CONCURRENCY`) |
+| Architecture 5.3 | Retry con `max_retries=3`, `retry_count`, `error_message` |
+| Architecture 5.4 | Parser en `infrastructure/parser/` |
+| Architecture 5.5 | Recovery de docs stuck en `processing` > 5 min |
+| Architecture 5.6 | Chunking semántico (párrafo/oración con fallback) |
+| Architecture 5.7 | Pasar `*domain.Document` al usecase para metadata |
+| Architecture 5.9 | Campos de progreso en `Document` |
+| Architecture 5.10 | Tabla `processing_steps` para granularidad |
 
 ---
 
@@ -34,48 +38,100 @@ Falta el procesamiento posterior.
 
 Crea `internal/core/ports/parser.go`:
 
-| Método | Descripción |
-|--------|-------------|
-| `Parse(ctx, reader io.Reader, contentType string) (string, error)` | Extrae texto del archivo |
+```go
+type Parser interface {
+    Parse(ctx context.Context, reader io.Reader, contentType string) (string, error)
+}
+```
 
-En Release 1.4 solo implementas **texto plano** (`.txt`, contenido sin chunk). En 1.5 agregas PDF, DOCX, etc.
+En Release 1.4 solo implementas **texto plano** (`.txt`). En 1.5 agregas PDF, DOCX, etc.
 
 ---
 
 ## Paso 2: Adapter - PlainText Parser
 
-Crea `internal/core/parser/plaintext.go` (o en infrastructure):
+Crea `internal/infrastructure/parser/plaintext.go`:
 
 Implementa `ports.Parser`:
 - Lee todo el contenido con `io.ReadAll`
 - Convierte a string
 - Retorna
-
-Solo maneja `text/plain`. Para otros content-types, retorna error "unsupported content type".
+- Solo maneja `text/plain`. Para otros content-types, retorna error "unsupported content type".
 
 ---
 
-## Paso 3: Ampliar DocumentRepository
+## Paso 3: Ampliar Document Model
 
-Agrega a `ports/database.go` y `postgres/document_repo.go`:
+Agregar a `internal/core/domain/document.go`:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `ProcessingStartedAt` | `*time.Time` | Cuándo el worker empezó a procesar |
+| `ErrorMessage` | `string` | Mensaje del último error |
+| `RetryCount` | `int` | Contador de reintentos |
+
+GORM tags apropiados para cada uno.
+
+---
+
+## Paso 4: Tabla Processing Steps
+
+Crear modelo y migrar. Estructura:
+
+```go
+type ProcessingStep struct {
+    ID           int       `gorm:"primaryKey"`
+    DocumentID   int       `gorm:"index;not null;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+    StepName     string    `gorm:"size:50;not null"` // download, parse, chunk, embed, upsert
+    Status       string    `gorm:"size:20;not null"`  // started, completed, failed
+    ErrorMessage *string   `gorm:"type:text"`
+    DurationMS   *int      `json:"duration_ms"`
+    CreatedAt    time.Time `gorm:"not null"`
+}
+```
+
+Steps del pipeline:
+1. **download** — Descargar de MinIO
+2. **parse** — Extraer texto
+3. **chunk** — Dividir en chunks
+4. **embed** — Calcular embeddings
+5. **upsert** — Insertar en Qdrant
+
+Flujo para cada paso:
+1. Insertar fila con `status=started`
+2. Ejecutar operación
+3. Actualizar fila con `status=completed/failed`, `duration_ms`, `error_message`
+
+**No olvides agregar `&domain.ProcessingStep{}` al AutoMigrate.**
+
+---
+
+## Paso 5: Ampliar DocumentRepository
+
+Agregar a `ports/database.go` y `postgres/document_repo.go`:
 
 | Método | Descripción |
 |--------|-------------|
-| `FindDocumentsByStatus(ctx, status, limit) ([]*Document, error)` | Documentos con status específico, con límite |
+| `FindPendingDocuments(ctx, limit) ([]*Document, error)` | Docs `pending` o `processing` viejo (recuperación) |
+| `CreateProcessingStep(ctx, step *ProcessingStep) error` | INSERT paso |
+| `UpdateProcessingStep(ctx, id, status, error, duration) error` | UPDATE paso |
 
+Query para `FindPendingDocuments`:
 ```go
-// ports
-FindDocumentsByStatus(ctx context.Context, status domain.DocumentStatus, limit int) ([]*domain.Document, error)
-```
-
-En GORM:
-```go
-r.db.WithContext(ctx).Where("status = ?", status).Limit(limit).Find(&docs)
+r.db.WithContext(ctx).
+    Where("status = ? OR (status = ? AND updated_at < ?)",
+        domain.StatusPending,
+        domain.StatusProcessing,
+        time.Now().Add(-5*time.Minute),
+    ).
+    Order("created_at ASC").
+    Limit(limit).
+    Find(&docs)
 ```
 
 ---
 
-## Paso 4: Puerto - Worker
+## Paso 6: Puerto - Worker
 
 Crea `internal/core/ports/worker.go`:
 
@@ -90,7 +146,32 @@ Interfaz simple: arrancar y detener.
 
 ---
 
-## Paso 5: IngestWorker
+## Paso 7: Chunker (Semantic)
+
+Crea `internal/core/ports/chunker.go`:
+
+```go
+type Chunker interface {
+    Chunk(text string) ([]string, error)
+}
+```
+
+Crea `internal/infrastructure/chunker/semantic.go`:
+
+Implementación:
+1. Split por párrafos (`\n\n`)
+2. Agrupar párrafos hasta alcanzar `CHUNK_SIZE` (configurable, default 512)
+3. Si un párrafo individual > `CHUNK_SIZE` → split por oraciones (`. `)
+4. Si una oración > `CHUNK_SIZE` → fallback split por caracteres
+5. Overlap: última oración del chunk se repite al inicio del siguiente (configurable `CHUNK_OVERLAP`, default 50)
+
+Config por env vars:
+- `CHUNK_SIZE` (default: 512)
+- `CHUNK_OVERLAP` (default: 50)
+
+---
+
+## Paso 8: IngestWorker
 
 Crea `internal/worker/ingest_worker.go`:
 
@@ -99,95 +180,116 @@ type IngestWorker struct {
     DocRepo      ports.DocumentRepository
     BlobStorage  ports.BlobStorage
     Parser       ports.Parser
+    Chunker      ports.Chunker
     Embedder     ports.Embedder
     IngestUC     *application.IngestUsecase
     Logger       ports.Logger
-    PollInterval time.Duration // ej. 10 segundos
-    BatchSize    int           // cuántos documentos procesar por ciclo
+    PollInterval time.Duration
+    Concurrency  int
+    MaxRetries   int
     stopCh       chan struct{}
+    processed    int64 // counter atómico
 }
 ```
 
-**Flujo del worker (método `Start`):**
+**Método `Start`:**
+1. Lanza N goroutines (donde N = `Concurrency`)
+2. Cada goroutine corre un loop:
+   - `SELECT ... FOR UPDATE SKIP LOCKED` (limit 1) para obtener un doc
+   - Si no hay docs → espera `PollInterval` y reintenta
+   - Si hay doc → llama `processDocument(doc)`
+3. Graceful shutdown con `select` en `stopCh`
 
-1. Lanza goroutine con `time.NewTicker(PollInterval)`
-2. Cada tick, llama método interno `processPendingDocuments`
-3. `processPendingDocuments`:
-   - Busca documentos con status `pending` (limit BatchSize)
-   - Por cada documento:
-     - Cambia status a `processing`
-     - Descarga archivo de MinIO (`BlobStorage.Download(doc.FilePath)`)
-     - Parsea texto (`Parser.Parse(reader, doc.ContentType)`)
-     - Ingresa a Qdrant (`IngestUC.Execute(filename, content)`)
-     - Si ok → status `completed`
-     - Si error → status `failed` (con log del error)
-   - El ciclo sigue aunque un documento falle
+**Método `processDocument(doc)`:**
+1. Cambia status a `processing`, set `ProcessingStartedAt`
+2. Para cada paso del pipeline, ejecutar y registrar en `processing_steps`:
 
-**Stop:**
+```
+download → parse → chunk → embed → upsert
+```
+
+3. Si todos exitosos → status `completed`
+4. Si algún paso falla:
+   - Incrementar `RetryCount`
+   - Si `RetryCount >= MaxRetries` → status `failed`, guardar `ErrorMessage`
+   - Si no → volver a `pending` para próximo ciclo
+5. El ciclo sigue aunque un documento falle
+
+**Método `Stop`:**
 ```go
 func (w *IngestWorker) Stop() {
     close(w.stopCh)
 }
 ```
 
-**Select en el ticker** para manejar graceful shutdown:
+---
+
+## Paso 9: Adaptar IngestUsecase
+
+Cambiar `IngestUsecase.Execute` para recibir el documento completo:
+
 ```go
-select {
-case <-ticker.C:
-    w.processPendingDocuments()
-case <-w.stopCh:
-    return
+type IngestUsecase struct {
+    // ...existing fields
+}
+
+func (uc *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, content string) error {
+    // ...existing logic
+    // Metadata injection:
+    doc := schema.Document{
+        PageContent: chunk,
+        Metadata: map[string]any{
+            "source":       doc.Filename,
+            "user_id":      doc.UserID,
+            "content_type": doc.ContentType,
+            "document_id":  doc.ID,
+        },
+    }
 }
 ```
 
 ---
 
-## Paso 6: Composition Root (main.go)
+## Paso 10: Composition Root (main.go)
 
 Agregar al arranque:
 
 ```go
-// Inicializar parser (por ahora plain text)
+// Inicializar parser
 parser := parser.NewPlainTextParser()
+
+// Inicializar chunker
+chunker := chunker.NewSemanticChunker(
+    config.GetInt("CHUNK_SIZE", 512),
+    config.GetInt("CHUNK_OVERLAP", 50),
+)
 
 // Inicializar worker
 ingestWorker := worker.NewIngestWorker(
     docRepo,
     minio,         // BlobStorage
     parser,        // Parser
+    chunker,       // Chunker
     embedder,      // ya existe
     ingestUC,      // ya existe
     log,
     10*time.Second, // PollInterval
-    5,              // BatchSize
+    config.GetInt("WORKER_CONCURRENCY", 3),
+    3,              // MaxRetries
 )
-ingestWorker.Start(ctx)
-```
 
-**Graceful shutdown** (ya tienes el bloque, agrega):
-```go
+// Iniciar worker con contexto
+go ingestWorker.Start(ctx)
+
+// Graceful shutdown (ya tienes el bloque, agrega):
 ingestWorker.Stop()
 ```
 
 ---
 
-## Paso 7: Aislamiento Vectorial (Roadmap 1.4)
+## Paso 11: Aislamiento Vectorial (Roadmap 1.4)
 
-Cuando el worker inserta en Qdrant vía `IngestUC.Execute`, debe incluir `user_id` en los metadatos del documento. El `IngestUsecase` actual ya usa `domain.Document.Metadata` (vía `schema.Document`). 
-
-Si no está implementado, agrega en `IngestUsecase.Execute`:
-- Agregar `user_id` al metadata del chunk antes de hacer `UpsertDocuments`
-
-Ejemplo del documento schema:
-```go
-doc := schema.Document{
-    PageContent: chunk,
-    Metadata: map[string]any{
-        "source":    filename,
-        "user_id":   userID,
-    },
-}
-```
+Ya cubierto en Paso 9 — el `IngestUsecase` inyecta `user_id` en los metadatos de Qdrant. Asegúrate de que el `VectorStore.Search` filtre por `user_id` en los metadatos.
 
 ---
 
@@ -196,13 +298,19 @@ doc := schema.Document{
 ```
 internal/
 ├── core/
+│   ├── domain/
+│   │   └── processing_step.go     ← nuevo
 │   ├── ports/
-│   │   ├── parser.go     ← nuevo
-│   │   └── worker.go     ← nuevo
-│   └── parser/          ← nuevo directorio
-│       └── plaintext.go
-├── worker/              ← nuevo directorio
-│   └── ingest_worker.go
+│   │   ├── parser.go              ← nuevo
+│   │   ├── chunker.go             ← nuevo
+│   │   └── worker.go              ← nuevo
+├── infrastructure/
+│   ├── parser/
+│   │   └── plaintext.go           ← nuevo
+│   └── chunker/
+│       └── semantic.go            ← nuevo
+└── worker/
+    └── ingest_worker.go           ← nuevo
 ```
 
 ---
@@ -210,10 +318,13 @@ internal/
 ## Orden sugerido
 
 ```
-1. Ports/parser.go + ports/worker.go
-2. parser/plaintext.go
-3. FindDocumentsByStatus en port + adapter
-4. worker/ingest_worker.go
-5. main.go (wire worker + graceful shutdown)
-6. Probar: subir archivo → status "pending" → worker lo procesa → "completed"
+1. Ports: parser.go, chunker.go, worker.go
+2. Domain: ProcessingStep model
+3. Infrastructure: parser/plaintext.go, chunker/semantic.go
+4. DB: FindPendingDocuments, CreateProcessingStep, UpdateProcessingStep
+5. Adaptar IngestUsecase para recibir *domain.Document
+6. Worker: ingest_worker.go
+7. Config: WORKER_CONCURRENCY, CHUNK_SIZE, CHUNK_OVERLAP
+8. main.go: wire worker + graceful shutdown
+9. Probar: subir archivo → pending → worker procesa → steps registrados → completed
 ```
