@@ -208,7 +208,32 @@ El frontend hace polling de steps para mostrar progress bar real.
 
 ---
 
-## 6. Tables Status
+## 6. Qdrant Vector Store Decisions
+
+### 6.1 Payload Indexes
+- Se crean **payload indexes keyword** para `user_id` y `document_id` al crear la colección
+- Usar `CreateFieldIndex` con `FieldType_FieldTypeKeyword`
+- Sin estos indexes, `Match_Keyword` en búsquedas funciona de forma impredecible
+
+### 6.2 Point ID Generation
+- Point IDs se generan como: `document_id * 10000 + chunk_index`
+- Ej: doc 42, chunk 0 → ID 420000; doc 42, chunk 1 → ID 420001
+- Esto evita colisiones entre documentos (antes todos empezaban en 0)
+- Máximo ~10,000 chunks por documento (suficiente para cualquier caso real)
+
+### 6.3 Aislamiento Vectorial
+- Búsquedas filtradas por `user_id` usando `Match_Keyword`
+- Un usuario solo ve resultados de sus propios documentos
+- El filtro requiere el payload index de 6.1 para funcionar correctamente
+
+### 6.4 Metadata Payload
+- `formatPayload` convierte todos los metadatos a strings via `fmt.Sprintf("%v", v)`
+- Esto es suficiente para filtros keyword pero limita queries numéricos en el futuro
+- Si se necesita filtering numérico (ej: `score > 0.8`), cambiar a `PayloadIndexParams_IntegerIndexParams`
+
+---
+
+## 7. Tables Status
 
 ### Existing (implemented)
 - `roles` — Con gorm.Model
@@ -222,7 +247,7 @@ El frontend hace polling de steps para mostrar progress bar real.
 
 ---
 
-## 5. Key Files
+## 8. Key Files
 
 | File | Purpose |
 |---|---|
@@ -232,6 +257,7 @@ El frontend hace polling de steps para mostrar progress bar real.
 | `internal/core/domain/document_status.go` | DocumentStatus custom type |
 | `internal/core/ports/database.go` | Repository interfaces |
 | `internal/infrastructure/postgres/*` | GORM implementations |
+| `internal/infrastructure/qdrant/qdrant.go` | Qdrant vector store adapter |
 | `cmd/server/main.go` | DB init, AutoMigrate, role seed |
 | `docs/database-schema.md` | ER diagram + table details |
 | `docs/architecture-decisions.md` | This file |

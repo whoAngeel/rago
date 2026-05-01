@@ -51,6 +51,21 @@ func (qa *QdrantAdapter) CreateCollection(ctx context.Context, name string, size
 	if err != nil {
 		return fmt.Errorf("error creating collection: %w", err)
 	}
+
+	pointsClient := qa.client.GetPointsClient()
+
+	indexFields := []string{"user_id", "document_id"}
+	for _, field := range indexFields {
+		_, err = pointsClient.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+			CollectionName: name,
+			FieldName:      field,
+			FieldType:      ptrOf(qdrant.FieldType_FieldTypeKeyword),
+		})
+		if err != nil {
+			return fmt.Errorf("error creating payload index for %s: %w", field, err)
+		}
+	}
+
 	return nil
 }
 
@@ -62,18 +77,20 @@ func (qa *QdrantAdapter) UpsertDocuments(
 ) error {
 	points := make([]*qdrant.PointStruct, len(docs))
 	for i, doc := range docs {
-		id := doc.Metadata["_id"]
-		var pointId uint64
-		if id != nil {
-			fmt.Sscanf(fmt.Sprintf("%v", id), "%d", &pointId)
+		docID := doc.Metadata["document_id"]
+		var baseID uint64
+		if docID != nil {
+			fmt.Sscanf(fmt.Sprintf("%v", docID), "%d", &baseID)
 		} else {
-			pointId = uint64(i)
+			baseID = 0
 		}
+
+		pointID := baseID*10000 + uint64(i)
 
 		points[i] = &qdrant.PointStruct{
 			Id: &qdrant.PointId{
 				PointIdOptions: &qdrant.PointId_Num{
-					Num: pointId,
+					Num: pointID,
 				},
 			},
 			Payload: formatPayload(doc),
