@@ -106,10 +106,15 @@ func main() {
 	sessionRepo := postgres.NewSessionRepository(gormDB)
 	docRepo := postgres.NewDocumentRepository(gormDB)
 
-	parser := parserpkg.NewPlainTextAdapter()
+	parserRegistry := parserpkg.NewRegistry()
+	parserRegistry.Register("text/plain", parserpkg.NewPlainTextAdapter())
+	parserRegistry.Register("text/csv", parserpkg.NewCSVParser())
+	parserRegistry.Register("application/json", parserpkg.NewJSONParser())
+	parserRegistry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
+
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 
-	worker := worker.NewIngestWorker(docRepo, minio, parser, chunker, embedder, ingestUC, 10*time.Second, 3, 3, *cfg)
+	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, 10*time.Second, 3, 3, *cfg)
 
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(
