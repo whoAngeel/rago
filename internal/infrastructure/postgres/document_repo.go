@@ -26,7 +26,7 @@ func (r *DocumentRepository) CreateDocument(ctx context.Context, doc *domain.Doc
 
 func (r *DocumentRepository) FindDocumentByUserID(ctx context.Context, userID int) ([]*domain.Document, error) {
 	var docs []*domain.Document
-	err := r.db.WithContext(ctx).Where("user_id=?", userID).Find(&docs).Error
+	err := r.db.WithContext(ctx).Where("user_id=?", userID).Order("created_at desc").Find(&docs).Error
 	return docs, err
 }
 

@@ -73,7 +73,7 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		rest.RespondError(c, 413, "File too large", "")
 		return
 	}
-	allowedExts := map[string]bool{".txt": true, ".pdf": true, ".csv": true, ".json": true, ".docx": true}
+	allowedExts := map[string]bool{".txt": true, ".pdf": true, ".csv": true, ".json": true, ".docx": true, ".xlsx": true}
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if !allowedExts[ext] {
 		rest.RespondError(c, 400, "File type not allowed", "")

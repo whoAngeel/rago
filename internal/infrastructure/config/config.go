@@ -36,8 +36,6 @@ type Config struct {
 	MinioBucket   string
 	MinioUseSSL   bool
 
-	GotenbergURL string
-
 	Env string
 
 	MaxUploadSize int64
@@ -72,8 +70,6 @@ func Load() (*Config, error) {
 		MinioRootPass: getEnv("MINIO_ROOT_PASS", ""),
 		MinioBucket:   getEnv("MINIO_BUCKET", "rago"),
 		MinioUseSSL:   getEnvAsBool("MINIO_USE_SSL", false),
-
-		GotenbergURL: getEnv("GOTENBERG_URL", ""),
 
 		MaxUploadSize: getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
 	}

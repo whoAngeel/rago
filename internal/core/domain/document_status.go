@@ -5,6 +5,7 @@ import "database/sql/driver"
 type DocumentStatus string
 
 const (
+	StatusUploading  DocumentStatus = "uploading"
 	StatusPending    DocumentStatus = "pending"
 	StatusProcessing DocumentStatus = "processing"
 	StatusCompleted  DocumentStatus = "completed"
@@ -17,7 +18,7 @@ func (s DocumentStatus) String() string {
 
 func (s DocumentStatus) Valid() bool {
 	switch s {
-	case StatusPending, StatusProcessing, StatusCompleted, StatusFailed:
+	case StatusUploading, StatusPending, StatusProcessing, StatusCompleted, StatusFailed:
 		return true
 	}
 	return false
