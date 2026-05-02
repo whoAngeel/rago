@@ -1,0 +1,36 @@
+[
+  {
+    "title": "Q4 2025 Revenue Report",
+    "department": "Finance",
+    "total_revenue": 4500000,
+    "growth_pct": 12.5,
+    "top_product": "CloudSync Enterprise",
+    "regions": ["NA", "EMEA", "APAC"]
+  },
+  {
+    "title": "Customer Satisfaction Survey",
+    "department": "Customer Success",
+    "total_respondents": 2340,
+    "nps_score": 72,
+    "key_finding": "Onboarding needs improvement",
+    "action_items": ["Redesign onboarding flow", "Add video tutorials", "Assign dedicated CSM for first 30 days"]
+  },
+  {
+    "title": "Infrastructure Migration Plan",
+    "department": "Platform Engineering",
+    "services_migrated": 18,
+    "cost_savings_monthly": 12400,
+    "completion_pct": 85,
+    "next_milestone": "Database cluster migration - June 2026"
+  },
+  {
+    "title": "Security Audit Results",
+    "department": "Security",
+    "total_findings": 12,
+    "critical": 0,
+    "high": 2,
+    "medium": 7,
+    "low": 3,
+    "remediation_deadline": "2026-07-01"
+  }
+]

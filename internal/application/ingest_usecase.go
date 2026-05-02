@@ -41,10 +41,14 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 	var embedErr error
 
 	embedStart := time.Now()
-	for _, chunk := range chunks {
+	for i, chunk := range chunks {
+		preview := chunk
+		if len(preview) > 100 {
+			preview = preview[:100] + "..."
+		}
 		vectors, err := iu.Embedder.EmbedText(ctx, chunk)
 		if err != nil {
-			iu.Logger.Warn("Error embedding text", "error", err)
+			iu.Logger.Warn("Error embedding text", "error", err, "chunk_idx", i, "chunk_len", len(chunk), "chunk_preview", preview)
 			embedErr = err
 			continue
 		}

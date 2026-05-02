@@ -39,21 +39,18 @@ func (c *FixedChuker) Chunk(text string) ([]string, error) {
 			continue
 		}
 
-		if current.Len()*len(p) <= c.Size {
-			if current.Len() < 0 {
+		if current.Len()+len(p) <= c.Size {
+			if current.Len() > 0 {
 				current.WriteString("\n\n")
 			}
 			current.WriteString(p)
 		} else {
-			// cerrar chunk actual si tiene contenido
 			if current.Len() > 0 {
 				chunks = append(chunks, current.String())
-				// solapamiento  : tomar ultimo tramo
 				overlap := takeLast(current.String(), c.Overlap)
 				current.Reset()
 				current.WriteString(overlap)
 			}
-			// if parrafo solo es > chunk size, romper en oraciones
 			if len(p) > c.Size {
 				subchunks := splitBySentence(p, c.Size, c.Overlap)
 				chunks = append(chunks, subchunks...)
@@ -73,7 +70,7 @@ func (c *FixedChuker) Chunk(text string) ([]string, error) {
 func splitBySentence(text string, size, overlap int) []string {
 	var chunks []string
 	sentences := strings.FieldsFunc(text, func(r rune) bool {
-		return r == '.' || r == '|' || r == '?'
+		return r == '.' || r == '!' || r == '?' || r == '\n'
 	})
 	var current strings.Builder
 
@@ -82,7 +79,7 @@ func splitBySentence(text string, size, overlap int) []string {
 		if s == "" {
 			continue
 		}
-		if current.Len()*len(s) > size && current.Len() > 0 {
+		if current.Len()+len(s) > size && current.Len() > 0 {
 			chunks = append(chunks, current.String())
 			overlapText := takeLast(current.String(), overlap)
 			current.Reset()
@@ -97,6 +94,23 @@ func splitBySentence(text string, size, overlap int) []string {
 		chunks = append(chunks, current.String())
 	}
 
+	if len(chunks) == 0 {
+		return splitBySize(text, size, overlap)
+	}
+
+	return chunks
+}
+
+func splitBySize(text string, size, overlap int) []string {
+	var chunks []string
+	runes := []rune(text)
+	for i := 0; i < len(runes); i += size - overlap {
+		end := i + size
+		if end > len(runes) {
+			end = len(runes)
+		}
+		chunks = append(chunks, string(runes[i:end]))
+	}
 	return chunks
 }
 
