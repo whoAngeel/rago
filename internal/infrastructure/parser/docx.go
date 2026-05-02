@@ -1,14 +1,19 @@
 package parser
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"io"
-	"os"
-	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/tmc/langchaingo/schema"
-	"github.com/unidoc/unioffice/document"
+)
+
+var (
+	docxParagraphRE = regexp.MustCompile(`(?s)<w:p[ >].*?</w:p>`)
+	docxTextRE      = regexp.MustCompile(`<w:t[^>]*>([^<]*)</w:t>`)
 )
 
 type DOCXParser struct{}
@@ -18,45 +23,65 @@ func NewDOCXParser() *DOCXParser {
 }
 
 func (p *DOCXParser) Parse(ctx context.Context, reader io.Reader, contentType string) ([]schema.Document, error) {
-	tmpDir, err := os.MkdirTemp("", "docx-parse-*")
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
 
-	filePath := filepath.Join(tmpDir, "input.docx")
-	f, err := os.Create(filePath)
+	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
 	}
-	if _, err := io.Copy(f, reader); err != nil {
-		f.Close()
-		return nil, err
-	}
-	f.Close()
 
-	doc, err := document.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer doc.Close()
-
-	var paragraphs []string
-	for _, p := range doc.Paragraphs() {
-		var lines []string
-		for _, r := range p.Runs() {
-			lines = append(lines, r.Text())
-		}
-		if text := strings.TrimSpace(strings.Join(lines, "")); text != "" {
-			paragraphs = append(paragraphs, text)
+	var documentXML []byte
+	for _, f := range zipReader.File {
+		if f.Name == "word/document.xml" {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+			documentXML, err = io.ReadAll(rc)
+			rc.Close()
+			if err != nil {
+				return nil, err
+			}
+			break
 		}
 	}
 
-	content := strings.Join(paragraphs, "\n\n")
+	if documentXML == nil {
+		return nil, err
+	}
+
+	text := extractTextFromDocxXML(documentXML)
+	if strings.TrimSpace(text) == "" {
+		return nil, err
+	}
+
 	return []schema.Document{{
-		PageContent: content,
+		PageContent: text,
 		Metadata: map[string]any{
 			"content_type": contentType,
 		},
 	}}, nil
+}
+
+func extractTextFromDocxXML(data []byte) string {
+	paragraphs := docxParagraphRE.FindAll(data, -1)
+	if len(paragraphs) == 0 {
+		return string(data)
+	}
+
+	var lines []string
+	for _, p := range paragraphs {
+		matches := docxTextRE.FindAllSubmatch(p, -1)
+		var line strings.Builder
+		for _, m := range matches {
+			line.Write(m[1])
+		}
+		if text := strings.TrimSpace(line.String()); text != "" {
+			lines = append(lines, text)
+		}
+	}
+	return strings.Join(lines, "\n\n")
 }

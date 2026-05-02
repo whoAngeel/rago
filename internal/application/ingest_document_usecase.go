@@ -38,7 +38,7 @@ func (i *IngestDocumentUsecase) Upload(
 	doc := &domain.Document{
 		Filename:    filename,
 		UserID:      userId,
-		Status:      domain.StatusPending,
+		Status:      domain.StatusUploading,
 		ContentType: contentType,
 		Size:        size,
 	}
@@ -54,8 +54,9 @@ func (i *IngestDocumentUsecase) Upload(
 		return nil, err
 	}
 	document.FilePath = objectKey
+	document.Status = domain.StatusPending
 	_, err = i.DocRepo.UpdateDocument(ctx, document)
-	return doc, nil
+	return document, nil
 
 }
 

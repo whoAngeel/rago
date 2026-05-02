@@ -112,7 +112,7 @@ func main() {
 	parserRegistry.Register("application/json", parserpkg.NewJSONParser())
 	parserRegistry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
 	parserRegistry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parserpkg.NewXLSXParser())
-	parserRegistry.Register("application/pdf", parserpkg.NewPDFParser(cfg.GotenbergURL))
+	parserRegistry.Register("application/pdf", parserpkg.NewPDFParser())
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 
