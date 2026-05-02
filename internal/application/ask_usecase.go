@@ -3,12 +3,13 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
 
-const defaultLimit = 3
+const defaultLimit = 8
 
 type AskUsecase struct {
 	VectorStore ports.VectorStore
@@ -56,12 +57,17 @@ func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) 
 		return "[NOT FOUND RELEVANT INFO]", nil
 	}
 
-	var context string
-	for _, r := range results {
-		context += r.Document.PageContent + "\n"
+	var parts []string
+	for i, r := range results {
+		source := "desconocido"
+		if s, ok := r.Document.Metadata["source"]; ok {
+			source = fmt.Sprintf("%v", s)
+		}
+		parts = append(parts, fmt.Sprintf("[Fuente %d: %s]\n%s", i+1, source, r.Document.PageContent))
 	}
-	prompt := fmt.Sprintf("Contexto: %s\n\nPregunta: %s\n\nResponde basándote solo en el contexto.", context, question)
-	au.Logger.Info("Generating answer", "prompt", prompt[50:])
+	context := strings.Join(parts, "\n\n---\n\n")
+	prompt := fmt.Sprintf("Usa SOLO el siguiente contexto para responder. Si no encuentras la respuesta, di 'No encontré información sobre eso en los documentos'.\n\nCONTEXTO:\n%s\n\nPREGUNTA: %s\n\nRESPUESTA:", context, question)
+	au.Logger.Info("Generating answer", "sources_found", len(results), "prompt_len", len(prompt))
 
 	answer, err := au.LLMProvider.GenerateAnswer(ctx, prompt)
 	if err != nil {
