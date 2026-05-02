@@ -19,7 +19,7 @@ import (
 type IngestWorker struct {
 	DocRepo      ports.DocumentRepository
 	BlobStorage  ports.BlobStorage
-	Parser       ports.Parser
+	ParserRegistry ports.ParserRegistry
 	Chunker      ports.Chunker
 	Embedder     ports.Embedder
 	IngestUC     *application.IngestUsecase
@@ -36,7 +36,7 @@ type IngestWorker struct {
 func NewIngestWorker(
 	docRepo ports.DocumentRepository,
 	blobStorage ports.BlobStorage,
-	parser ports.Parser,
+	parserRegistry ports.ParserRegistry,
 	chunker ports.Chunker,
 	embedder ports.Embedder,
 	ingestUC *application.IngestUsecase,
@@ -47,18 +47,18 @@ func NewIngestWorker(
 ) *IngestWorker {
 	log := logger.New(config.Env).With()
 	return &IngestWorker{
-		DocRepo:      docRepo,
-		BlobStorage:  blobStorage,
-		Parser:       parser,
-		Chunker:      chunker,
-		Embedder:     embedder,
-		IngestUC:     ingestUC,
-		PollInterval: pollInterval,
-		Concurrency:  concurrency,
-		MaxRetries:   maxRetries,
-		spotCh:       make(chan struct{}, concurrency),
-		config:       config,
-		logger:       log,
+		DocRepo:        docRepo,
+		BlobStorage:    blobStorage,
+		ParserRegistry: parserRegistry,
+		Chunker:        chunker,
+		Embedder:       embedder,
+		IngestUC:       ingestUC,
+		PollInterval:   pollInterval,
+		Concurrency:    concurrency,
+		MaxRetries:     maxRetries,
+		spotCh:         make(chan struct{}, concurrency),
+		config:         config,
+		logger:         log,
 	}
 }
 
@@ -131,19 +131,33 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	w.finishStep(ctx, stepID, start, nil)
 
 	stepID, start = w.startStep(ctx, doc.ID, "parse")
-	text, err := w.Parser.Parse(ctx, bytes.NewReader(rawBytes), doc.ContentType)
+	parser, err := w.ParserRegistry.Resolve(doc.ContentType)
+	if err != nil {
+		w.finishStep(ctx, stepID, start, err)
+		w.handleDocumentError(ctx, doc, fmt.Errorf("parser resolve: %w", err))
+		return
+	}
+	parsedDocs, err := parser.Parse(ctx, bytes.NewReader(rawBytes), doc.ContentType)
 	w.finishStep(ctx, stepID, start, err)
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parsing: %w", err))
 		return
 	}
 
-	stepID, start = w.startStep(ctx, doc.ID, "chunk")
-	chunks, err := w.Chunker.Chunk(text)
-	w.finishStep(ctx, stepID, start, err)
-	if err != nil {
-		w.handleDocumentError(ctx, doc, fmt.Errorf("chunking: %w", err))
-		return
+	var chunks []string
+	for _, parsedDoc := range parsedDocs {
+		if parsedDoc.Metadata["chunk_type"] == "structured" {
+			chunks = append(chunks, parsedDoc.PageContent)
+		} else {
+			stepID, start = w.startStep(ctx, doc.ID, "chunk")
+			docChunks, err := w.Chunker.Chunk(parsedDoc.PageContent)
+			w.finishStep(ctx, stepID, start, err)
+			if err != nil {
+				w.handleDocumentError(ctx, doc, fmt.Errorf("chunking: %w", err))
+				return
+			}
+			chunks = append(chunks, docChunks...)
+		}
 	}
 
 	if len(chunks) == 0 {
