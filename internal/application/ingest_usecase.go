@@ -60,6 +60,10 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 		return fmt.Errorf("no chunks embedded")
 	}
 
+	if err := iu.VectorStore.CreateCollection(ctx, iu.config.QdrantCollection, iu.config.EmbeddingDim); err != nil {
+		iu.Logger.Warn("collection may already exist", "error", err)
+	}
+
 	upsertStart := time.Now()
 	err := iu.VectorStore.UpsertDocuments(ctx, iu.config.QdrantCollection, allDocs, allVectors)
 	recordStep("upsert", upsertStart, err)

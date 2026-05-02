@@ -95,8 +95,10 @@ func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID int) e
 	if err != nil {
 		return err
 	}
-	if err := i.BlobStorage.Delete(ctx, doc.FilePath); err != nil {
-		return err
+	if doc.FilePath != "" {
+		if err := i.BlobStorage.Delete(ctx, doc.FilePath); err != nil {
+			return err
+		}
 	}
 
 	return i.DocRepo.DeleteDocument(ctx, doc.ID)
