@@ -233,7 +233,67 @@ El frontend hace polling de steps para mostrar progress bar real.
 
 ---
 
-## 7. Tables Status
+## 7. Parsers & File Types Decisions (Phase 1.5)
+
+### 7.1 Parser Architecture
+- **Strategy Pattern** con `ParserRegistry`
+- Registry mapea content-type → parser específico
+- Registration en `main.go` o init function
+
+```go
+registry.Register("text/plain", parser.NewPlainTextParser())
+registry.Register("application/pdf", parser.NewPDFParser())
+registry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parser.NewDOCXParser())
+registry.Register("text/csv", parser.NewCSVParser())
+registry.Register("application/json", parser.NewJSONParser())
+registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parser.NewXLSXParser())
+```
+
+### 7.2 Archivos Estructurados (CSV, JSON)
+- **Parser devuelve `[]schema.Document` directamente**, saltándose el chunker genérico
+- CSV: cada fila es un documento con headers como metadata
+- JSON: cada objeto/array element es un documento
+- Metadata incluye: `row_number`, `headers`, `source`
+
+### 7.3 PDF — Texto Nativo + OCR Fallback
+- Primero intentar extraer texto nativo (PDFs generados digitalmente)
+- Si no se obtiene texto → llamar a **OCRmyPDF** (Docker service en homelab)
+- OCRmyPDF detecta automáticamente si necesita OCR y aplica Tesseract
+- Docker image: `jbarlow83/ocrmypdf`
+- Se invoca vía `exec.Command` desde Go
+
+### 7.4 XLSX — Fila por Fila
+- Cada fila se convierte en documento con headers como metadata
+- Similar al parser CSV
+- Metadata: `sheet_name`, `row_number`, `headers`
+- Para hojas con 10+ columnas, se puede agrupar por bloque (optimización futura)
+
+### 7.5 DOCX — Extracción directa
+- Librería Go: `github.com/unidoc/unioffice` o similar
+- Extrae párrafos y tablas manteniendo estructura lógica
+- No requiere dependencias externas en el servidor
+
+### 7.6 PDFs — Extracción Página por Página
+- Se extrae texto de cada página individualmente
+- Cada página pasa por el chunker semántico
+- Metadata incluye `page_number`
+- Permite mejor tracking de progreso y recuperación de fallos parciales
+
+### 7.7 Imágenes Embebidas
+- **Opción 3: Placeholder** — Se registra `[IMAGEN: nombre_archivo.jpg]` en el texto
+- No se extrae contenido de imágenes por ahora
+- OCR de imágenes embebidas se deja para fase posterior
+
+### 7.8 OCR Infrastructure
+- Docker service: `jbarlow83/ocrmypdf`
+- Se invoca vía CLI: `ocrmypdf --skip-text input.pdf output.pdf`
+- `--skip-text` evita re-OCR de páginas que ya tienen texto
+- Límite de recursos: 2GB RAM en docker-compose
+- Flujo: detectar texto nativo → si no hay → OCR → extraer texto del output
+
+---
+
+## 8. Tables Status
 
 ### Existing (implemented)
 - `roles` — Con gorm.Model
@@ -247,7 +307,7 @@ El frontend hace polling de steps para mostrar progress bar real.
 
 ---
 
-## 8. Key Files
+## 9. Key Files
 
 | File | Purpose |
 |---|---|
