@@ -61,7 +61,7 @@ type UploadResponse struct {
 }
 
 func (h *DocumentHandler) Upload(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
 	defer cancel()
 
 	file, err := c.FormFile("file")

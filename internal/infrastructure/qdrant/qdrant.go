@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
 	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/core/ports"
@@ -77,20 +78,16 @@ func (qa *QdrantAdapter) UpsertDocuments(
 ) error {
 	points := make([]*qdrant.PointStruct, len(docs))
 	for i, doc := range docs {
+		userID := doc.Metadata["user_id"]
 		docID := doc.Metadata["document_id"]
-		var baseID uint64
-		if docID != nil {
-			fmt.Sscanf(fmt.Sprintf("%v", docID), "%d", &baseID)
-		} else {
-			baseID = 0
-		}
 
-		pointID := baseID*10000 + uint64(i)
+		uniqueString := fmt.Sprintf("%v-%v-%d", userID, docID, i)
+		pointUUID := uuid.NewMD5(uuid.NameSpaceOID, []byte(uniqueString)).String()
 
 		points[i] = &qdrant.PointStruct{
 			Id: &qdrant.PointId{
-				PointIdOptions: &qdrant.PointId_Num{
-					Num: pointID,
+				PointIdOptions: &qdrant.PointId_Uuid{
+					Uuid: pointUUID,
 				},
 			},
 			Payload: formatPayload(doc),
