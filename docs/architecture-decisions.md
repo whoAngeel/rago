@@ -304,3 +304,36 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 | `cmd/server/main.go` | DB init, AutoMigrate, role seed |
 | `docs/database-schema.md` | ER diagram + table details |
 | `docs/architecture-decisions.md` | This file |
+
+---
+
+## 10. Known Weaknesses (Debilidades)
+
+### 10.1 Rendimiento / Escalabilidad
+- **Embedding uno por uno**: `Embedder.EmbedText` por chunk, sin batch. Lento para docs grandes, propenso a rate-limiting.
+- **Poll interval fijo (10s)**: Hasta 10s de delay entre upload y procesamiento.
+- **Chunker usa `len()` (bytes)**: No cuenta tokens. Texto con acentos/UTF-8 subestima el tamaño real enviado al modelo de embedding.
+
+### 10.2 Calidad de Retrieval
+- **Solo búsqueda semántica**: Sin BM25/keyword search híbrido. Queries con términos exactos (nombres, IDs) pueden fallar.
+- **Sin query expansion**: Preguntas cortas ("cv") obtienen malos resultados.
+- **Sin re-ranking**: Los top-N resultados no se reordenan por relevancia cruzada con el query.
+- **`defaultLimit` hardcodeado**: No configurable por request.
+
+### 10.3 PDF / OCR
+- **`ledongthuc/pdf` no extrae todo**: PDFs escaneados, tablas complejas, layouts multi-columna fallan silenciosamente.
+- **Sin OCR**: Gotenberg 6 tenía `/forms/ocr` pero se eliminó en v7/v8. No hay fallback para PDFs sin texto nativo.
+
+### 10.4 Datos Estructurados (CSV, JSON, XLSX)
+- **Pérdida de contexto**: Cada fila/registro es un chunk aislado. Una búsqueda de "empleados" no sabe que viene de `employees.csv`.
+- **Sin agrupación por documento**: Los resultados de búsqueda no se agrupan por documento fuente.
+
+### 10.5 Infraestructura
+- **Una sola colección Qdrant**: Sin aislamiento por tenant (aunque filtramos por `user_id` en queries).
+- **Sin deduplicación**: Mismo archivo subido 2 veces = vectores duplicados.
+- **Worker y API en mismo proceso**: Si el worker hace trabajo pesado, afecta latencia de API.
+
+### 10.6 Operaciones
+- **Sin re-upload/update**: Para actualizar un documento hay que borrarlo y volver a subir.
+- **Sin auto-detección de MIME type**: El cliente debe enviar el `Content-Type` correcto.
+- **Métricas mínimas**: Solo contador de docs procesados en memoria, sin Prometheus/OpenTelemetry.
