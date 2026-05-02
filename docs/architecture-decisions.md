@@ -257,27 +257,10 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 
 ### 7.3 PDF — Texto Nativo + OCR Fallback
 - Primero intentar extraer texto nativo (PDFs generados digitalmente)
-- Si no se obtiene texto → llamar a **OCRmyPDF** (Docker service en homelab)
-- OCRmyPDF detecta automáticamente si necesita OCR y aplica Tesseract
-- Docker image: `jbarlow83/ocrmypdf`
-- Se invoca vía `exec.Command` desde Go
-
-### 7.4 XLSX — Fila por Fila
-- Cada fila se convierte en documento con headers como metadata
-- Similar al parser CSV
-- Metadata: `sheet_name`, `row_number`, `headers`
-- Para hojas con 10+ columnas, se puede agrupar por bloque (optimización futura)
-
-### 7.5 DOCX — Extracción directa
-- Librería Go: `github.com/unidoc/unioffice` o similar
-- Extrae párrafos y tablas manteniendo estructura lógica
-- No requiere dependencias externas en el servidor
-
-### 7.6 PDFs — Extracción Página por Página
-- Se extrae texto de cada página individualmente
-- Cada página pasa por el chunker semántico
-- Metadata incluye `page_number`
-- Permite mejor tracking de progreso y recuperación de fallos parciales
+- Si no se obtiene texto → llamar a **Gotenberg** vía HTTP (Docker service en homelab)
+- Gotenberg convierte PDF escaneado a PDF con texto embebido
+- URL configurable: `GOTENBERG_URL` (ej: `http://192.168.1.21:3000`)
+- Se invoca via `POST /forms/ocr` con multipart form
 
 ### 7.7 Imágenes Embebidas
 - **Opción 3: Placeholder** — Se registra `[IMAGEN: nombre_archivo.jpg]` en el texto
@@ -285,11 +268,11 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 - OCR de imágenes embebidas se deja para fase posterior
 
 ### 7.8 OCR Infrastructure
-- Docker service: `jbarlow83/ocrmypdf`
-- Se invoca vía CLI: `ocrmypdf --skip-text input.pdf output.pdf`
-- `--skip-text` evita re-OCR de páginas que ya tienen texto
-- Límite de recursos: 2GB RAM en docker-compose
-- Flujo: detectar texto nativo → si no hay → OCR → extraer texto del output
+- **Gotenberg** como servicio Docker en homelab (puerto 3000)
+- Misma infra que Qdrant y MinIO: servicio externo accesible por HTTP
+- Sin docker socket montado (más seguro)
+- Run: `docker run -d --name gotenberg -p 3000:3000 gotenberg/gotenberg:8`
+- Flujo: detectar texto nativo → si no hay → POST a Gotenberg → extraer texto del output
 
 ---
 

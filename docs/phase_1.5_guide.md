@@ -197,13 +197,14 @@ func flattenJSON(v interface{}) string {
 
 ---
 
-## Paso 6: PDF Parser (con OCR fallback)
+## Paso 6: PDF Parser (con OCR fallback via Gotenberg)
 
 Crea `internal/infrastructure/parser/pdf.go`:
 
 ```go
 type PDFParser struct {
-    ocrEndpoint string // URL del servicio OCRmyPDF
+    gotenbergURL string // URL del servicio Gotenberg (ej: http://localhost:3000)
+    httpClient   *http.Client
 }
 
 func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType string) ([]schema.Document, error) {
@@ -228,13 +229,13 @@ func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType str
         return p.splitByPages(nativeText), nil
     }
 
-    // 3. Fallback: OCR
-    if p.ocrEndpoint == "" {
-        return nil, fmt.Errorf("PDF requires OCR but no OCR endpoint configured")
+    // 3. Fallback: Gotenberg OCR
+    if p.gotenbergURL == "" {
+        return nil, fmt.Errorf("PDF requires OCR but no Gotenberg endpoint configured")
     }
 
     ocrOutputPath := filepath.Join(tmpDir, "ocr_output.pdf")
-    if err := runOCR(ctx, inputPath, ocrOutputPath, p.ocrEndpoint); err != nil {
+    if err := p.runGotenbergOCR(ctx, inputPath, ocrOutputPath); err != nil {
         return nil, fmt.Errorf("OCR failed: %w", err)
     }
 
@@ -245,6 +246,37 @@ func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType str
     return p.splitByPages(ocrText), nil
 }
 
+func (p *PDFParser) runGotenbergOCR(ctx context.Context, inputPath, outputPath string) error {
+    // Gotenberg POST /forms/ocr endpoint
+    body := &bytes.Buffer{}
+    writer := multipart.NewWriter(body)
+    
+    fw, _ := writer.CreateFormFile("files", filepath.Base(inputPath))
+    f, _ := os.Open(inputPath)
+    io.Copy(fw, f)
+    f.Close()
+    writer.Close()
+
+    req, _ := http.NewRequestWithContext(ctx, "POST", 
+        p.gotenbergURL+"/forms/ocr", body)
+    req.Header.Set("Content-Type", writer.FormDataContentType())
+
+    resp, err := p.httpClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return fmt.Errorf("gotenberg returned %d", resp.StatusCode)
+    }
+
+    out, _ := os.Create(outputPath)
+    io.Copy(out, resp.Body)
+    out.Close()
+    return nil
+}
+
 func (p *PDFParser) splitByPages(text string) []schema.Document {
     pages := strings.Split(text, "\x0c") // Form feed character = page separator
     var docs []schema.Document
@@ -252,8 +284,6 @@ func (p *PDFParser) splitByPages(text string) []schema.Document {
         if strings.TrimSpace(page) == "" {
             continue
         }
-        // Reemplazar imágenes con placeholder
-        page = replaceImagePlaceholders(page)
         docs = append(docs, schema.Document{
             PageContent: page,
             Metadata: map[string]any{
@@ -266,18 +296,9 @@ func (p *PDFParser) splitByPages(text string) []schema.Document {
 }
 ```
 
-OCR service call:
-```go
-func runOCR(ctx context.Context, inputPath, outputPath string, endpoint string) error {
-    cmd := exec.CommandContext(ctx, "docker", "run", "--rm",
-        "-v", fmt.Sprintf("%s:/tmp", filepath.Dir(inputPath)),
-        "jbarlow83/ocrmypdf",
-        "--skip-text",
-        filepath.Base(inputPath),
-        filepath.Base(outputPath),
-    )
-    return cmd.Run()
-}
+**Para levantar Gotenberg en el homelab:**
+```bash
+docker run -d --name gotenberg --restart unless-stopped -p 3000:3000 gotenberg/gotenberg:8
 ```
 
 ---
@@ -423,32 +444,25 @@ for _, parsedDoc := range parsedDocs {
 
 ---
 
-## Paso 10: OCR Docker Service
+## Paso 10: Gotenberg Service (en homelab)
 
-Agregar a `docker-compose.yml`:
+Gotenberg corre como un servicio separado en el homelab (igual que Qdrant y MinIO):
 
-```yaml
-ocrmypdf:
-  image: jbarlow83/ocrmypdf
-  volumes:
-    - ./tmp/ocr:/tmp
-  deploy:
-    resources:
-      limits:
-        memory: 2G
+```bash
+docker run -d --name gotenberg --restart unless-stopped -p 3000:3000 gotenberg/gotenberg:8
 ```
 
 Agregar env var en `.env`:
 ```
-OCR_ENABLED=true
-OCR_ENDPOINT=docker://jbarlow83/ocrmypdf
+GOTENBERG_URL=http://192.168.1.21:3000
 ```
 
 Config en `config.go`:
 ```go
-OCREnabled   bool
-OCREndpoint  string
+GotenbergURL string
 ```
+
+El `docker-compose.yml` de RAGO **NO necesita cambios** — Gotenberg es un servicio externo.
 
 ---
 
@@ -512,11 +526,11 @@ go get github.com/pdfcpu/pdfcpu/pkg/api
 6. DOCX Parser
 7. XLSX Parser
 8. PDF Parser (texto nativo)
-9. OCR integration (PDF fallback)
+9. Gotenberg integration (PDF OCR fallback via HTTP)
 10. Adaptar worker para structured docs
 11. Extender validación de extensiones
-12. Docker compose: agregar ocrmypdf service
-13. Config: agregar vars de OCR
+12. Config: agregar GOTENBERG_URL
+13. Deploy Gotenberg en homelab
 14. main.go: registrar todos los parsers
 15. Probar: subir cada tipo de archivo y verificar ingestión
 ```
