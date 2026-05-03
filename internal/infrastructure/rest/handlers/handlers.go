@@ -82,6 +82,7 @@ func setupRoutes(
 			chatGroup := protected.Group("/chats")
 			{
 				chatGroup.POST("/send", chatHandler.SendMessage)
+				chatGroup.POST("/send-stream", chatHandler.SendStream)
 				chatGroup.GET("/", chatHandler.ListSessions)
 				chatGroup.GET("/:id", chatHandler.GetSession)
 				chatGroup.PATCH("/:id", chatHandler.UpdateSessionTittle)

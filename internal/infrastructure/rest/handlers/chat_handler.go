@@ -187,3 +187,42 @@ func (h *ChatHandler) Delete(c *gin.Context) {
 	h.logger.Info("Session deleted successfully", "session_id", sessionID, "user_id", userID)
 	c.Status(http.StatusNoContent)
 }
+
+func (h *ChatHandler) SendStream(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req SendMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.Warn("invalid request body")
+		rest.RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+	c.Writer.Flush()
+
+	answer, sources, sessionID, err := h.useCase.SendStream(ctx, userID, req.SessionID, req.Question,
+		func(token string) error {
+			c.SSEvent("chat_token", gin.H{"token": token})
+			c.Writer.Flush()
+			return nil
+		})
+	if err != nil {
+		h.logger.Error("Failed to send stream message", "error", err)
+		c.SSEvent("error", gin.H{"message": "Failed to send message"})
+		c.Writer.Flush()
+		return
+	}
+
+	c.SSEvent("chat_done", gin.H{
+		"answer":     answer,
+		"sources":    sources,
+		"session_id": sessionID,
+	})
+	c.Writer.Flush()
+}
