@@ -149,9 +149,9 @@ func main() {
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 
-	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, 10*time.Second, 3, 3, *cfg)
-
 	sseManager := ssePkg.NewManager()
+
+	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, sseManager, 10*time.Second, 3, 3, *cfg)
 
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(

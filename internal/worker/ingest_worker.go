@@ -17,20 +17,21 @@ import (
 )
 
 type IngestWorker struct {
-	DocRepo      ports.DocumentRepository
-	BlobStorage  ports.BlobStorage
+	DocRepo        ports.DocumentRepository
+	BlobStorage    ports.BlobStorage
 	ParserRegistry ports.ParserRegistry
-	Chunker      ports.Chunker
-	Embedder     ports.Embedder
-	IngestUC     *application.IngestUsecase
-	PollInterval time.Duration
-	Concurrency  int
-	MaxRetries   int
-	spotCh       chan struct{}
-	processed    atomic.Int64
-	wg           sync.WaitGroup
-	config       config.Config
-	logger       ports.Logger
+	Chunker        ports.Chunker
+	Embedder       ports.Embedder
+	IngestUC       *application.IngestUsecase
+	SSEManager     ports.SSEManager
+	PollInterval   time.Duration
+	Concurrency    int
+	MaxRetries     int
+	spotCh         chan struct{}
+	processed      atomic.Int64
+	wg             sync.WaitGroup
+	config         config.Config
+	logger         ports.Logger
 }
 
 func NewIngestWorker(
@@ -40,6 +41,7 @@ func NewIngestWorker(
 	chunker ports.Chunker,
 	embedder ports.Embedder,
 	ingestUC *application.IngestUsecase,
+	sseManager ports.SSEManager,
 	pollInterval time.Duration,
 	concurrency int,
 	maxRetries int,
@@ -53,6 +55,7 @@ func NewIngestWorker(
 		Chunker:        chunker,
 		Embedder:       embedder,
 		IngestUC:       ingestUC,
+		SSEManager:     sseManager,
 		PollInterval:   pollInterval,
 		Concurrency:    concurrency,
 		MaxRetries:     maxRetries,
@@ -108,6 +111,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	now := time.Now()
 	doc.Status = domain.StatusProcessing
 	doc.ProcessingStartedAt = &now
+	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to update document status", "error", err)
 		return
@@ -176,6 +180,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 
 	doc.Status = domain.StatusCompleted
 	doc.ErrorMessage = ""
+	w.notifyDocumentStatus(doc, string(domain.StatusCompleted))
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to mark document completed", "error", err)
 		return
@@ -219,9 +224,11 @@ func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Docu
 
 	if doc.RetryCount >= w.MaxRetries {
 		doc.Status = domain.StatusFailed
+		w.notifyDocumentStatus(doc, string(domain.StatusFailed))
 		log.Error("document permanently failed", "error", err, "retry_count", doc.RetryCount)
 	} else {
 		doc.Status = domain.StatusPending
+		w.notifyDocumentStatus(doc, string(domain.StatusPending))
 		log.Warn("document failed, will retry", "error", err, "retry_count", doc.RetryCount)
 	}
 
@@ -232,4 +239,19 @@ func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Docu
 
 func (w *IngestWorker) Stop() {
 
+}
+
+func (w *IngestWorker) notifyDocumentStatus(doc *domain.Document, status string) {
+	if w.SSEManager == nil {
+		return
+	}
+	w.SSEManager.SendToUser(doc.UserID, ports.SSEEvent{
+		Type: "document_status",
+		Data: map[string]any{
+			"id":       doc.ID,
+			"filename": doc.Filename,
+			"status":   status,
+			"error":    doc.ErrorMessage,
+		},
+	})
 }
