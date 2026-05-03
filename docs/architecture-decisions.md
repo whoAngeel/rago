@@ -392,5 +392,38 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 
 ### 10.7 Chat (Phase 1.6)
 - **Atomicidad parcial en SendMessage**: La sesión se crea antes de hacer RAG/LLM (línea 73 de `chat_usecase.go`). Si el LLM falla después, la sesión queda huérfana sin mensajes. Architecture 9.9 especifica que la sesión solo debe persistirse si todo el flujo es exitoso. Pendiente: mover `CreateSession` al final o implementar rollback.
-- **Sin manejo de session_id inválido**: Si el cliente manda un `session_id` que no existe, se retorna error genérico. Podría intentar crearse una nueva sesión automáticamente.
+- **Sin manejo de session_id inválido**: Si el cliente manda un `session_id` que no existe, se retorna error genérico. Podría intentarse crearse una nueva sesión automáticamente.
 - **Sin paginación en lista de sesiones**: `GET /sessions` retorna todas las sesiones del usuario sin límite.
+
+---
+
+## 11. Real-Time & Streaming Decisions (Phase 1.7)
+
+### 11.1 Protocolo
+- **SSE (Server-Sent Events)** como protocolo principal.
+- WebSockets NO se usan en esta fase (overkill para un flujo servidor→cliente).
+- Webhooks se dejan para futura integración con sistemas externos.
+
+### 11.2 Alcance del Stream
+- **Canal único**: Un solo endpoint `/api/v1/stream` maneja todos los eventos (docs, chat, sistema).
+- El frontend filtra por tipo de evento nativo de SSE (`event: chat_token`, `event: doc_completed`).
+
+### 11.3 Streaming del LLM
+- **Token por Token**: El texto se envía a medida que el LLM lo genera.
+- Efecto "máquina de escribir" en el frontend.
+- Se usa el stream nativo de la librería de Go (langchaingo / openai).
+
+### 11.4 Formato de Eventos
+- **Formato Nativo SSE** (`event:`, `data:`, `id:`).
+- Permite usar `addEventListener` en el navegador para cada tipo de evento.
+
+### 11.5 Heartbeat
+- Se envía un `ping` cada **15 segundos** para mantener la conexión viva y detectar desconexiones de proxies.
+
+### 11.6 Gestión de Conexiones
+- **Mapa en Memoria (`sync.Map`)** para guardar conexiones activas por `UserID`.
+- Suficiente mientras RAGO corra en un solo nodo.
+
+---
+
+## 12. Key Files
