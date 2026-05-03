@@ -29,3 +29,19 @@ type DocumentRepository interface {
 	CreateProcessingStep(ctx context.Context, step *domain.ProcessingStep) error
 	UpdateProcessingStep(ctx context.Context, id, duration int, status, errMsg string) error
 }
+
+type ChatRepository interface {
+	CreateSession(ctx context.Context, session *domain.ChatSession) error
+	GetSession(ctx context.Context, id, userID int) (*domain.ChatSession, error)
+	GetUserSessions(ctx context.Context, userID int) ([]*domain.ChatSession, error)
+	UpdateSessionTitle(ctx context.Context, id, userID int, title string) error
+	DeleteSession(ctx context.Context, id, userID int) error
+
+	CreateMessage(ctx context.Context, msg *domain.ChatMessage) error
+	GetMessages(ctx context.Context, sessionID, limit int) ([]*domain.ChatMessage, error)
+}
+
+type SystemConfigRepository interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key, value string) error
+}
