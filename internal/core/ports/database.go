@@ -39,6 +39,7 @@ type ChatRepository interface {
 
 	CreateMessage(ctx context.Context, msg *domain.ChatMessage) error
 	GetMessages(ctx context.Context, sessionID, limit int) ([]*domain.ChatMessage, error)
+	GetAllMessages(ctx context.Context, sessionID int) ([]*domain.ChatMessage, error)
 }
 
 type SystemConfigRepository interface {

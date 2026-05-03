@@ -78,10 +78,10 @@ func setupRoutes(
 			chatGroup := protected.Group("/chats")
 			{
 				chatGroup.POST("/send", chatHandler.SendMessage)
-				// chatGroup.GET("/", chatHandler.List)
-				// chatGroup.GET("/:id", chatHandler.GetByID)
-				// chatGroup.POST("/", chatHandler.Create)
-				// chatGroup.DELETE("/:id", chatHandler.Delete)
+				chatGroup.GET("/", chatHandler.ListSessions)
+				chatGroup.GET("/:id", chatHandler.GetSession)
+				chatGroup.PATCH("/:id", chatHandler.UpdateSessionTittle)
+				chatGroup.DELETE("/:id", chatHandler.Delete)
 			}
 		}
 

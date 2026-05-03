@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -60,4 +61,125 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		Sources:   sources,
 		SessionID: sessionId,
 	})
+}
+
+type ListSessionsResponse struct {
+	ID        int       `json:"id"`
+	Title     string    `json:"title"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (h *ChatHandler) ListSessions(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	userId := c.GetInt("user_id")
+
+	sessions, err := h.useCase.ListSessions(ctx, userId)
+	if err != nil {
+		rest.RespondError(c, http.StatusInternalServerError, "Error getting sessions", err.Error())
+		return
+	}
+
+	var sessionsResponse []ListSessionsResponse
+	for _, session := range sessions {
+		sessionsResponse = append(sessionsResponse, ListSessionsResponse{
+			ID:        int(session.ID),
+			Title:     session.Title,
+			UpdatedAt: session.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, sessionsResponse)
+}
+
+type MessageResponse struct {
+	ID        uint      `json:"id"`
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
+	Sources   string    `json:"sources"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (h *ChatHandler) GetSession(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	sessionID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid session ID", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+	messages, err := h.useCase.GetSessionHistory(ctx, sessionID, userID)
+	if err != nil {
+		rest.RespondError(c, http.StatusInternalServerError, "Error getting session messages", err.Error())
+		return
+	}
+
+	var response []MessageResponse
+	for _, m := range messages {
+		response = append(response, MessageResponse{
+			ID:        m.ID,
+			Role:      m.Role,
+			Content:   m.Content,
+			Sources:   string(m.Sources),
+			CreatedAt: m.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+type UpdateSessionTittleRequest struct {
+	Title string `json:"title" binding:"required"`
+}
+
+func (h *ChatHandler) UpdateSessionTittle(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	sessionID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid session ID", err.Error())
+		return
+	}
+
+	var req UpdateSessionTittleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+
+	err = h.useCase.UpdateSessionTitle(ctx, sessionID, userID, req.Title)
+	if err != nil {
+		rest.RespondError(c, http.StatusInternalServerError, "Error updating session title", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Session title updated successfully"})
+}
+
+func (h *ChatHandler) Delete(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	sessionID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid session ID", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+	if err := h.useCase.DeleteSession(ctx, sessionID, userID); err != nil {
+		h.logger.Error("Error deleting session", "error", err.Error())
+		rest.RespondError(c, http.StatusInternalServerError, "Error deleting session", err.Error())
+		return
+	}
+
+	h.logger.Info("Session deleted successfully", "session_id", sessionID, "user_id", userID)
+	c.Status(http.StatusNoContent)
 }

@@ -149,7 +149,11 @@ func (uc *ChatUsecase) SendMessage(
 	}
 	uc.Logger.Info("Answer generated", "answer_len", len(answer))
 
-	sourcesJSON, _ := json.Marshal(sources)
+	sourcesJSON, err := json.Marshal(sources)
+	if err != nil {
+		return "", nil, int(session.ID), fmt.Errorf("marshaling sources: %w", err)
+	}
+	uc.Logger.Info("Sources JSON", "len", len(sourcesJSON), "sources_count", len(sources))
 
 	userMsg := domain.ChatMessage{
 		SessionID: int(session.ID),
@@ -166,7 +170,7 @@ func (uc *ChatUsecase) SendMessage(
 		SessionID: int(session.ID),
 		Role:      "assistant",
 		Content:   answer,
-		Sources:   string(sourcesJSON),
+		Sources:   datatypes.JSON(sourcesJSON),
 	}
 	if err := uc.ChatRepo.CreateMessage(ctx, &assistantMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving assistant message: %w", err)
@@ -187,4 +191,40 @@ func (uc *ChatUsecase) SendMessage(
 	newSessionID = int(session.ID)
 
 	return answer, sources, newSessionID, nil
+}
+
+func (uc *ChatUsecase) ListSessions(ctx context.Context, userID int) ([]*domain.ChatSession, error) {
+	sessions, err := uc.ChatRepo.GetUserSessions(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting sessions: %w", err)
+	}
+	return sessions, nil
+}
+
+func (uc *ChatUsecase) GetSessionHistory(ctx context.Context, sessionID int, userID int) ([]*domain.ChatMessage, error) {
+	_, err := uc.ChatRepo.GetSession(ctx, sessionID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("validating session: %w", err)
+	}
+	messages, err := uc.ChatRepo.GetAllMessages(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("getting messages: %w", err)
+	}
+	return messages, nil
+}
+
+func (uc *ChatUsecase) DeleteSession(ctx context.Context, sessionID, userID int) error {
+	err := uc.ChatRepo.DeleteSession(ctx, sessionID, userID)
+	if err != nil {
+		return fmt.Errorf("deleting session: %w", err)
+	}
+	return nil
+}
+
+func (uc *ChatUsecase) UpdateSessionTitle(ctx context.Context, sessionID int, userID int, title string) error {
+	err := uc.ChatRepo.UpdateSessionTitle(ctx, sessionID, userID, title)
+	if err != nil {
+		return fmt.Errorf("updating session title: %w", err)
+	}
+	return nil
 }
