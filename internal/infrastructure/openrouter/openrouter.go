@@ -34,3 +34,15 @@ func (or *OpenRouterAdapter) GenerateAnswer(ctx context.Context, prompt string) 
 	}
 	return completion, nil
 }
+
+func (or *OpenRouterAdapter) Stream(ctx context.Context, prompt string, onToken func(token string) error) (string, error) {
+	completion, err := llms.GenerateFromSinglePrompt(ctx, or.llm, prompt,
+		llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+			return onToken(string(chunk))
+		}),
+	)
+	if err != nil {
+		return "", fmt.Errorf("error streaming answer: %w", err)
+	}
+	return completion, nil
+}
