@@ -1,0 +1,177 @@
+package application
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/whoAngeel/rago/internal/core/domain"
+	"github.com/whoAngeel/rago/internal/core/ports"
+)
+
+type Source struct {
+	Content string  `json:"content"`
+	Source  string  `json:"source"`
+	Score   float32 `json:"score"`
+}
+
+type ChatUsecase struct {
+	ChatRepo       ports.ChatRepository
+	ConfigRepo     ports.SystemConfigRepository
+	VectorStore    ports.VectorStore
+	Embedder       ports.Embedder
+	LLM            ports.LLMProvider
+	Logger         ports.Logger
+	HistoryLimit   int
+	CollectionName string
+	ContextLimit   int
+}
+
+func NewChatUsecase(
+	chatRepo ports.ChatRepository,
+	configRepo ports.SystemConfigRepository,
+	vectorStore ports.VectorStore,
+	embedder ports.Embedder,
+	llm ports.LLMProvider,
+	logger ports.Logger,
+	historyLimit int,
+	collectionName string,
+	contextLimit int,
+) *ChatUsecase {
+	return &ChatUsecase{
+		ChatRepo:       chatRepo,
+		ConfigRepo:     configRepo,
+		VectorStore:    vectorStore,
+		Embedder:       embedder,
+		LLM:            llm,
+		Logger:         logger,
+		HistoryLimit:   historyLimit,
+		CollectionName: collectionName,
+		ContextLimit:   contextLimit,
+	}
+}
+
+const fallbackSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en el contexto proporcionado.
+Instrucciones:
+1. Usa solo la información dentro de las etiquetas <context> para responder.
+2. Si el contexto no tiene suficiente información, responde: "No tengo información suficiente en tus documentos para responder a esto."
+3. No inventes ni uses conocimiento general.
+4. Si mencionas datos, cita las fuentes proporcionadas en el contexto.`
+
+func (uc *ChatUsecase) SendMessage(
+	ctx context.Context,
+	userID int,
+	sessionID *int,
+	question string,
+) (answer string, sources []Source, newSessionID int, err error) {
+	var session *domain.ChatSession
+	isNew := false
+
+	if sessionID == nil {
+		session = &domain.ChatSession{UserID: userID}
+		if err := uc.ChatRepo.CreateSession(ctx, session); err != nil {
+			return "", nil, 0, fmt.Errorf("creating session: %w", err)
+		}
+		isNew = true
+	} else {
+		session, err = uc.ChatRepo.GetSession(ctx, *sessionID, userID)
+		if err != nil {
+			return "", nil, 0, fmt.Errorf("getting session: %w", err)
+		}
+	}
+
+	systemPrompt, err := uc.ConfigRepo.Get(ctx, "system_prompt")
+	if err != nil {
+		systemPrompt = fallbackSystemPrompt
+	}
+
+	var historyStr string
+	if !isNew {
+		messages, err := uc.ChatRepo.GetMessages(ctx, int(session.ID), uc.HistoryLimit)
+		if err != nil {
+			return "", nil, int(session.ID), fmt.Errorf("getting messages: %w", err)
+		}
+		slices.Reverse(messages)
+		var parts []string
+		for _, m := range messages {
+			parts = append(parts, fmt.Sprintf("%s: %s", m.Role, m.Content))
+		}
+		historyStr = strings.Join(parts, "\n")
+	}
+
+	queryVector, err := uc.Embedder.EmbedText(ctx, question)
+	if err != nil {
+		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
+	}
+
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, uc.ContextLimit)
+	if err != nil {
+		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
+	}
+
+	var contextStr string
+	for _, r := range searchResults {
+		src := "desconocido"
+		if s, ok := r.Document.Metadata["source"]; ok {
+			src = fmt.Sprintf("%v", s)
+		}
+		sources = append(sources, Source{
+			Content: r.Document.PageContent,
+			Source:  src,
+			Score:   r.Score,
+		})
+		contextStr += fmt.Sprintf("[Fuente: %s]\n%s\n\n", src, r.Document.PageContent)
+	}
+
+	prompt := fmt.Sprintf("<system>%s</system>\n"+
+		"<context>\n%s\n</context>\n"+
+		"<history>\n%s\n</history>\n"+
+		"<question>\n%s\n</question>",
+		systemPrompt, contextStr, historyStr, question)
+
+	answer, err = uc.LLM.GenerateAnswer(ctx, prompt)
+	if err != nil {
+		return "", nil, int(session.ID), fmt.Errorf("generating answer: %w", err)
+	}
+
+	sourcesJSON, _ := json.Marshal(sources)
+
+	userMsg := domain.ChatMessage{
+		SessionID: int(session.ID),
+		Role:      "user",
+		Content:   question,
+	}
+	if err := uc.ChatRepo.CreateMessage(ctx, &userMsg); err != nil {
+		return "", nil, int(session.ID), fmt.Errorf("saving user message: %w", err)
+	}
+
+	assistantMsg := domain.ChatMessage{
+		SessionID: int(session.ID),
+		Role:      "assistant",
+		Content:   answer,
+		Sources:   string(sourcesJSON),
+	}
+	if err := uc.ChatRepo.CreateMessage(ctx, &assistantMsg); err != nil {
+		return "", nil, int(session.ID), fmt.Errorf("saving assistant message: %w", err)
+	}
+
+	if isNew {
+		title := question
+		if len([]rune(title)) > 80 {
+			title = string([]rune(title)[:80]) + "..."
+		}
+		session.Title = title
+		if err := uc.ChatRepo.UpdateSessionTitle(ctx, int(session.ID), userID, title); err != nil {
+			uc.Logger.Error("Failed to update session title", "error", err)
+		}
+	}
+
+	newSessionID = 0
+	if isNew {
+		newSessionID = int(session.ID)
+	}
+
+	return answer, sources, newSessionID, nil
+}
