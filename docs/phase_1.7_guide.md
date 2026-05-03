@@ -1,4 +1,4 @@
-# Guía: Release 1.7 - Websockets e Interactividad en Tiempo Real
+# Guía: Release 1.7 - Server-Sent Events (SSE) y Streaming
 
 ## Objetivo
 Implementar Server-Sent Events (SSE) para notificaciones en tiempo real y streaming de respuestas del LLM.
