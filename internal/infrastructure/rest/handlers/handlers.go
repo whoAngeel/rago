@@ -16,6 +16,7 @@ type Handlers struct {
 	AuthHandler     *AuthHandler
 	DocumentHandler *DocumentHandler
 	ChatHandler     *ChatHandler
+	SSEHandler      *SSEHandler
 }
 
 func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
@@ -40,6 +41,7 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 		handlers.AuthHandler,
 		handlers.DocumentHandler,
 		handlers.ChatHandler,
+		handlers.SSEHandler,
 	)
 
 	return r
@@ -52,6 +54,7 @@ func setupRoutes(
 	authHandler *AuthHandler,
 	docHandler *DocumentHandler,
 	chatHandler *ChatHandler,
+	sseHandler *SSEHandler,
 ) {
 	v1 := router.Group("/api/v1")
 	{
@@ -67,6 +70,7 @@ func setupRoutes(
 		{
 			protected.Use(middleware.AuthMiddleware())
 			protected.POST("/ask", askHandler.Ask)
+			protected.GET("/stream", sseHandler.Stream)
 			// protected.POST("/ingest", ingestHandler.Ingest)
 			documentGroup := protected.Group("/documents")
 			{

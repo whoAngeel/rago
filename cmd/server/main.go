@@ -22,6 +22,7 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest/handlers"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest/middleware"
+	ssePkg "github.com/whoAngeel/rago/internal/infrastructure/sse"
 	"github.com/whoAngeel/rago/internal/infrastructure/storage"
 	"github.com/whoAngeel/rago/internal/worker"
 	gormPostgres "gorm.io/driver/postgres"
@@ -150,6 +151,8 @@ func main() {
 
 	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, 10*time.Second, 3, 3, *cfg)
 
+	sseManager := ssePkg.NewManager()
+
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(
 			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
@@ -180,6 +183,7 @@ func main() {
 			log,
 			*cfg,
 		),
+		SSEHandler: handlers.NewSSEHandler(sseManager, log),
 	})
 	server := rest.NewServer(cfg.Host, cfg.Port, router, log)
 	middleware.InitJWTSecret(cfg.Secret)
