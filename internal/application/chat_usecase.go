@@ -170,7 +170,7 @@ func (uc *ChatUsecase) SendMessage(
 		SessionID: int(session.ID),
 		Role:      "assistant",
 		Content:   answer,
-		Sources:   datatypes.JSON(sourcesJSON),
+		Sources:   string(sourcesJSON),
 	}
 	if err := uc.ChatRepo.CreateMessage(ctx, &assistantMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving assistant message: %w", err)

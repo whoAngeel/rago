@@ -52,7 +52,8 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 	userId := c.GetInt("user_id")
 	answer, sources, sessionId, err := h.useCase.SendMessage(ctx, userId, req.SessionID, req.Question)
 	if err != nil {
-		rest.RespondError(c, http.StatusInternalServerError, "Failed to send message", err.Error())
+		h.logger.Error("Failed to send message", "error", err)
+		rest.RespondError(c, http.StatusInternalServerError, "Failed to send message", "")
 		return
 	}
 
@@ -77,7 +78,8 @@ func (h *ChatHandler) ListSessions(c *gin.Context) {
 
 	sessions, err := h.useCase.ListSessions(ctx, userId)
 	if err != nil {
-		rest.RespondError(c, http.StatusInternalServerError, "Error getting sessions", err.Error())
+		h.logger.Error("Error getting sessions", "error", err)
+		rest.RespondError(c, http.StatusInternalServerError, "Error getting sessions", "")
 		return
 	}
 
@@ -114,7 +116,8 @@ func (h *ChatHandler) GetSession(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	messages, err := h.useCase.GetSessionHistory(ctx, sessionID, userID)
 	if err != nil {
-		rest.RespondError(c, http.StatusInternalServerError, "Error getting session messages", err.Error())
+		h.logger.Error("Error getting session messages", "error", err)
+		rest.RespondError(c, http.StatusInternalServerError, "Error getting session messages", "")
 		return
 	}
 
@@ -156,7 +159,8 @@ func (h *ChatHandler) UpdateSessionTittle(c *gin.Context) {
 
 	err = h.useCase.UpdateSessionTitle(ctx, sessionID, userID, req.Title)
 	if err != nil {
-		rest.RespondError(c, http.StatusInternalServerError, "Error updating session title", err.Error())
+		h.logger.Error("Error updating session title", "error", err)
+		rest.RespondError(c, http.StatusInternalServerError, "Error updating session title", "")
 		return
 	}
 
@@ -175,8 +179,8 @@ func (h *ChatHandler) Delete(c *gin.Context) {
 
 	userID := c.GetInt("user_id")
 	if err := h.useCase.DeleteSession(ctx, sessionID, userID); err != nil {
-		h.logger.Error("Error deleting session", "error", err.Error())
-		rest.RespondError(c, http.StatusInternalServerError, "Error deleting session", err.Error())
+		h.logger.Error("Error deleting session", "error", err)
+		rest.RespondError(c, http.StatusInternalServerError, "Error deleting session", "")
 		return
 	}
 
