@@ -389,3 +389,8 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 - **Sin re-upload/update**: Para actualizar un documento hay que borrarlo y volver a subir.
 - **Sin auto-detección de MIME type**: El cliente debe enviar el `Content-Type` correcto.
 - **Métricas mínimas**: Solo contador de docs procesados en memoria, sin Prometheus/OpenTelemetry.
+
+### 10.7 Chat (Phase 1.6)
+- **Atomicidad parcial en SendMessage**: La sesión se crea antes de hacer RAG/LLM (línea 73 de `chat_usecase.go`). Si el LLM falla después, la sesión queda huérfana sin mensajes. Architecture 9.9 especifica que la sesión solo debe persistirse si todo el flujo es exitoso. Pendiente: mover `CreateSession` al final o implementar rollback.
+- **Sin manejo de session_id inválido**: Si el cliente manda un `session_id` que no existe, se retorna error genérico. Podría intentar crearse una nueva sesión automáticamente.
+- **Sin paginación en lista de sesiones**: `GET /sessions` retorna todas las sesiones del usuario sin límite.

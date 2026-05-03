@@ -75,6 +75,7 @@ func (uc *ChatUsecase) SendMessage(
 			return "", nil, 0, fmt.Errorf("creating session: %w", err)
 		}
 		isNew = true
+		uc.Logger.Info("New chat session created", "session_id", session.ID, "user_id", userID)
 	} else {
 		session, err = uc.ChatRepo.GetSession(ctx, *sessionID, userID)
 		if err != nil {
@@ -85,6 +86,7 @@ func (uc *ChatUsecase) SendMessage(
 	systemPrompt, err := uc.ConfigRepo.Get(ctx, "system_prompt")
 	if err != nil {
 		systemPrompt = fallbackSystemPrompt
+		uc.Logger.Warn("Error getting system prompt, using fallback", "error", err)
 	}
 
 	var historyStr string
@@ -110,6 +112,7 @@ func (uc *ChatUsecase) SendMessage(
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
+	uc.Logger.Info("search completed", "results", len(searchResults))
 
 	var contextStr string
 	for _, r := range searchResults {
@@ -125,16 +128,23 @@ func (uc *ChatUsecase) SendMessage(
 		contextStr += fmt.Sprintf("[Fuente: %s]\n%s\n\n", src, r.Document.PageContent)
 	}
 
-	prompt := fmt.Sprintf("<system>%s</system>\n"+
-		"<context>\n%s\n</context>\n"+
-		"<history>\n%s\n</history>\n"+
-		"<question>\n%s\n</question>",
-		systemPrompt, contextStr, historyStr, question)
+	var prompt string
+	if len(searchResults) == 0 {
+		prompt = fmt.Sprintf("<system>%s</system>\n<question>\n%s\n</question>\nResponde 'No tengo información suficiente...'", systemPrompt, question)
+	} else {
+		prompt = fmt.Sprintf("<system>%s</system>\n"+
+			"<context>\n%s\n</context>\n"+
+			"<history>\n%s\n</history>\n"+
+			"<question>\n%s\n</question>",
+			systemPrompt, contextStr, historyStr, question)
+	}
 
+	uc.Logger.Info("Generating answer", "prompt_len", len(prompt))
 	answer, err = uc.LLM.GenerateAnswer(ctx, prompt)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("generating answer: %w", err)
 	}
+	uc.Logger.Info("Answer generated", "answer_len", len(answer))
 
 	sourcesJSON, _ := json.Marshal(sources)
 
@@ -146,6 +156,7 @@ func (uc *ChatUsecase) SendMessage(
 	if err := uc.ChatRepo.CreateMessage(ctx, &userMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving user message: %w", err)
 	}
+	uc.Logger.Info("User message saved", "session_id", session.ID, "user_id", userID, "message", question)
 
 	assistantMsg := domain.ChatMessage{
 		SessionID: int(session.ID),
@@ -156,6 +167,7 @@ func (uc *ChatUsecase) SendMessage(
 	if err := uc.ChatRepo.CreateMessage(ctx, &assistantMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving assistant message: %w", err)
 	}
+	uc.Logger.Info("assistant message saved", "session_id", session.ID, "user_id", userID, "message", answer)
 
 	if isNew {
 		title := question
@@ -170,6 +182,7 @@ func (uc *ChatUsecase) SendMessage(
 
 	newSessionID = 0
 	if isNew {
+		uc.Logger.Info("New chat session created", "session_id", session.ID, "user_id", userID, "title", session.Title)
 		newSessionID = int(session.ID)
 	}
 
