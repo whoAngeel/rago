@@ -9,6 +9,7 @@ import (
 
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
+	"gorm.io/datatypes"
 )
 
 type Source struct {
@@ -159,7 +160,7 @@ func (uc *ChatUsecase) SendMessage(
 		SessionID: int(session.ID),
 		Role:      "user",
 		Content:   question,
-		Sources:   "[]",
+		Sources:   datatypes.JSON("[]"),
 	}
 	if err := uc.ChatRepo.CreateMessage(ctx, &userMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving user message: %w", err)
@@ -170,7 +171,7 @@ func (uc *ChatUsecase) SendMessage(
 		SessionID: int(session.ID),
 		Role:      "assistant",
 		Content:   answer,
-		Sources:   string(sourcesJSON),
+		Sources:   datatypes.JSON(sourcesJSON),
 	}
 	if err := uc.ChatRepo.CreateMessage(ctx, &assistantMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving assistant message: %w", err)
