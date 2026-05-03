@@ -15,6 +15,7 @@ type Handlers struct {
 	// IngestHandler   *IngestHandler
 	AuthHandler     *AuthHandler
 	DocumentHandler *DocumentHandler
+	ChatHandler     *ChatHandler
 }
 
 func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
@@ -38,6 +39,7 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 		// handlers.IngestHandler,
 		handlers.AuthHandler,
 		handlers.DocumentHandler,
+		handlers.ChatHandler,
 	)
 
 	return r
@@ -49,6 +51,7 @@ func setupRoutes(
 	// ingestHandler *IngestHandler,
 	authHandler *AuthHandler,
 	docHandler *DocumentHandler,
+	chatHandler *ChatHandler,
 ) {
 	v1 := router.Group("/api/v1")
 	{
@@ -70,6 +73,15 @@ func setupRoutes(
 				documentGroup.GET("/", docHandler.List)
 				documentGroup.POST("/", docHandler.Upload)
 				documentGroup.DELETE("/:id", docHandler.Delete)
+			}
+
+			chatGroup := protected.Group("/chats")
+			{
+				chatGroup.POST("/send", chatHandler.SendMessage)
+				// chatGroup.GET("/", chatHandler.List)
+				// chatGroup.GET("/:id", chatHandler.GetByID)
+				// chatGroup.POST("/", chatHandler.Create)
+				// chatGroup.DELETE("/:id", chatHandler.Delete)
 			}
 		}
 

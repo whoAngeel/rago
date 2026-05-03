@@ -116,11 +116,24 @@ func main() {
 	}
 
 	// inicializar repositories
-	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
 
 	userRepo := postgres.NewUserRepository(gormDB)
 	sessionRepo := postgres.NewSessionRepository(gormDB)
 	docRepo := postgres.NewDocumentRepository(gormDB)
+	chatRepo := postgres.NewChatRepository(gormDB)
+	systemRepo := postgres.NewSystemConfigRepository(gormDB)
+
+	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
+	chatUC := application.NewChatUsecase(
+		chatRepo,
+		systemRepo,
+		vStore,
+		embedder,
+		llm,
+		log,
+		cfg.ChatHistoryLimit,
+		cfg.QdrantCollection,
+		cfg.ContextWindowLimit)
 
 	parserRegistry := parserpkg.NewRegistry()
 	parserRegistry.Register("text/plain", parserpkg.NewPlainTextAdapter())
@@ -156,6 +169,11 @@ func main() {
 				minio,
 				ingestUC,
 			),
+			log,
+			*cfg,
+		),
+		ChatHandler: handlers.NewChatHandler(
+			chatUC,
 			log,
 			*cfg,
 		),

@@ -38,7 +38,11 @@ type Config struct {
 
 	Env string
 
-	MaxUploadSize int64
+	MaxUploadSize      int64
+	ConcurrencyWorkers int
+	MaxRetries         int
+	ChatHistoryLimit   int
+	ContextWindowLimit int
 }
 
 func Load() (*Config, error) {
@@ -71,7 +75,11 @@ func Load() (*Config, error) {
 		MinioBucket:   getEnv("MINIO_BUCKET", "rago"),
 		MinioUseSSL:   getEnvAsBool("MINIO_USE_SSL", false),
 
-		MaxUploadSize: getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
+		MaxUploadSize:      getEnvAsInt64("MAX_UPLOAD_SIZE", 52428800),
+		ConcurrencyWorkers: getEnvAsInt("CONCURRENCY_WORKER", 3),
+		MaxRetries:         getEnvAsInt("MAX_RETRIES", 3),
+		ChatHistoryLimit:   getEnvAsInt("CHAT_HISTORY_LIMIT", 10),
+		ContextWindowLimit: getEnvAsInt("CONTEXT_WINDOW_LIMIT", 8192),
 	}
 
 	if cfg.OpenRouterKey == "" {
