@@ -48,7 +48,10 @@ func main() {
 
 	log.Info("App starting...", "mode", cfg.Env, "port", cfg.Port)
 
-	gormDB, err := gorm.Open(gormPostgres.Open(cfg.DatabaseUrl), &gorm.Config{
+	gormDB, err := gorm.Open(gormPostgres.New(gormPostgres.Config{
+		DSN:                  cfg.DatabaseUrl,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{
 		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
 	})
 	if err != nil {
