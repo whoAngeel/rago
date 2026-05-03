@@ -276,7 +276,59 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 
 ---
 
-## 8. Tables Status
+## 9. Chat Contextual Decisions (Phase 1.6)
+
+### 9.1 Formato de Mensajes
+- Mensajes guardados en `chat_messages` con estructura JSONB o campos planos + JSON para fuentes.
+- Estructura: `role`, `content`, `sources`.
+- Las fuentes son inherentes a cada respuesta del asistente.
+
+### 9.2 Ventana de Contexto (Context Window)
+- **Ventana fija (Last N messages)** para el contexto del LLM.
+- Configurable: `CHAT_HISTORY_LIMIT` (default: 10).
+- El historial completo se guarda en BD para trazabilidad del usuario.
+
+### 9.3 Respuesta sin Contexto
+- **Modo Estricto (Refusal)**: Si no hay resultados de RAG, el sistema responde que no encontró información.
+- El LLM NO usa su conocimiento general si no hay contexto relevante.
+- Prompt: "Responde basándote solo en el contexto proporcionado. Si no hay información, di que no lo sabes."
+
+### 9.4 Títulos de Sesión
+- **Generados automáticamente** a partir de la primera pregunta del usuario.
+- Se truncan a ~50 caracteres o se usa un resumen corto si se decide usar LLM en futuro.
+- Editables por el usuario (PATCH).
+
+### 9.5 Creación de Sesión
+- **Implícita (Lazy Creation)**: Si el usuario envía un mensaje sin `session_id`, el backend crea la sesión automáticamente.
+- La sesión se devuelve en la respuesta del primer mensaje.
+
+### 9.6 Formato del Prompt
+- **XML Tags** para delimitar secciones (`<context>`, `<history>`, `<question>`).
+- Mejora la adherencia de modelos modernos (Claude, Gemini, Llama) a las instrucciones.
+- System Prompt se inyecta al inicio.
+
+### 9.7 System Prompt
+- Guardado en **tabla `system_configs`** en la BD.
+- Se hace seed de un prompt por defecto al arrancar si no existe.
+- Actualizable vía API (solo admin).
+
+### 9.8 Retención de Historial
+- **Guardar todo** en la BD indefinidamente.
+- El LLM solo ve los últimos N mensajes (ventana), pero el usuario tiene acceso al historial completo.
+- Necesario para trazabilidad y futuras features de "memoria a largo plazo".
+
+### 9.9 Atomicidad
+- **Transaccional**: La sesión solo se crea si el proceso de RAG/LLM es exitoso.
+- Si falla el LLM o la búsqueda, no se crea una sesión "zombie" ni mensajes incompletos.
+- Flujo: Obtener/Crear session (memoria) → RAG → LLM → Guardar Session + Messages (DB).
+
+### 9.10 Estructura de Tablas
+- `chat_sessions`: `id`, `user_id`, `title`, `created_at`, `updated_at`
+- `chat_messages`: `id`, `session_id`, `role`, `content`, `sources` (JSONB), `created_at`
+
+---
+
+## 10. Tables Status
 
 ### Existing (implemented)
 - `roles` — Con gorm.Model
