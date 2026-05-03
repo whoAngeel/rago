@@ -29,6 +29,13 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
+const DefaultSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en el contexto proporcionado.
+Instrucciones:
+1. Usa solo la información dentro de las etiquetas <context> para responder.
+2. Si el contexto no tiene suficiente información, responde: "No tengo información suficiente en tus documentos para responder a esto."
+3. No inventes ni uses conocimiento general.
+4. Si mencionas datos, cita las fuentes proporcionadas en el contexto.`
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -53,6 +60,9 @@ func main() {
 		&domain.Session{},
 		&domain.Document{},
 		&domain.ProcessingStep{},
+		&domain.SystemConfig{},
+		&domain.ChatMessage{},
+		&domain.ChatSession{},
 	}
 	for _, model := range models {
 		if err := gormDB.AutoMigrate(model); err != nil {
@@ -68,6 +78,12 @@ func main() {
 			{Name: "admin"}, {Name: "viewer"}, {Name: "editor"},
 		})
 	}
+
+	// seed system prompt
+	gormDB.FirstOrCreate(&domain.SystemConfig{
+		Key:   "system_prompt",
+		Value: DefaultSystemPrompt,
+	}, &domain.SystemConfig{Key: "system_prompt"})
 
 	// Inicializar servicios
 	vStore, err := qdrant.NewQdrantAdapter(cfg.QdrantHost, cfg.QdrantPort)
