@@ -28,7 +28,7 @@ func NewChatHandler(uc *application.ChatUsecase, logger ports.Logger, config con
 
 type SendMessageRequest struct {
 	SessionID *int   `json:"session_id,omitempty"`
-	Question  string `json:"question" validate:"required"`
+	Question  string `json:"question" binding:"required,gte=1"`
 }
 
 type SendMessageResponse struct {

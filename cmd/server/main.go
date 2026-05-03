@@ -29,12 +29,12 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
-const DefaultSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en el contexto proporcionado.
+const DefaultSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en la sección CONTEXTO proporcionada.
 Instrucciones:
-1. Usa solo la información dentro de las etiquetas <context> para responder.
-2. Si el contexto no tiene suficiente información, responde: "No tengo información suficiente en tus documentos para responder a esto."
+1. Usa solo la información en la sección CONTEXTO para responder.
+2. Si el CONTEXTO no tiene información suficiente, responde: "No tengo información suficiente en tus documentos para responder a esto."
 3. No inventes ni uses conocimiento general.
-4. Si mencionas datos, cita las fuentes proporcionadas en el contexto.`
+4. Si mencionas datos, cita las fuentes proporcionadas.`
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

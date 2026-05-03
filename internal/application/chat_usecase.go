@@ -53,12 +53,12 @@ func NewChatUsecase(
 	}
 }
 
-const fallbackSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en el contexto proporcionado.
+const fallbackSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en la sección CONTEXTO proporcionada.
 Instrucciones:
-1. Usa solo la información dentro de las etiquetas <context> para responder.
-2. Si el contexto no tiene suficiente información, responde: "No tengo información suficiente en tus documentos para responder a esto."
+1. Usa solo la información en la sección CONTEXTO para responder.
+2. Si el CONTEXTO no tiene información suficiente, responde: "No tengo información suficiente en tus documentos para responder a esto."
 3. No inventes ni uses conocimiento general.
-4. Si mencionas datos, cita las fuentes proporcionadas en el contexto.`
+4. Si mencionas datos, cita las fuentes proporcionadas.`
 
 func (uc *ChatUsecase) SendMessage(
 	ctx context.Context,
@@ -128,16 +128,19 @@ func (uc *ChatUsecase) SendMessage(
 		contextStr += fmt.Sprintf("[Fuente: %s]\n%s\n\n", src, r.Document.PageContent)
 	}
 
-	var prompt string
+	prompt := systemPrompt + "\n\n"
+
 	if len(searchResults) == 0 {
-		prompt = fmt.Sprintf("<system>%s</system>\n<question>\n%s\n</question>\nResponde 'No tengo información suficiente...'", systemPrompt, question)
+		prompt += "No se encontró información relevante en los documentos.\n\n"
 	} else {
-		prompt = fmt.Sprintf("<system>%s</system>\n"+
-			"<context>\n%s\n</context>\n"+
-			"<history>\n%s\n</history>\n"+
-			"<question>\n%s\n</question>",
-			systemPrompt, contextStr, historyStr, question)
+		prompt += "CONTEXTO:\n" + contextStr + "\n"
 	}
+
+	if historyStr != "" {
+		prompt += "HISTORIAL:\n" + historyStr + "\n\n"
+	}
+
+	prompt += "PREGUNTA: " + question + "\n\nRESPUESTA:"
 
 	uc.Logger.Info("Generating answer", "prompt_len", len(prompt))
 	answer, err = uc.LLM.GenerateAnswer(ctx, prompt)
@@ -152,6 +155,7 @@ func (uc *ChatUsecase) SendMessage(
 		SessionID: int(session.ID),
 		Role:      "user",
 		Content:   question,
+		Sources:   "[]",
 	}
 	if err := uc.ChatRepo.CreateMessage(ctx, &userMsg); err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("saving user message: %w", err)
@@ -180,11 +184,7 @@ func (uc *ChatUsecase) SendMessage(
 		}
 	}
 
-	newSessionID = 0
-	if isNew {
-		uc.Logger.Info("New chat session created", "session_id", session.ID, "user_id", userID, "title", session.Title)
-		newSessionID = int(session.ID)
-	}
+	newSessionID = int(session.ID)
 
 	return answer, sources, newSessionID, nil
 }
