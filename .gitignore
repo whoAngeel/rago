@@ -1,56 +1,55 @@
-# Created by https://www.toptal.com/developers/gitignore/api/go
-# Edit at https://www.toptal.com/developers/gitignore?templates=go
-
-### Go ###
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# === Build outputs ===
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+rago
+server
+inspect
 
-# Test binary, built with `go test -c`
+# === Go ===
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+vendor/
 go.work
+go.work.sum
 
-# End of https://www.toptal.com/developers/gitignore/api/go
+# === Secrets & env ===
 .env
-.env.production
-.kilocode/skills/caveman/SKILL.md
-.kilocode/skills/diagnose/SKILL.md
-.kilocode/skills/diagnose/scripts/hitl-loop.template.sh
-.kilocode/skills/grill-me/SKILL.md
-.kilocode/skills/grill-with-docs/ADR-FORMAT.md
-.kilocode/skills/grill-with-docs/CONTEXT-FORMAT.md
-.kilocode/skills/grill-with-docs/SKILL.md
-.kilocode/skills/improve-codebase-architecture/DEEPENING.md
-.kilocode/skills/improve-codebase-architecture/INTERFACE-DESIGN.md
-.kilocode/skills/improve-codebase-architecture/LANGUAGE.md
-.kilocode/skills/improve-codebase-architecture/SKILL.md
-.kilocode/skills/write-a-skill/SKILL.md
-.kilocode/skills/zoom-out/SKILL.md
-.claude/skills/caveman/SKILL.md
-.claude/skills/diagnose/SKILL.md
-.claude/skills/diagnose/scripts/hitl-loop.template.sh
-.claude/skills/grill-me/SKILL.md
-.claude/skills/grill-with-docs/ADR-FORMAT.md
-.claude/skills/grill-with-docs/CONTEXT-FORMAT.md
-.claude/skills/grill-with-docs/SKILL.md
-.claude/skills/improve-codebase-architecture/DEEPENING.md
-.claude/skills/improve-codebase-architecture/INTERFACE-DESIGN.md
-.claude/skills/improve-codebase-architecture/LANGUAGE.md
-.claude/skills/improve-codebase-architecture/SKILL.md
-.claude/skills/write-a-skill/SKILL.md
-.claude/skills/zoom-out/SKILL.md
-tmp/build-errors.log
+.env.*
+
+# === IDE & editors ===
+.vscode/
+.idea/
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === AI assistants ===
+.kilocode/
+.claude/
+.kiro/
+.agents/
+skills-lock.json
+
+# === Dependencies ===
+node_modules/
+
+# === Frontend builds ===
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# === Logs & temp ===
+*.log
+logs/
+tmp/
+uploads/

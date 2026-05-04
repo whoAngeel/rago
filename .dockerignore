@@ -1,11 +1,56 @@
-.git
+# === Dependencies (no instalar dentro del contenedor) ===
+node_modules/
+frontend/node_modules/
+
+# === Build outputs (se compilan dentro del Dockerfile) ===
+*.exe
+*.exe~
+server
+rago
+inspect
+frontend/dist/
+frontend/dist-ssr/
+
+# === VCS ===
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# === Secrets & config local ===
 .env
 .env.*
-*.md
-docs/
-uploads/
+.air.toml
+
+# === AI assistants ===
 .agents/
+.kiro/
+.kilocode/
+.claude/
+skills-lock.json
+
+# === IDE & OS ===
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+
+# === Docs & notes (no van a producción) ===
+docs/
+*.md
+README.md
+brainfishai-palette.html
+
+# === CI/CD & release ===
+.github/
+.goreleaser.yml
 docker-compose.yml
-.air.toml
+Dockerfile
+.dockerignore
+
+# === Temp, test data & uploads ===
+tmp/
+uploads/
+testdata/
+*.log
+logs/
