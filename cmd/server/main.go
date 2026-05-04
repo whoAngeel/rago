@@ -133,6 +133,7 @@ func main() {
 		vStore,
 		embedder,
 		llm,
+		sseManager,
 		log,
 		cfg.ChatHistoryLimit,
 		cfg.QdrantCollection,

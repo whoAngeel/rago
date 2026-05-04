@@ -17,20 +17,21 @@ import (
 )
 
 type IngestWorker struct {
-	DocRepo      ports.DocumentRepository
-	BlobStorage  ports.BlobStorage
+	DocRepo        ports.DocumentRepository
+	BlobStorage    ports.BlobStorage
 	ParserRegistry ports.ParserRegistry
-	Chunker      ports.Chunker
-	Embedder     ports.Embedder
-	IngestUC     *application.IngestUsecase
-	PollInterval time.Duration
-	Concurrency  int
-	MaxRetries   int
-	spotCh       chan struct{}
-	processed    atomic.Int64
-	wg           sync.WaitGroup
-	config       config.Config
-	logger       ports.Logger
+	Chunker        ports.Chunker
+	Embedder       ports.Embedder
+	IngestUC       *application.IngestUsecase
+	SSEManager     ports.SSEManager
+	PollInterval   time.Duration
+	Concurrency    int
+	MaxRetries     int
+	spotCh         chan struct{}
+	processed      atomic.Int64
+	wg             sync.WaitGroup
+	config         config.Config
+	logger         ports.Logger
 }
 
 func NewIngestWorker(
@@ -40,6 +41,7 @@ func NewIngestWorker(
 	chunker ports.Chunker,
 	embedder ports.Embedder,
 	ingestUC *application.IngestUsecase,
+	sseManager ports.SSEManager,
 	pollInterval time.Duration,
 	concurrency int,
 	maxRetries int,
@@ -53,6 +55,7 @@ func NewIngestWorker(
 		Chunker:        chunker,
 		Embedder:       embedder,
 		IngestUC:       ingestUC,
+		SSEManager:     sseManager,
 		PollInterval:   pollInterval,
 		Concurrency:    concurrency,
 		MaxRetries:     maxRetries,
@@ -112,6 +115,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		log.Error("failed to update document status", "error", err)
 		return
 	}
+	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 
 	stepID, start := w.startStep(ctx, doc.ID, "download")
 	reader, err := w.BlobStorage.Download(ctx, doc.FilePath)
@@ -180,6 +184,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		log.Error("failed to mark document completed", "error", err)
 		return
 	}
+	w.notifyDocumentStatus(doc, string(domain.StatusCompleted))
 	w.processed.Add(1)
 	log.Info("document processed successfully")
 }
@@ -227,9 +232,27 @@ func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Docu
 
 	if _, updateErr := w.DocRepo.UpdateDocument(ctx, doc); updateErr != nil {
 		log.Error("failed to update document error state", "original_error", err, "update_error", updateErr)
+		return
 	}
+	w.notifyDocumentStatus(doc, string(doc.Status))
+}
 }
 
 func (w *IngestWorker) Stop() {
 
+}
+
+func (w *IngestWorker) notifyDocumentStatus(doc *domain.Document, status string) {
+	if w.SSEManager == nil {
+		return
+	}
+	w.SSEManager.SendToUser(doc.UserID, ports.SSEEvent{
+		Type: "document_status",
+		Data: map[string]any{
+			"id":       doc.ID,
+			"filename": doc.Filename,
+			"status":   status,
+			"error":    doc.ErrorMessage,
+		},
+	})
 }
