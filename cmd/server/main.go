@@ -128,12 +128,16 @@ func main() {
 	systemRepo := postgres.NewSystemConfigRepository(gormDB)
 
 	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
+
+	sseManager := ssePkg.NewManager()
+
 	chatUC := application.NewChatUsecase(
 		chatRepo,
 		systemRepo,
 		vStore,
 		embedder,
 		llm,
+		sseManager,
 		log,
 		cfg.ChatHistoryLimit,
 		cfg.QdrantCollection,
@@ -148,8 +152,6 @@ func main() {
 	parserRegistry.Register("application/pdf", parserpkg.NewPDFParser())
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
-
-	sseManager := ssePkg.NewManager()
 
 	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, sseManager, 10*time.Second, 3, 3, *cfg)
 

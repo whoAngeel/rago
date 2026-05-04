@@ -395,6 +395,13 @@ registry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.s
 - **Sin manejo de session_id inválido**: Si el cliente manda un `session_id` que no existe, se retorna error genérico. Podría intentarse crearse una nueva sesión automáticamente.
 - **Sin paginación en lista de sesiones**: `GET /sessions` retorna todas las sesiones del usuario sin límite.
 
+### 10.8 SSE & Streaming (Phase 1.7)
+- **Código duplicado**: `SendMessage` y `SendStream` comparten ~100 líneas (setup sesión, RAG, prompt, guardado). Pendiente extraer método común `sendMessage(ctx, userID, sessionID, question, llmCall)`.
+- **Worker notifica antes de DB**: `notifyDocumentStatus` se llama antes del `UpdateDocument`. Si el update falla, el cliente recibe una notificación falsa.
+- **Tokens con `\n` rompen SSE**: `c.SSEvent` de Gin escapa JSON pero no controla saltos de línea dentro del token. Un `\n` dentro de `token` parte el evento SSE en dos.
+- **Sin notificación cross-tab para chat_done**: `POST /chats/send-stream` es un stream efímero por request. El `chat_done` no se emite en el stream compartido `GET /stream`. Si el usuario cierra la pestaña del chat, pierde la notificación.
+- **Manager en memoria**: `sync.RWMutex` + `map` en un solo nodo. Si se escala a múltiples instancias, las conexiones SSE no se comparten (necesita Redis pub/sub).
+
 ---
 
 ## 11. Real-Time & Streaming Decisions (Phase 1.7)

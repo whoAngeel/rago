@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brainfish Design System — Component Palette</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@500,700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Satoshi', 'Arial', 'sans-serif'] },
+      colors: {
+        'brand-lime':    '#a3e635',
+        'brand-lime-300': '#bef265',
+        'brand-lime-500': '#84cc17',
+        'brand-lime-700': '#4e7c10',
+        'border-dark':   '#171717',
+        'shadow-dark':   '#0a0a0d',
+        'hero-pink':     '#f5d1fe',
+        'smokewhite':    '#f5f5f5',
+        'input-idle':    '#737373',
+        'accent-purple': '#edeafe',
+        'accent-rose':   '#fae9ff',
+        'gradient-mint': '#d2fae5',
+        'gradient-lime-light': '#ecfccc',
+        'footer-mint':   '#b4edd8',
+        'footer-green':  '#6adbb1',
+      },
+      boxShadow: {
+        'hard-sm':  '1px 1px 0 0 #0a0a0d',
+        'hard':     '2px 2px 0 0 #0a0a0d',
+        'hard-lg':  '4px 4px 0 0 #0a0a0d',
+      },
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-weight: 500; }
+
+  /* Soft gradient backgrounds mimicking the DS */
+  .bg-cta-gradient {
+    background: linear-gradient(90deg, #ecfccc 0%, #d2fae5 32%, #edeafe 72%, #fae9ff 100%);
+  }
+  .bg-footer-gradient {
+    background: linear-gradient(180deg, #b4edd8 0%, #6adbb1 100%);
+  }
+</style>
+</head>
+<body class="bg-white text-black font-sans antialiased">
+
+<!-- ============ HEADER ============ -->
+<header class="py-12 px-8 text-center">
+  <h1 class="text-5xl font-medium tracking-[-0.02em] leading-tight mb-2">Brainfish Design System</h1>
+  <p class="text-lg text-[#525252]">Component palette — extracted from brainfishai.com</p>
+</header>
+
+<main class="max-w-[1376px] mx-auto px-8 space-y-20 pb-20">
+
+<!-- ============ 1. NAVBAR PILL ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">1. Navbar Pill</h2>
+  <div class="flex justify-center">
+    <div class="bg-white border border-[#171717] rounded-full shadow-hard px-12 py-3 w-full max-w-[1376px] h-[68px] flex items-center justify-between text-xl">
+      <!-- logo placeholder -->
+      <span class="font-bold">🐟 Brainfish</span>
+      <!-- links -->
+      <nav class="flex gap-8 text-base">
+        <a href="#" class="hover:underline">Why Brainfish</a>
+        <a href="#" class="hover:underline">Product ▾</a>
+        <a href="#" class="hover:underline">Customers</a>
+        <a href="#" class="hover:underline">Resources ▾</a>
+        <a href="#" class="hover:underline">Pricing</a>
+      </nav>
+      <!-- cta buttons -->
+      <div class="flex gap-3 text-base">
+        <button class="bg-white border border-[#171717] rounded px-4 py-2 shadow-hard-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">
+          Sign In
+        </button>
+        <button class="bg-brand-lime border border-[#171717] rounded px-4 py-2 shadow-hard-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all flex items-center gap-2">
+          Book Demo
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. BUTTONS ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">2. Buttons</h2>
+
+  <div class="grid grid-cols-2 gap-12">
+
+    <!-- Primary / Green -->
+    <div class="space-y-4">
+      <p class="text-sm text-[#525252] uppercase tracking-wider">Primary (lime)</p>
+      <div class="space-y-4">
+        <button class="bg-brand-lime text-black border border-[#171717] rounded px-4 py-2 shadow-hard-sm text-base font-medium flex items-center gap-2">
+          ⚡ Book Demo <span class="opacity-50">→</span>
+        </button>
+        <p class="text-xs text-[#525252]">padding: 8px 16px · radius: 4px · shadow: 2px 2px</p>
+
+        <button class="bg-brand-lime text-black border border-[#171717] rounded px-6 py-3 shadow-hard-sm text-lg font-medium flex items-center gap-2">
+          Subscribe <span class="opacity-50">→</span>
+        </button>
+        <p class="text-xs text-[#525252]">large: padding 12px 24px · font 18px</p>
+      </div>
+    </div>
+
+    <!-- Secondary / White -->
+    <div class="space-y-4">
+      <p class="text-sm text-[#525252] uppercase tracking-wider">Secondary (white)</p>
+      <button class="bg-white text-black border border-[#171717] rounded px-4 py-2 shadow-hard-sm text-base font-medium">
+        Sign In
+      </button>
+      <p class="text-xs text-[#525252]">same as primary but bg: #ffffff</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. TAGS / PILLS ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">3. Tags / Pills</h2>
+
+  <div class="flex flex-wrap gap-8 items-start">
+
+    <!-- Default tag -->
+    <div class="space-y-2">
+      <div class="inline-flex items-center gap-2 bg-white border border-[#171717] rounded-full px-[14px] py-[6px] h-[38px] text-base font-medium">
+        <span class="text-pink-400">★</span> Our Features
+      </div>
+      <p class="text-xs text-[#525252]">default: 6px 14px · h:38px · radius 100px · no shadow</p>
+    </div>
+
+    <!-- Small tag -->
+    <div class="space-y-2">
+      <div class="inline-flex items-center gap-2 bg-white border border-[#171717] rounded-full px-[14px] py-[4px] h-[34px] text-base font-medium">
+        <span class="text-red-400">✦</span> Take a Look
+      </div>
+      <p class="text-xs text-[#525252]">small: 4px 14px · h:34px</p>
+    </div>
+
+    <!-- Colored accent tags -->
+    <div class="space-y-2">
+      <div class="inline-flex items-center gap-2 bg-white border border-[#171717] rounded-full px-[14px] py-[6px] h-[38px] text-base font-medium">
+        <span class="text-amber-400">◆</span> Pain Points
+      </div>
+      <p class="text-xs text-[#525252]">icon accent colors vary</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. RESULTS CARD ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">4. Results Card</h2>
+
+  <div class="bg-white border-2 border-[#0a0a0d] rounded-[20px] shadow-hard-lg p-[60px_30px_40px_60px] flex gap-16 max-w-[1312px]">
+    <!-- left column -->
+    <div class="flex-1 space-y-6">
+      <div class="text-2xl font-bold text-[#a3e635]">01</div>
+      <h3 class="text-[32px] font-medium tracking-[-0.02em] leading-tight">
+        Reduce Customer Effort by 40%
+      </h3>
+      <hr class="border-dashed border-[#d4d4d4]">
+      <p class="text-sm text-[#525252] leading-relaxed">
+        Brainfish AI agents resolve tickets instantly, cutting resolution time and improving CSAT scores across every channel.
+      </p>
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-[#525252]">logo cliente</span>
+        <a href="#" class="text-sm underline text-[#525252]">Case Study →</a>
+      </div>
+      <div class="inline-flex items-center gap-2 bg-white border border-[#171717] rounded-full px-[14px] py-[4px] h-[34px] text-base font-medium">
+        Take a Look
+      </div>
+    </div>
+    <!-- right column — placeholder img -->
+    <div class="flex-1 bg-[#f5f5f5] rounded-[20px] flex items-center justify-center min-h-[300px] text-[#a3a3a3]">
+      [ product screenshot ]
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. PAINPOINT CARDS ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">5. Painpoint Cards</h2>
+
+  <div class="space-y-[22px]">
+    <!-- Card 1 -->
+    <div class="flex items-center ml-10">
+      <!-- pin (positioned outside left) -->
+      <div class="w-[70px] h-[70px] bg-red-400 rounded-[20px] shadow-hard-lg flex items-center justify-center mr-[-35px] z-10 text-white font-bold text-xl">
+        !
+      </div>
+      <div class="bg-white border border-[#171717] rounded-[10px] shadow-hard-lg py-[18px] pl-[38px] pr-[18px] w-[440px] h-[66px] flex items-center text-xl font-medium">
+        Users abandon after 2+ minute wait times
+      </div>
+    </div>
+    <!-- Card 2 -->
+    <div class="flex items-center ml-10">
+      <div class="w-[70px] h-[70px] bg-red-400 rounded-[20px] shadow-hard-lg flex items-center justify-center mr-[-35px] z-10 text-white font-bold text-xl">
+        !
+      </div>
+      <div class="bg-white border border-[#171717] rounded-[10px] shadow-hard-lg py-[18px] pl-[38px] pr-[18px] w-[440px] h-[66px] flex items-center text-xl font-medium">
+        Repetitive tickets drain agent morale
+      </div>
+    </div>
+    <!-- Card 3 -->
+    <div class="flex items-center ml-10">
+      <div class="w-[70px] h-[70px] bg-red-400 rounded-[20px] shadow-hard-lg flex items-center justify-center mr-[-35px] z-10 text-white font-bold text-xl">
+        !
+      </div>
+      <div class="bg-white border border-[#171717] rounded-[10px] shadow-hard-lg py-[18px] pl-[38px] pr-[18px] w-[440px] h-[66px] flex items-center text-xl font-medium">
+        24/7 coverage is too expensive to staff
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. INPUT + STATUS BADGE ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">6. Input & Status Badge</h2>
+
+  <div class="grid grid-cols-2 gap-12">
+
+    <!-- Newsletter input -->
+    <div class="space-y-4">
+      <p class="text-sm text-[#525252] uppercase tracking-wider">Newsletter Input</p>
+      <div class="flex gap-3">
+        <input type="email" placeholder="Enter your email"
+               class="bg-white border border-[#737373] rounded px-3 py-0 w-[263px] h-[52px] text-base font-medium placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#171717] transition-colors">
+        <button class="bg-brand-lime border border-[#171717] rounded px-6 py-3 shadow-hard-sm text-lg font-medium h-[52px]">
+          Subscribe
+        </button>
+      </div>
+      <p class="text-xs text-[#525252]">idle border: #737373 · focus: #171717</p>
+    </div>
+
+    <!-- Status badge -->
+    <div class="space-y-4">
+      <p class="text-sm text-[#525252] uppercase tracking-wider">Status Badge (Footer)</p>
+      <div class="inline-flex items-center gap-2 bg-white border border-black rounded px-4 py-[8.5px] shadow-hard-sm text-sm font-medium w-[203px] h-[41px]">
+        <span class="w-2 h-2 rounded-full bg-brand-lime"></span>
+        All systems operational
+      </div>
+      <p class="text-xs text-[#525252]">shadow: 1px 1px · border: #000 · radius: 4px</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 7. SECTION BACKGROUNDS ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">7. Section Backgrounds</h2>
+
+  <div class="grid grid-cols-3 gap-6">
+
+    <!-- Hero pink -->
+    <div class="bg-hero-pink rounded-xl p-6 h-40 flex items-center justify-center text-center text-xl font-medium">
+      Hero<br><span class="text-sm text-[#525252]">#f5d1fe</span>
+    </div>
+
+    <!-- Smokewhite -->
+    <div class="bg-smokewhite rounded-xl p-6 h-40 flex items-center justify-center text-center text-xl font-medium border border-[#e5e5e5]">
+      Painpoints / Impact<br><span class="text-sm text-[#525252]">#f5f5f5</span>
+    </div>
+
+    <!-- Lime with waves -->
+    <div class="bg-brand-lime rounded-xl p-6 h-40 flex items-center justify-center text-center text-xl font-medium relative overflow-hidden">
+      Client Logos Strip<br><span class="text-sm text-[#000000aa]">#a3e635 + white waves</span>
+    </div>
+
+  </div>
+
+  <!-- CTA gradient -->
+  <div class="mt-6 bg-cta-gradient rounded-xl p-6 h-52 flex items-center justify-center text-center text-xl font-medium">
+    CTA "Interested?"<br>
+    <span class="text-sm text-[#525252]">linear-gradient(90deg, #ecfccc → #d2fae5 → #edeafe → #fae9ff)</span>
+  </div>
+
+  <!-- Footer gradient -->
+  <div class="mt-6 bg-footer-gradient rounded-xl p-6 h-52 flex items-center justify-center text-center text-xl font-medium rounded-b-xl rounded-t-none" style="border-radius: 0 0 12px 12px;">
+    Footer Gradient<br>
+    <span class="text-sm text-[#00000088]">#b4edd8 → #6adbb1 · radius: 0 0 12px 12px</span>
+  </div>
+</section>
+
+<!-- ============ 8. TYPOGRAPHY SCALE ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">8. Typography Scale</h2>
+
+  <div class="space-y-6">
+    <div class="border-b border-[#e5e5e5] pb-4">
+      <p class="text-xs text-[#a3a3a3] mb-1">H1 — 64px / 500 / -1.28px letter-spacing</p>
+      <h1 class="text-[64px] font-medium tracking-[-0.02em] leading-[74px]">Reduce Customer Effort</h1>
+    </div>
+    <div class="border-b border-[#e5e5e5] pb-4">
+      <p class="text-xs text-[#a3a3a3] mb-1">H2 — 48px / 500 / -0.96px letter-spacing</p>
+      <h2 class="text-[48px] font-medium tracking-[-0.02em] leading-[64px]">Why Teams Choose Brainfish</h2>
+    </div>
+    <div class="border-b border-[#e5e5e5] pb-4">
+      <p class="text-xs text-[#a3a3a3] mb-1">H3 — 32px / 500 / -0.64px letter-spacing</p>
+      <h3 class="text-[32px] font-medium tracking-[-0.02em] leading-[44px]">Reduce Customer Effort by 40%</h3>
+    </div>
+    <div class="border-b border-[#e5e5e5] pb-4">
+      <p class="text-xs text-[#a3a3a3] mb-1">Body — 20px / 500</p>
+      <p class="text-xl font-medium leading-[28px]">Brainfish AI agents resolve customer questions instantly across chat, email, and help center.</p>
+    </div>
+    <div class="border-b border-[#e5e5e5] pb-4">
+      <p class="text-xs text-[#a3a3a3] mb-1">Card number — 24px / 700</p>
+      <p class="text-2xl font-bold">01</p>
+    </div>
+    <div class="border-b border-[#e5e5e5] pb-4">
+      <p class="text-xs text-[#a3a3a3] mb-1">Button / pill / tag — 16px / 500</p>
+      <p class="text-base font-medium">Book Demo  ·  Our Features  ·  Case Study</p>
+    </div>
+    <div>
+      <p class="text-xs text-[#a3a3a3] mb-1">Status badge / footer — 14px / 500</p>
+      <p class="text-sm font-medium">All systems operational</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. HOVER EFFECTS ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">9. Hover Effects (neo-brutalist sink)</h2>
+
+  <div class="flex flex-wrap gap-8">
+    <div class="space-y-2">
+      <p class="text-sm text-[#525252]">Button hover → translate(2px,2px) + shadow disappears</p>
+      <div class="group">
+        <button class="bg-brand-lime border border-[#171717] rounded px-4 py-2 shadow-hard-sm text-base font-medium transition-all group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-hover:shadow-none">
+          Hover me
+        </button>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-sm text-[#525252]">Card hover → same sink effect (4px offset)</p>
+      <div class="group">
+        <div class="bg-white border border-[#171717] rounded-[10px] shadow-hard-lg p-6 w-64 text-base font-medium transition-all group-hover:translate-x-[4px] group-hover:translate-y-[4px] group-hover:shadow-none cursor-pointer">
+          Hover over this card
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-sm text-[#525252]">Input idle / focus</p>
+      <input type="text" placeholder="idle border #737373"
+             class="bg-white border border-[#737373] rounded px-3 py-2 text-base font-medium w-64 transition-colors focus:outline-none focus:border-[#171717]"
+             onfocus="this.style.borderColor='#171717'" onblur="this.style.borderColor='#737373'">
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. COLOR PALETTE ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">10. Full Color Palette</h2>
+
+  <!-- Neutrals -->
+  <h3 class="text-xl font-medium mb-4">Neutrals</h3>
+  <div class="flex flex-wrap gap-2 mb-8">
+    <div class="w-20 h-20 rounded border border-[#e5e5e5]" style="background:#ffffff"><span class="block text-xs p-1 text-[#525252]">#fff</span></div>
+    <div class="w-20 h-20 rounded" style="background:#000000"><span class="block text-xs p-1 text-white">#000</span></div>
+    <div class="w-20 h-20 rounded border border-[#e5e5e5]" style="background:#fafafa"><span class="block text-xs p-1 text-[#525252]">#fafafa</span></div>
+    <div class="w-20 h-20 rounded border border-[#e5e5e5]" style="background:#f5f5f5"><span class="block text-xs p-1 text-[#525252]">#f5f5f5</span></div>
+    <div class="w-20 h-20 rounded" style="background:#e5e5e5"><span class="block text-xs p-1 text-[#525252]">#e5e5e5</span></div>
+    <div class="w-20 h-20 rounded" style="background:#d4d4d4"><span class="block text-xs p-1 text-[#525252]">#d4d4d4</span></div>
+    <div class="w-20 h-20 rounded" style="background:#a3a3a3"><span class="block text-xs p-1 text-white">#a3a3a3</span></div>
+    <div class="w-20 h-20 rounded" style="background:#737373"><span class="block text-xs p-1 text-white">#737373</span></div>
+    <div class="w-20 h-20 rounded" style="background:#525252"><span class="block text-xs p-1 text-white">#525252</span></div>
+    <div class="w-20 h-20 rounded" style="background:#404040"><span class="block text-xs p-1 text-white">#404040</span></div>
+    <div class="w-20 h-20 rounded" style="background:#262626"><span class="block text-xs p-1 text-white">#262626</span></div>
+    <div class="w-20 h-20 rounded" style="background:#171717"><span class="block text-xs p-1 text-[#737373]">border</span></div>
+    <div class="w-20 h-20 rounded" style="background:#0a0a0d"><span class="block text-xs p-1 text-[#737373]">shadow</span></div>
+  </div>
+
+  <!-- Primary (Lime) -->
+  <h3 class="text-xl font-medium mb-4">Primary — Lime</h3>
+  <div class="flex flex-wrap gap-2 mb-8">
+    <div class="w-20 h-20 rounded border border-[#e5e5e5]" style="background:#f7fee8"><span class="block text-xs p-1 text-[#525252]">#f7fee8</span></div>
+    <div class="w-20 h-20 rounded" style="background:#d9f99e"><span class="block text-xs p-1 text-[#525252]">#d9f99e</span></div>
+    <div class="w-20 h-20 rounded" style="background:#bef265"><span class="block text-xs p-1 text-[#525252]">#bef265</span></div>
+    <div class="w-20 h-20 rounded border-2 border-black" style="background:#a3e635"><span class="block text-xs p-1 font-bold">#a3e635</span></div>
+    <div class="w-20 h-20 rounded" style="background:#84cc17"><span class="block text-xs p-1 text-[#525252]">#84cc17</span></div>
+    <div class="w-20 h-20 rounded" style="background:#65a30e"><span class="block text-xs p-1 text-white">#65a30e</span></div>
+    <div class="w-20 h-20 rounded" style="background:#4e7c10"><span class="block text-xs p-1 text-white">#4e7c10</span></div>
+    <div class="w-20 h-20 rounded" style="background:#406213"><span class="block text-xs p-1 text-white">#406213</span></div>
+    <div class="w-20 h-20 rounded" style="background:#375415"><span class="block text-xs p-1 text-white">#375415</span></div>
+  </div>
+
+  <!-- Accents -->
+  <h3 class="text-xl font-medium mb-4">Accent Colors</h3>
+  <div class="grid grid-cols-6 gap-3">
+    <div>
+      <p class="text-xs mb-1 text-[#525252]">Pink</p>
+      <div class="h-12 rounded" style="background:#fae9ff"></div>
+      <div class="h-12 rounded mt-1" style="background:#f5d1fe"></div>
+      <div class="h-12 rounded mt-1" style="background:#e87af9"></div>
+    </div>
+    <div>
+      <p class="text-xs mb-1 text-[#525252]">Purple</p>
+      <div class="h-12 rounded" style="background:#edeafe"></div>
+      <div class="h-12 rounded mt-1" style="background:#ded7fe"></div>
+      <div class="h-12 rounded mt-1" style="background:#8c5df6"></div>
+    </div>
+    <div>
+      <p class="text-xs mb-1 text-[#525252]">Blue</p>
+      <div class="h-12 rounded" style="background:#dceafe"></div>
+      <div class="h-12 rounded mt-1" style="background:#94c5fd"></div>
+      <div class="h-12 rounded mt-1" style="background:#3c82f6"></div>
+    </div>
+    <div>
+      <p class="text-xs mb-1 text-[#525252]">Orange</p>
+      <div class="h-12 rounded" style="background:#ffedd6"></div>
+      <div class="h-12 rounded mt-1" style="background:#fdba75"></div>
+      <div class="h-12 rounded mt-1" style="background:#fb923d"></div>
+    </div>
+    <div>
+      <p class="text-xs mb-1 text-[#525252]">Yellow</p>
+      <div class="h-12 rounded" style="background:#fef3c8"></div>
+      <div class="h-12 rounded mt-1" style="background:#fde68b"></div>
+      <div class="h-12 rounded mt-1" style="background:#fbbf25"></div>
+    </div>
+    <div>
+      <p class="text-xs mb-1 text-[#525252]">Red</p>
+      <div class="h-12 rounded" style="background:#ffe5e6"></div>
+      <div class="h-12 rounded mt-1" style="background:#f4405e"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. BORDER & SHADOW SCALE ============ -->
+<section>
+  <h2 class="text-4xl font-medium tracking-[-0.02em] mb-10">11. Border & Shadow Scale</h2>
+
+  <div class="grid grid-cols-4 gap-6">
+    <div class="text-center space-y-2">
+      <div class="bg-white border border-[#171717] rounded rounded-[100px] px-4 py-2 shadow-hard-sm text-base">
+        pill / status badge
+      </div>
+      <p class="text-xs text-[#525252]">1px border · 1px shadow</p>
+    </div>
+    <div class="text-center space-y-2">
+      <div class="bg-white border border-[#171717] rounded px-4 py-2 shadow-hard text-base">
+        button / navbar pill
+      </div>
+      <p class="text-xs text-[#525252]">1px border · 2px shadow</p>
+    </div>
+    <div class="text-center space-y-2">
+      <div class="bg-white border-2 border-[#0a0a0d] rounded-[20px] px-4 py-2 shadow-hard-lg text-base">
+        results card
+      </div>
+      <p class="text-xs text-[#525252]">2px border · 4px shadow</p>
+    </div>
+    <div class="text-center space-y-2">
+      <div class="bg-white border border-[#171717] rounded-[10px] px-4 py-2 shadow-hard-lg text-base">
+        painpoint card
+      </div>
+      <p class="text-xs text-[#525252]">1px border · 4px shadow</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="bg-footer-gradient py-10" style="border-radius: 0 0 12px 12px;">
+  <p class="text-center text-sm opacity-60">Design system extracted from brainfishai.com — component palette</p>
+</footer>
+
+</body>
+</html>

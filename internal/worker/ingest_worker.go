@@ -116,6 +116,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		log.Error("failed to update document status", "error", err)
 		return
 	}
+	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 
 	stepID, start := w.startStep(ctx, doc.ID, "download")
 	reader, err := w.BlobStorage.Download(ctx, doc.FilePath)
@@ -185,6 +186,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		log.Error("failed to mark document completed", "error", err)
 		return
 	}
+	w.notifyDocumentStatus(doc, string(domain.StatusCompleted))
 	w.processed.Add(1)
 	log.Info("document processed successfully")
 }
@@ -234,7 +236,9 @@ func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Docu
 
 	if _, updateErr := w.DocRepo.UpdateDocument(ctx, doc); updateErr != nil {
 		log.Error("failed to update document error state", "original_error", err, "update_error", updateErr)
+		return
 	}
+	w.notifyDocumentStatus(doc, string(doc.Status))
 }
 
 func (w *IngestWorker) Stop() {

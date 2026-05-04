@@ -24,6 +24,7 @@ type ChatUsecase struct {
 	VectorStore    ports.VectorStore
 	Embedder       ports.Embedder
 	LLM            ports.LLMProvider
+	SSEManager     ports.SSEManager
 	Logger         ports.Logger
 	HistoryLimit   int
 	CollectionName string
@@ -36,6 +37,7 @@ func NewChatUsecase(
 	vectorStore ports.VectorStore,
 	embedder ports.Embedder,
 	llm ports.LLMProvider,
+	sseManager ports.SSEManager,
 	logger ports.Logger,
 	historyLimit int,
 	collectionName string,
@@ -47,6 +49,7 @@ func NewChatUsecase(
 		VectorStore:    vectorStore,
 		Embedder:       embedder,
 		LLM:            llm,
+		SSEManager:     sseManager,
 		Logger:         logger,
 		HistoryLimit:   historyLimit,
 		CollectionName: collectionName,
@@ -190,7 +193,7 @@ func (uc *ChatUsecase) SendMessage(
 	}
 
 	newSessionID = int(session.ID)
-
+	uc.notifyChatDone(userID, newSessionID, answer, sources)
 	return answer, sources, newSessionID, nil
 }
 
@@ -274,7 +277,7 @@ func (uc *ChatUsecase) SendStream(
 
 	answer, err = uc.LLM.Stream(ctx, prompt, onToken)
 	if err != nil {
-		return "", nil, int(session.ID), fmt.Errorf("generating stream answer: %w", err)
+		return "", nil, int(session.ID), fmt.Errorf("streaming answer: %w", err)
 	}
 
 	sourcesJSON, err := json.Marshal(sources)
@@ -314,7 +317,22 @@ func (uc *ChatUsecase) SendStream(
 	}
 
 	newSessionID = int(session.ID)
+	uc.notifyChatDone(userID, newSessionID, answer, sources)
 	return answer, sources, newSessionID, nil
+}
+
+func (uc *ChatUsecase) notifyChatDone(userID, sessionID int, answer string, sources []Source) {
+	if uc.SSEManager == nil {
+		return
+	}
+	uc.SSEManager.SendToUser(userID, ports.SSEEvent{
+		Type: "chat_done",
+		Data: map[string]any{
+			"answer":     answer,
+			"sources":    sources,
+			"session_id": sessionID,
+		},
+	})
 }
 
 func (uc *ChatUsecase) ListSessions(ctx context.Context, userID int) ([]*domain.ChatSession, error) {
@@ -338,17 +356,9 @@ func (uc *ChatUsecase) GetSessionHistory(ctx context.Context, sessionID int, use
 }
 
 func (uc *ChatUsecase) DeleteSession(ctx context.Context, sessionID, userID int) error {
-	err := uc.ChatRepo.DeleteSession(ctx, sessionID, userID)
-	if err != nil {
-		return fmt.Errorf("deleting session: %w", err)
-	}
-	return nil
+	return uc.ChatRepo.DeleteSession(ctx, sessionID, userID)
 }
 
-func (uc *ChatUsecase) UpdateSessionTitle(ctx context.Context, sessionID int, userID int, title string) error {
-	err := uc.ChatRepo.UpdateSessionTitle(ctx, sessionID, userID, title)
-	if err != nil {
-		return fmt.Errorf("updating session title: %w", err)
-	}
-	return nil
+func (uc *ChatUsecase) UpdateSessionTitle(ctx context.Context, sessionID, userID int, title string) error {
+	return uc.ChatRepo.UpdateSessionTitle(ctx, sessionID, userID, title)
 }
