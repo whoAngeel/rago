@@ -45,18 +45,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	err := h.usecase.Register(ctx, req.Name, req.Email, req.Password, req.Role)
+	result, err := h.usecase.Register(ctx, req.Name, req.Email, req.Password, req.Role)
 	if err != nil {
 		h.logger.Error("Error register user", "error", err)
-		rest.RespondError(c, 400, "Error register user", err.Error())
+		rest.RespondError(c, http.StatusBadRequest, "Error register user", err.Error())
 		return
 	}
 
-	// h.logger.Debug("Result", "result", result)
-	c.JSON(http.StatusAccepted, RegisterResponse{
-		Message: "register successfully",
-	})
-
+	c.JSON(http.StatusCreated, result)
 }
 
 type LoginRequest struct {
@@ -81,8 +77,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		rest.RespondError(c, http.StatusBadRequest, "Error login", err.Error())
 		return
 	}
-
-	h.logger.Debug("LOGIN RESULT", "access", loginResult.AccessToken, "refresh", loginResult.RefreshToken)
 
 	c.JSON(http.StatusOK, loginResult)
 }
