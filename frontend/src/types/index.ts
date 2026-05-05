@@ -42,3 +42,5 @@ interface ChatMessage {
     sources: string
     created_at: string
 }
+
+export type { User, Document, ChatSession, Source, ChatMessage }
