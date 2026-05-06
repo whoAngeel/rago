@@ -91,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
                         refreshToken: null,
                         isAuthenticated: false,
                         isRefreshing: false,
+                        isLoading: false
 
                     })
                 }
