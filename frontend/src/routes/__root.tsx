@@ -2,6 +2,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
+import { ToastContainer } from "../components/ui/ToastContainer";
 
 export const Route = createRootRoute({
     component: RootComponent,
@@ -17,20 +18,21 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-    const { refresh, isLoading, refreshToken, accessToken } = useAuthStore()
+    const { refresh, isLoading, isRefreshing, refreshToken, accessToken } = useAuthStore()
     useEffect(() => {
         if (refreshToken && !accessToken) {
             refresh()
         }
     }, [])
 
-    if (isLoading) return (
+    if (isRefreshing) return (
         <div className="flex items-center justify-center min-h-screen">
-            <p className="text-body text-neutral-600">Cargando...</p>
+            <p className="text-body text-neutral-600">Refrescando token...</p>
         </div>
     )
     return (
         <>
+            <ToastContainer />
             <Outlet />
             <TanStackRouterDevtools position="bottom-left" />
         </>
