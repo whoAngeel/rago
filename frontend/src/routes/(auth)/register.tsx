@@ -23,6 +23,7 @@ function RouteComponent() {
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange"
   })
 
   const onSubmit = async (data: RegisterForm) => {

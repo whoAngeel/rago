@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useAuthStore, useIsAuthenticated } from '../../store/authStore'
 import { useForm } from 'react-hook-form'
 import { loginSchema, type LoginForm } from '../../lib/validations'
@@ -8,9 +8,10 @@ import { useEffect } from 'react'
 
 export const Route = createFileRoute('/(auth)/login')({
     validateSearch: (search: Record<string, unknown>) => {
-        return {
-            redirect: search.redirect as string | undefined,
+        if (search.redirect && typeof search.redirect === "string") {
+            return { redirect: search.redirect }
         }
+        return { redirect: "/dashboard" }
     },
     component: RouteComponent,
 })
@@ -23,7 +24,8 @@ function RouteComponent() {
     const search = useSearch({ from: "/(auth)/login" })
 
     const form = useForm<LoginForm>({
-        resolver: zodResolver(loginSchema)
+        resolver: zodResolver(loginSchema),
+        mode: "onChange",
     })
 
     const onSubmit = async (data: LoginForm) => {
@@ -55,6 +57,10 @@ function RouteComponent() {
                     onSubmit={onSubmit}
                     isLoading={isLoading}
                 />
+                <p className='text-base leading-snug font-medium text-neutral-600 text-center'>
+                    ¿No tienes una cuenta?{" "}
+                    <Link className="font-medium underline underline-offset-4 hover:text-black transition-colors" to="/register" search={{ redirect: search.redirect }}>Registrate</Link>
+                </p>
             </div>
         </div>
     )
