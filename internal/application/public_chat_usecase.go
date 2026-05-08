@@ -15,6 +15,7 @@ var ErrQuotaExceeded = errors.New("quota exceeded")
 var ErrGroupInactive = errors.New("group not found or inactive")
 
 const publicSearchLimit = 5
+const publicScoreThreshold float32 = 0.40
 
 type PublicDocument struct {
 	ID       int    `json:"id"`
@@ -140,6 +141,26 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		uc.Logger.Debug("public: result chunk", "idx", i, "score", r.Score, "content_len", len(r.Document.PageContent), "preview", preview)
 	}
 
+	filtered := searchResults[:0]
+	for _, r := range searchResults {
+		if r.Score >= publicScoreThreshold {
+			filtered = append(filtered, r)
+		}
+	}
+	uc.Logger.Info("public: after threshold filter", "threshold", publicScoreThreshold, "before", len(searchResults), "after", len(filtered))
+
+	lowConfidence := false
+	if len(filtered) == 0 && len(searchResults) > 0 {
+		top := 2
+		if len(searchResults) < top {
+			top = len(searchResults)
+		}
+		filtered = searchResults[:top]
+		lowConfidence = true
+		uc.Logger.Warn("public: low confidence fallback", "using_top", top, "best_score", searchResults[0].Score)
+	}
+	searchResults = filtered
+
 	systemPrompt, err := uc.ConfigRepo.Get(ctx, "system_prompt")
 	if err != nil {
 		systemPrompt = fallbackSystemPrompt
@@ -161,6 +182,9 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		uc.Logger.Warn("public: no search results — LLM will respond with fallback", "slug", slug, "document_ids", group.DocumentIDs)
 		sb.WriteString("No se encontró información relevante en los documentos.\n\n")
 	} else {
+		if lowConfidence {
+			sb.WriteString("NOTA: El contexto siguiente es de baja relevancia para la pregunta. Si no es suficiente para responder con precisión, pedile al usuario que reformule su pregunta con más detalle.\n\n")
+		}
 		sb.WriteString("CONTEXTO:\n")
 		sb.WriteString(contextStr)
 		sb.WriteString("\n")
