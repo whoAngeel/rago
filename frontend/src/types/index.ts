@@ -3,6 +3,8 @@ interface User {
     name: string | undefined,
     email: string
     role: 'editor' | 'admin' | 'viewer'
+    max_documents: number
+    document_count: number
 }
 
 interface Document {
