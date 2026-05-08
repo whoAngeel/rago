@@ -43,4 +43,14 @@ interface ChatMessage {
     created_at: string
 }
 
-export type { User, Document, ChatSession, Source, ChatMessage }
+interface ProcessingStep {
+    id: number
+    document_id: number
+    step_name: string
+    status: 'started' | 'completed' | 'failed'
+    error_message: string | null
+    duration_ms: number | null
+    created_at: string
+}
+
+export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep }

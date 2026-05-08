@@ -6,12 +6,15 @@ import { type Document as DocumentType } from '../types'
 import { DocumentTable } from '../components/documents/DocumentTable'
 import { useEffect, useState } from 'react'
 import { useToastStore } from '../store/toastStore'
+import { useSSE } from '../hooks/useSSE'
 
 export const Route = createFileRoute('/_authenticated/documents')({
   component: RouteComponent,
 })
 
 function RouteComponent() {
+
+  useSSE();
   const addToast = useToastStore((s) => s.add)
   const queryClient = useQueryClient()
 
@@ -21,7 +24,13 @@ function RouteComponent() {
       const { data } = await api.get('/documents')
       console.log('Fetch documents:', data)
       return data.items
-    }
+    },
+    refetchInterval: (query) => {
+      const docs = query.state.data
+      if (!docs) return false
+      const hasActive = docs.some(d => d.status === 'uploading' || d.status === 'pending' || d.status === 'processing')
+      return hasActive ? 3000 : false
+    },
   })
 
   useEffect(() => {

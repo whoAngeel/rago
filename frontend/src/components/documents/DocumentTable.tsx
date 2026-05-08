@@ -1,8 +1,12 @@
+import { useState, useRef } from "react"
+import { createPortal } from "react-dom"
+import { useQuery } from "@tanstack/react-query"
 import { formatSize } from "../../lib/formatter"
-import type { Document } from "../../types"
-import { Download, FileText, Trash2, FileSpreadsheet, FileJson, AlertCircle } from "lucide-react"
+import type { Document, ProcessingStep } from "../../types"
+import { Download, FileText, Trash2, FileSpreadsheet, FileJson, AlertCircle, Check, X, RefreshCw, Circle } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
+import api from "../../lib/api"
 
 interface DocumentsProps {
     documents: Document[]
@@ -14,7 +18,7 @@ interface DocumentsProps {
 const statusConfig = {
     uploading: { label: "Subiendo", bg: "bg-blue-pastel", dot: "bg-blue-600" },
     pending: { label: "Pendiente", bg: "bg-neutral-100", dot: "bg-neutral-500" },
-    processing: { label: "Procesando", bg: "bg-accent-blue/30", dot: "bg-accent-blue animate-pulse" },
+    processing: { label: "Procesando", bg: "bg-accent-blue/20 animate-pulse", dot: "bg-blue-700" },
     completed: { label: "Completado", bg: "bg-primary-400/30", dot: "bg-primary-500" },
     failed: { label: "Fallido", bg: "bg-accent-red/30", dot: "bg-accent-red-deep" },
 }
@@ -46,54 +50,117 @@ const getFileTypeLabel = (contentType: string) => {
     return "FILE"
 }
 
-const renderProgressDots = (status: string) => {
-    const steps = ['download', 'parse', 'chunk', 'embed', 'upsert']
-    let completedCount = 0
-    let activeIndex = -1
-    let isFailed = false
+const STEP_NAMES = ['download', 'parse', 'chunk', 'embed', 'upsert'] as const
 
-    if (status === "completed") {
-        completedCount = 5
-    } else if (status === "processing") {
-        completedCount = 2 // Simulamos que va por el paso 3
-        activeIndex = 2 // chunk
-    } else if (status === "uploading") {
-        completedCount = 0
-        activeIndex = 0 // download
-    } else if (status === "pending") {
-        completedCount = 0
-    } else if (status === "failed") {
-        completedCount = 1 // Simulamos que falló en el parse
-        activeIndex = 1
-        isFailed = true
+const formatDuration = (ms: number | null | undefined): string => {
+    if (ms == null) return '—'
+    if (ms < 1000) return `${ms}ms`
+    return `${(ms / 1000).toFixed(1)}s`
+}
+
+function ProgressDots({ doc }: { doc: Document }) {
+    const [isHovered, setIsHovered] = useState(false)
+    const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 })
+    const ref = useRef<HTMLDivElement>(null)
+
+    const canHaveSteps = doc.status === 'completed' || doc.status === 'failed'
+
+    const { data: steps } = useQuery<ProcessingStep[]>({
+        queryKey: ["documents", doc.id, "steps"],
+        queryFn: async () => {
+            const { data } = await api.get(`/documents/${doc.id}/steps`)
+            return data
+        },
+        enabled: isHovered && canHaveSteps,
+        staleTime: Infinity,
+    })
+
+    const handleMouseEnter = () => {
+        if (ref.current && canHaveSteps) {
+            const rect = ref.current.getBoundingClientRect()
+            setTooltipPos({ top: rect.bottom + 6, left: rect.left })
+        }
+        setIsHovered(true)
     }
 
+    const stepMap = new Map(steps?.map(s => [s.step_name, s]) ?? [])
+
+    const getDotClass = (name: string, i: number): string => {
+        const base = "w-3 h-3 rounded-full border border-neutral-950 "
+        if (steps !== undefined) {
+            const step = stepMap.get(name)
+            if (step?.status === 'completed') return base + "bg-primary-500"
+            if (step?.status === 'failed') return base + "bg-accent-red-deep"
+            if (step?.status === 'started') return base + "bg-blue-700 animate-pulse"
+            if (doc.status === 'completed') return base + "bg-primary-500"
+            return base + "bg-neutral-100"
+        }
+        // Fallback simulated state while steps not loaded
+        if (doc.status === 'completed') return base + "bg-primary-500"
+        if (doc.status === 'processing') {
+            if (i < 2) return base + "bg-primary-500"
+            if (i === 2) return base + "bg-blue-700 animate-pulse"
+        }
+        if (doc.status === 'failed') {
+            if (i < 1) return base + "bg-primary-500"
+            if (i === 1) return base + "bg-accent-red-deep"
+        }
+        return base + "bg-neutral-100"
+    }
 
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-                {steps.map((step, i) => {
-                    let className = "w-3 h-3 rounded-full border border-neutral-950 "
-                    if (i < completedCount) {
-                        className += "bg-primary-500"
-                    } else if (i === activeIndex) {
-                        if (isFailed) {
-                            className += "bg-accent-red-deep"
-                        } else {
-                            className += "bg-accent-blue animate-pulse"
-                        }
-                    } else {
-                        className += "bg-neutral-100"
-                    }
-                    return <div key={step} className={className} title={step} />
-                })}
+        <>
+            <div
+                ref={ref}
+                className={`flex items-center gap-1.5 w-fit ${canHaveSteps ? 'cursor-help' : 'cursor-default'}`}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={() => setIsHovered(false)}
+            >
+                {STEP_NAMES.map((name, i) => (
+                    <div key={name} className={getDotClass(name, i)} />
+                ))}
             </div>
-            {activeIndex !== -1 && (
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${isFailed ? "text-accent-red-deep" : "text-neutral-500"}`}>
-                    {isFailed ? `Fallo en: ${steps[activeIndex]}` : steps[activeIndex]}
-                </span>
+
+            {isHovered && canHaveSteps && createPortal(
+                <div
+                    style={{ top: tooltipPos.top, left: tooltipPos.left }}
+                    className="fixed z-50 pointer-events-none bg-white border-2 border-neutral-950 rounded shadow-hard-sm w-44"
+                >
+                    <div className="px-2 py-1 bg-neutral-100 border-b-2 border-neutral-950">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-950">Pipeline</span>
+                    </div>
+                    {steps !== undefined ? (
+                        <div className="divide-y divide-neutral-200">
+                            {STEP_NAMES.map(name => {
+                                const step = stepMap.get(name)
+                                const isCompleted = step?.status === 'completed' || (doc.status === 'completed' && !step)
+                                const isFailed = step?.status === 'failed'
+                                const isActive = step?.status === 'started'
+                                return (
+                                    <div key={name} className="px-2 py-1 flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`w-4 h-4 flex items-center justify-center ${isCompleted ? 'text-primary-500' : isFailed ? 'text-accent-red-deep' : isActive ? 'text-blue-600' : 'text-neutral-400'}`}>
+                                                {isCompleted ? <Check size={12} strokeWidth={3} /> : isFailed ? <X size={12} strokeWidth={3} /> : isActive ? <RefreshCw size={10} className="animate-spin" /> : <Circle size={4} fill="currentColor" />}
+                                            </span>
+                                            <span className="text-xs font-bold capitalize text-neutral-800">{name}</span>
+                                        </div>
+                                        <span className="text-[10px] font-mono font-bold text-neutral-500">
+                                            {formatDuration(step?.duration_ms)}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div className="px-2 py-2 text-[10px] font-bold text-neutral-500 flex items-center gap-1">
+                            <RefreshCw size={10} className="animate-spin" />
+                            Cargando...
+                        </div>
+                    )}
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     )
 }
 
@@ -159,14 +226,15 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
 
                                 {/* Progreso */}
                                 <td className="px-6 py-5">
-                                    {document.status === "failed" ? (
-                                        <div className="flex items-center gap-1 text-accent-red-deep font-bold text-xs">
-                                            <AlertCircle size={14} />
-                                            <span className="break-all">{document.error_message || "Error de procesamiento"}</span>
-                                        </div>
-                                    ) : (
-                                        renderProgressDots(document.status)
-                                    )}
+                                    <div className="flex flex-col gap-1">
+                                        <ProgressDots doc={document} />
+                                        {document.status === "failed" && (
+                                            <div className="flex items-center gap-1 text-accent-red-deep font-bold text-xs mt-1">
+                                                <AlertCircle size={12} />
+                                                <span className="break-all">{document.error_message || "Error de procesamiento"}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
 
                                 {/* Subido */}
@@ -177,16 +245,16 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                                 {/* Acciones */}
                                 <td className="px-6 py-5">
                                     <div className="flex items-center gap-2 justify-center">
-                                        <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2 
-                                        border-transparent hover:border-neutral-950 hover:bg-white 
+                                        <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2
+                                        border-transparent hover:border-neutral-950 hover:bg-white
                                         hover:shadow-hard-sm rounded transition-all cursor-pointer"
                                             title="Descargar"
                                             onClick={() => onDownload(document.id)}
                                         >
                                             <Download size={16} />
                                         </button>
-                                        <button className="p-2 text-neutral-600 hover:text-accent-red-deep 
-                                        border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10 
+                                        <button className="p-2 text-neutral-600 hover:text-accent-red-deep
+                                        border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10
                                         hover:shadow-hard-sm rounded transition-all cursor-pointer" title="Eliminar"
                                             onClick={() => onDelete(document.id)}
                                         >
