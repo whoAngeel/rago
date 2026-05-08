@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -102,4 +103,21 @@ func (r *DocumentRepository) FindStepsByDocumentID(ctx context.Context, docID in
 	var steps []*domain.ProcessingStep
 	err := r.db.WithContext(ctx).Where("document_id = ?", docID).Order("created_at ASC").Find(&steps).Error
 	return steps, err
+}
+
+func (r *DocumentRepository) FindByChecksum(ctx context.Context, userID int, checksum string) (*domain.Document, error) {
+	var doc domain.Document
+	err := r.db.WithContext(ctx).Where("user_id = ? AND checksum = ?", userID, checksum).First(&doc).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &doc, err
+}
+
+func (r *DocumentRepository) CountDocumentsByUserID(ctx context.Context, userID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count, err
 }

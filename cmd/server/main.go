@@ -174,6 +174,7 @@ func main() {
 		DocumentHandler: handlers.NewDocumentHandler(
 			application.NewIngestDocumentUsecase(
 				docRepo,
+				userRepo,
 				minio,
 				ingestUC,
 			),

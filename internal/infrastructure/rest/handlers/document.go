@@ -114,7 +114,20 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 	defer src.Close()
 	doc, err := h.usecase.Upload(ctx, userId, file.Filename, src, file.Size, file.Header.Get("Content-Type"))
 	if err != nil {
-		rest.RespondError(c, http.StatusInternalServerError, "Upload failed", err.Error())
+		switch {
+		case errors.Is(err, application.ErrDuplicateDocument):
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "duplicate_document",
+				"message": "Ya tenés este archivo subido",
+			})
+		case errors.Is(err, application.ErrDocumentLimitReached):
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":   "quota_exceeded",
+				"message": "Alcanzaste el límite de documentos",
+			})
+		default:
+			rest.RespondError(c, http.StatusInternalServerError, "Upload failed", err.Error())
+		}
 		return
 	}
 

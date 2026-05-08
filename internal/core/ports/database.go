@@ -29,6 +29,8 @@ type DocumentRepository interface {
 	CreateProcessingStep(ctx context.Context, step *domain.ProcessingStep) error
 	UpdateProcessingStep(ctx context.Context, id, duration int, status, errMsg string) error
 	FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error)
+	FindByChecksum(ctx context.Context, userID int, checksum string) (*domain.Document, error)
+	CountDocumentsByUserID(ctx context.Context, userID int) (int64, error)
 }
 
 type ChatRepository interface {
@@ -46,4 +48,16 @@ type ChatRepository interface {
 type SystemConfigRepository interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key, value string) error
+}
+
+type DocumentGroupRepository interface {
+	Create(ctx context.Context, group *domain.DocumentGroup) error
+	FindByID(ctx context.Context, id, userID int) (*domain.DocumentGroup, error)
+	FindByUserID(ctx context.Context, userID int) ([]*domain.DocumentGroup, error)
+	Update(ctx context.Context, group *domain.DocumentGroup) error
+	Delete(ctx context.Context, id, userID int) error
+	AddDocuments(ctx context.Context, groupID int, documentIDs []int) error
+	RemoveDocument(ctx context.Context, groupID, documentID int) error
+	FindDocumentIDs(ctx context.Context, groupID int) ([]int, error)
+	SlugExists(ctx context.Context, slug string) (bool, error)
 }
