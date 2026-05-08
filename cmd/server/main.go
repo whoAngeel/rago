@@ -67,6 +67,8 @@ func main() {
 		&domain.SystemConfig{},
 		&domain.ChatMessage{},
 		&domain.ChatSession{},
+		&domain.DocumentGroup{},
+		&domain.DocumentGroupItem{},
 	}
 	for _, model := range models {
 		if err := gormDB.AutoMigrate(model); err != nil {
@@ -124,6 +126,7 @@ func main() {
 	userRepo := postgres.NewUserRepository(gormDB)
 	sessionRepo := postgres.NewSessionRepository(gormDB)
 	docRepo := postgres.NewDocumentRepository(gormDB)
+	groupRepo := postgres.NewDocumentGroupRepository(gormDB)
 	chatRepo := postgres.NewChatRepository(gormDB)
 	systemRepo := postgres.NewSystemConfigRepository(gormDB)
 
@@ -180,6 +183,9 @@ func main() {
 			),
 			log,
 			*cfg,
+		),
+		DocumentGroupHandler: handlers.NewDocumentGroupHandler(
+			application.NewDocumentGroupUsecase(groupRepo, docRepo),
 		),
 		ChatHandler: handlers.NewChatHandler(
 			chatUC,
