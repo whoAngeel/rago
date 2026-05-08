@@ -53,6 +53,7 @@ type SystemConfigRepository interface {
 type DocumentGroupRepository interface {
 	Create(ctx context.Context, group *domain.DocumentGroup) error
 	FindByID(ctx context.Context, id, userID int) (*domain.DocumentGroup, error)
+	FindBySlug(ctx context.Context, slug string) (*domain.DocumentGroup, error)
 	FindByUserID(ctx context.Context, userID int) ([]*domain.DocumentGroup, error)
 	Update(ctx context.Context, group *domain.DocumentGroup) error
 	Delete(ctx context.Context, id, userID int) error
@@ -60,4 +61,6 @@ type DocumentGroupRepository interface {
 	RemoveDocument(ctx context.Context, groupID, documentID int) error
 	FindDocumentIDs(ctx context.Context, groupID int) ([]int, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	IncrementAttempts(ctx context.Context, groupID int) error
+	IncrementQuotaUsed(ctx context.Context, groupID int) error
 }

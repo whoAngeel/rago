@@ -15,6 +15,7 @@ type Handlers struct {
 	AuthHandler          *AuthHandler
 	DocumentHandler      *DocumentHandler
 	DocumentGroupHandler *DocumentGroupHandler
+	PublicGroupHandler   *PublicGroupHandler
 	ChatHandler          *ChatHandler
 	SSEHandler           *SSEHandler
 }
@@ -41,49 +42,58 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 
 func setupRoutes(router *gin.Engine, h *Handlers) {
 	v1 := router.Group("/api/v1")
+
+	// Auth (público)
+	auth := v1.Group("/auth")
 	{
-		authGroup := v1.Group("/auth")
+		auth.POST("/register", h.AuthHandler.Register)
+		auth.POST("/login", h.AuthHandler.Login)
+		auth.POST("/refresh", h.AuthHandler.Refresh)
+		auth.POST("/logout", h.AuthHandler.Logout)
+	}
+
+	// Rutas públicas sin auth (chat compartido)
+	public := v1.Group("/public")
+	{
+		public.GET("/groups/:slug", h.PublicGroupHandler.GetGroupInfo)
+		public.POST("/groups/:slug/chat", h.PublicGroupHandler.Chat)
+		public.GET("/groups/:slug/documents/:doc_id/download", h.PublicGroupHandler.DownloadDocument)
+	}
+
+	// Rutas protegidas
+	protected := v1.Group("")
+	protected.Use(middleware.AuthMiddleware())
+	{
+		protected.POST("/ask", h.AskHandler.Ask)
+		protected.GET("/stream", h.SSEHandler.Stream)
+
+		documents := protected.Group("/documents")
 		{
-			authGroup.POST("/register", h.AuthHandler.Register)
-			authGroup.POST("/login", h.AuthHandler.Login)
-			authGroup.POST("/refresh", h.AuthHandler.Refresh)
-			authGroup.POST("/logout", h.AuthHandler.Logout)
+			documents.GET("/", h.DocumentHandler.List)
+			documents.POST("/", h.DocumentHandler.Upload)
+			documents.DELETE("/:id", h.DocumentHandler.Delete)
+			documents.GET("/:id/steps", h.DocumentHandler.Steps)
 		}
 
-		protected := v1.Group("")
-		protected.Use(middleware.AuthMiddleware())
+		groups := protected.Group("/groups")
 		{
-			protected.POST("/ask", h.AskHandler.Ask)
-			protected.GET("/stream", h.SSEHandler.Stream)
+			groups.POST("/", h.DocumentGroupHandler.Create)
+			groups.GET("/", h.DocumentGroupHandler.List)
+			groups.GET("/:id", h.DocumentGroupHandler.Get)
+			groups.PATCH("/:id", h.DocumentGroupHandler.Update)
+			groups.DELETE("/:id", h.DocumentGroupHandler.Delete)
+			groups.POST("/:id/documents", h.DocumentGroupHandler.AddDocuments)
+			groups.DELETE("/:id/documents/:doc_id", h.DocumentGroupHandler.RemoveDocument)
+		}
 
-			documents := protected.Group("/documents")
-			{
-				documents.GET("/", h.DocumentHandler.List)
-				documents.POST("/", h.DocumentHandler.Upload)
-				documents.DELETE("/:id", h.DocumentHandler.Delete)
-				documents.GET("/:id/steps", h.DocumentHandler.Steps)
-			}
-
-			groups := protected.Group("/groups")
-			{
-				groups.POST("/", h.DocumentGroupHandler.Create)
-				groups.GET("/", h.DocumentGroupHandler.List)
-				groups.GET("/:id", h.DocumentGroupHandler.Get)
-				groups.PATCH("/:id", h.DocumentGroupHandler.Update)
-				groups.DELETE("/:id", h.DocumentGroupHandler.Delete)
-				groups.POST("/:id/documents", h.DocumentGroupHandler.AddDocuments)
-				groups.DELETE("/:id/documents/:doc_id", h.DocumentGroupHandler.RemoveDocument)
-			}
-
-			chats := protected.Group("/chats")
-			{
-				chats.POST("/send", h.ChatHandler.SendMessage)
-				chats.POST("/send-stream", h.ChatHandler.SendStream)
-				chats.GET("/", h.ChatHandler.ListSessions)
-				chats.GET("/:id", h.ChatHandler.GetSession)
-				chats.PATCH("/:id", h.ChatHandler.UpdateSessionTittle)
-				chats.DELETE("/:id", h.ChatHandler.Delete)
-			}
+		chats := protected.Group("/chats")
+		{
+			chats.POST("/send", h.ChatHandler.SendMessage)
+			chats.POST("/send-stream", h.ChatHandler.SendStream)
+			chats.GET("/", h.ChatHandler.ListSessions)
+			chats.GET("/:id", h.ChatHandler.GetSession)
+			chats.PATCH("/:id", h.ChatHandler.UpdateSessionTittle)
+			chats.DELETE("/:id", h.ChatHandler.Delete)
 		}
 	}
 }

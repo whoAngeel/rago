@@ -121,3 +121,32 @@ func (r *DocumentGroupRepository) SlugExists(ctx context.Context, slug string) (
 		Where("slug = ?", slug).Count(&count).Error
 	return count > 0, err
 }
+
+func (r *DocumentGroupRepository) FindBySlug(ctx context.Context, slug string) (*domain.DocumentGroup, error) {
+	var group domain.DocumentGroup
+	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&group).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	ids, err := r.FindDocumentIDs(ctx, group.ID)
+	if err != nil {
+		return nil, err
+	}
+	group.DocumentIDs = ids
+	return &group, nil
+}
+
+func (r *DocumentGroupRepository) IncrementAttempts(ctx context.Context, groupID int) error {
+	return r.db.WithContext(ctx).Model(&domain.DocumentGroup{}).
+		Where("id = ?", groupID).
+		UpdateColumn("chat_attempts", gorm.Expr("chat_attempts + 1")).Error
+}
+
+func (r *DocumentGroupRepository) IncrementQuotaUsed(ctx context.Context, groupID int) error {
+	return r.db.WithContext(ctx).Model(&domain.DocumentGroup{}).
+		Where("id = ?", groupID).
+		UpdateColumn("chat_quota_used", gorm.Expr("chat_quota_used + 1")).Error
+}

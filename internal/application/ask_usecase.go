@@ -48,7 +48,7 @@ func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) 
 		au.Logger.Warn("Collection may already exist", "error", err)
 	}
 
-	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, defaultLimit)
+	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, nil, defaultLimit)
 	if err != nil {
 		return "", fmt.Errorf("error searching: %w", err)
 	}

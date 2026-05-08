@@ -112,7 +112,7 @@ func (uc *ChatUsecase) SendMessage(
 		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
 	}
 
-	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, uc.ContextLimit)
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.ContextLimit)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
@@ -245,7 +245,7 @@ func (uc *ChatUsecase) SendStream(
 		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
 	}
 
-	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, uc.ContextLimit)
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.ContextLimit)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
