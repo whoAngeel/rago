@@ -174,6 +174,9 @@ func main() {
 			),
 			log,
 		),
+		UserHandler: handlers.NewUserHandler(
+			application.NewUserUsecase(userRepo, docRepo),
+		),
 		DocumentHandler: handlers.NewDocumentHandler(
 			application.NewIngestDocumentUsecase(
 				docRepo,

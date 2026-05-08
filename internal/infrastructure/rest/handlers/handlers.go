@@ -13,6 +13,7 @@ import (
 type Handlers struct {
 	AskHandler           *AskHandler
 	AuthHandler          *AuthHandler
+	UserHandler          *UserHandler
 	DocumentHandler      *DocumentHandler
 	DocumentGroupHandler *DocumentGroupHandler
 	PublicGroupHandler   *PublicGroupHandler
@@ -64,6 +65,8 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 	protected := v1.Group("")
 	protected.Use(middleware.AuthMiddleware())
 	{
+		protected.GET("/users/me", h.UserHandler.Me)
+
 		protected.POST("/ask", h.AskHandler.Ask)
 		protected.GET("/stream", h.SSEHandler.Stream)
 
