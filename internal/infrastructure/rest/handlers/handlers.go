@@ -77,6 +77,7 @@ func setupRoutes(
 				documentGroup.GET("/", docHandler.List)
 				documentGroup.POST("/", docHandler.Upload)
 				documentGroup.DELETE("/:id", docHandler.Delete)
+				documentGroup.GET("/:id/steps", docHandler.Steps)
 			}
 
 			chatGroup := protected.Group("/chats")

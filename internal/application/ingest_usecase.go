@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/core/domain"
@@ -11,7 +10,8 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
 
-type StepFunc func(stepName string, start time.Time, err error)
+// StepFunc is called before a step starts; returns a done func to call when the step finishes.
+type StepFunc func(stepName string) (done func(err error))
 
 type IngestUsecase struct {
 	VectorStore ports.VectorStore
@@ -40,7 +40,7 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 	var allVectors [][]float32
 	var embedErr error
 
-	embedStart := time.Now()
+	doneEmbed := recordStep("embed")
 	for i, chunk := range chunks {
 		preview := chunk
 		if len(preview) > 100 {
@@ -58,7 +58,7 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 			Metadata:    buildMetadata(doc, metadata),
 		})
 	}
-	recordStep("embed", embedStart, embedErr)
+	doneEmbed(embedErr)
 
 	if len(allDocs) == 0 {
 		return fmt.Errorf("no chunks embedded")
@@ -68,9 +68,9 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 		iu.Logger.Warn("collection may already exist", "error", err)
 	}
 
-	upsertStart := time.Now()
+	doneUpsert := recordStep("upsert")
 	err := iu.VectorStore.UpsertDocuments(ctx, iu.config.QdrantCollection, allDocs, allVectors)
-	recordStep("upsert", upsertStart, err)
+	doneUpsert(err)
 	if err != nil {
 		return fmt.Errorf("error upserting: %w", err)
 	}

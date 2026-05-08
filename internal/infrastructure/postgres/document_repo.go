@@ -24,10 +24,24 @@ func (r *DocumentRepository) CreateDocument(ctx context.Context, doc *domain.Doc
 	return doc, err
 }
 
-func (r *DocumentRepository) FindDocumentByUserID(ctx context.Context, userID int) ([]*domain.Document, error) {
+func (r *DocumentRepository) FindDocumentByUserID(ctx context.Context, userID int, page, limit int) ([]*domain.Document, int64, error) {
 	var docs []*domain.Document
-	err := r.db.WithContext(ctx).Where("user_id=?", userID).Order("created_at desc").Find(&docs).Error
-	return docs, err
+	var total int64
+
+	offset := (page - 1) * limit
+
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).Where("user_id = ?", userID).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at desc").
+		Limit(limit).Offset(offset).
+		Find(&docs).Error
+
+	return docs, total, err
 }
 
 func (r *DocumentRepository) UpdateDocumentStatus(ctx context.Context, id int, status domain.DocumentStatus) error {
@@ -82,4 +96,10 @@ func (r *DocumentRepository) UpdateProcessingStep(ctx context.Context, id, durat
 		"error_message": errMsg,
 		"duration_ms":   duration,
 	}).Error
+}
+
+func (r *DocumentRepository) FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error) {
+	var steps []*domain.ProcessingStep
+	err := r.db.WithContext(ctx).Where("document_id = ?", docID).Order("created_at ASC").Find(&steps).Error
+	return steps, err
 }

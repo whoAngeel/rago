@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -32,6 +33,26 @@ func NewDocumentHandler(uc *application.IngestDocumentUsecase, log ports.Logger,
 
 type ListResponse struct {
 	Items []*domain.Document `json:"items"`
+	Total int64              `json:"total"`
+	Page  int                `json:"page"`
+	Limit int                `json:"limit"`
+}
+
+type PaginationParams struct {
+	Page  int
+	Limit int
+}
+
+func parsePagination(c *gin.Context, defaultLimit int) PaginationParams {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(defaultLimit)))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = defaultLimit
+	}
+	return PaginationParams{Page: page, Limit: limit}
 }
 
 func (h *DocumentHandler) List(c *gin.Context) {
@@ -40,7 +61,9 @@ func (h *DocumentHandler) List(c *gin.Context) {
 
 	userId := c.GetInt("user_id")
 
-	documents, err := h.usecase.GetUsersDocuments(ctx, userId)
+	p := parsePagination(c, 10)
+
+	documents, total, err := h.usecase.GetUsersDocuments(ctx, userId, p.Page, p.Limit)
 	if err != nil {
 		rest.RespondError(c, http.StatusInternalServerError, "Error getting documents", err.Error())
 		return
@@ -50,6 +73,9 @@ func (h *DocumentHandler) List(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ListResponse{
 		Items: documents,
+		Total: total,
+		Page:  p.Page,
+		Limit: p.Limit,
 	})
 
 }
@@ -99,6 +125,31 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		Filename: file.Filename,
 		Status:   string(doc.Status),
 	})
+}
+
+func (h *DocumentHandler) Steps(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid document ID", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+
+	steps, err := h.usecase.GetDocumentSteps(ctx, id, userID)
+	if err != nil {
+		if errors.Is(err, application.ErrNotFound) {
+			rest.RespondError(c, http.StatusNotFound, "Document not found", "")
+		} else {
+			rest.RespondError(c, http.StatusInternalServerError, "Error getting steps", err.Error())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, steps)
 }
 
 func (h *DocumentHandler) Delete(c *gin.Context) {

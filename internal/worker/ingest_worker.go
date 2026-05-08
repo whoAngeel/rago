@@ -111,7 +111,6 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	now := time.Now()
 	doc.Status = domain.StatusProcessing
 	doc.ProcessingStartedAt = &now
-	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to update document status", "error", err)
 		return
@@ -170,9 +169,11 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		return
 	}
 
-	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string, start time.Time, err error) {
-		stepID, _ := w.startStep(ctx, doc.ID, stepName)
-		w.finishStep(ctx, stepID, start, err)
+	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string) func(error) {
+		stepID, start := w.startStep(ctx, doc.ID, stepName)
+		return func(err error) {
+			w.finishStep(ctx, stepID, start, err)
+		}
 	})
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("ingest: %w", err))
@@ -181,7 +182,6 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 
 	doc.Status = domain.StatusCompleted
 	doc.ErrorMessage = ""
-	w.notifyDocumentStatus(doc, string(domain.StatusCompleted))
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to mark document completed", "error", err)
 		return
@@ -226,11 +226,9 @@ func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Docu
 
 	if doc.RetryCount >= w.MaxRetries {
 		doc.Status = domain.StatusFailed
-		w.notifyDocumentStatus(doc, string(domain.StatusFailed))
 		log.Error("document permanently failed", "error", err, "retry_count", doc.RetryCount)
 	} else {
 		doc.Status = domain.StatusPending
-		w.notifyDocumentStatus(doc, string(domain.StatusPending))
 		log.Warn("document failed, will retry", "error", err, "retry_count", doc.RetryCount)
 	}
 

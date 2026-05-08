@@ -2,12 +2,15 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type IngestDocumentUsecase struct {
 	DocRepo     ports.DocumentRepository
@@ -105,6 +108,21 @@ func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID int) e
 	return i.DocRepo.DeleteDocument(ctx, doc.ID)
 }
 
-func (i *IngestDocumentUsecase) GetUsersDocuments(ctx context.Context, userID int) ([]*domain.Document, error) {
-	return i.DocRepo.FindDocumentByUserID(ctx, userID)
+func (i *IngestDocumentUsecase) GetUsersDocuments(ctx context.Context, userID int, page, limit int) ([]*domain.Document, int64, error) {
+	return i.DocRepo.FindDocumentByUserID(ctx, userID, page, limit)
+}
+
+func (i *IngestDocumentUsecase) GetDocumentSteps(ctx context.Context, docID, userID int) ([]*domain.ProcessingStep, error) {
+	doc, err := i.DocRepo.FindByID(ctx, docID)
+	if err != nil || doc.UserID != userID {
+		return nil, ErrNotFound
+	}
+	steps, err := i.DocRepo.FindStepsByDocumentID(ctx, docID)
+	if err != nil {
+		return nil, err
+	}
+	if steps == nil {
+		return []*domain.ProcessingStep{}, nil
+	}
+	return steps, nil
 }

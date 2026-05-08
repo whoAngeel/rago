@@ -21,13 +21,14 @@ type SessionRepository interface {
 type DocumentRepository interface {
 	CreateDocument(ctx context.Context, doc *domain.Document) (*domain.Document, error)
 	UpdateDocument(ctx context.Context, doc *domain.Document) (*domain.Document, error)
-	FindDocumentByUserID(ctx context.Context, userID int) ([]*domain.Document, error)
+	FindDocumentByUserID(ctx context.Context, userID int, page, limit int) ([]*domain.Document, int64, error)
 	UpdateDocumentStatus(ctx context.Context, id int, status domain.DocumentStatus) error
 	FindByID(ctx context.Context, id int) (*domain.Document, error)
 	DeleteDocument(ctx context.Context, id int) error
 	FindPendingDocuments(ctx context.Context, limit int) ([]*domain.Document, error)
 	CreateProcessingStep(ctx context.Context, step *domain.ProcessingStep) error
 	UpdateProcessingStep(ctx context.Context, id, duration int, status, errMsg string) error
+	FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error)
 }
 
 type ChatRepository interface {
