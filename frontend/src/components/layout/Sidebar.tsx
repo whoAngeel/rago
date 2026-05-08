@@ -1,13 +1,15 @@
-import { Link } from "@tanstack/react-router"
+import { Link, useLocation } from "@tanstack/react-router"
 import { LayoutDashboard, FileText, Settings, Fish } from "lucide-react"
 
 const links = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/documents", label: "Documentos", icon: FileText },
-    { to: "/settings", label: "Configuración", icon: Settings },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, subtitle: "Visión general del sistema" },
+    { to: "/documents", label: "Documentos", icon: FileText, subtitle: "Gestión de documentos" },
+    { to: "/settings", label: "Configuración", icon: Settings, subtitle: "Preferencias del sistema" },
 ]
 
 export const SideBar = () => {
+    const { pathname } = useLocation()
+
     return (
         <aside className="w-64 h-screen bg-neutral-100 border-r-2 border-neutral-950 p-6 flex flex-col gap-8 font-sans">
             <div className="flex items-center gap-3 px-4">

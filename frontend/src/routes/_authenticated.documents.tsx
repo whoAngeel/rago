@@ -7,6 +7,7 @@ import { DocumentTable } from '../components/documents/DocumentTable'
 import { useEffect, useState } from 'react'
 import { useToastStore } from '../store/toastStore'
 import { useSSE } from '../hooks/useSSE'
+import { Search, SlidersHorizontal } from "lucide-react"
 
 interface DocumentsResponse {
   items: DocumentType[]
@@ -98,13 +99,22 @@ function RouteComponent() {
   return (
     <div className='flex w-full h-full p-6 flex-col gap-6'>
 
-      <div>
-        <h1 className='text-4xl font-black text-neutral-950 tracking-tighter'>Documentos</h1>
-        <p className='text-neutral-500'>Gestión de documentos</p>
-      </div>
-
       <div className='w-full'>
         <DropZone onUpload={(file) => uploadMutation.mutate(file)} />
+      </div>
+
+      <div className="flex items-center justify-between w-full">
+        <div className="relative flex-1 max-w-md">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+          <input
+            placeholder="Buscar archivos..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-neutral-950 rounded text-sm font-bold text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:shadow-hard-sm focus:bg-neutral-50 transition-all"
+          />
+        </div>
+        <button className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-neutral-950 rounded text-sm font-black text-neutral-950 hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer">
+          <SlidersHorizontal size={16} strokeWidth={3} />
+          Filtros
+        </button>
       </div>
 
       {isLoading ? (

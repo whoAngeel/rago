@@ -1,13 +1,21 @@
-import { Search, Bell, HelpCircle } from "lucide-react"
+import { Bell, HelpCircle } from "lucide-react"
 import { useAuthStore, useUser } from "../../store/authStore"
-import { useNavigate } from "@tanstack/react-router"
+import { useNavigate, useLocation } from "@tanstack/react-router"
 import { useState } from "react"
+
+const pageTitles: Record<string, { label: string; subtitle: string }> = {
+    "/dashboard": { label: "Dashboard", subtitle: "Visión general del sistema" },
+    "/documents": { label: "Documentos", subtitle: "Gestión de documentos" },
+    "/settings": { label: "Configuración", subtitle: "Preferencias del sistema" },
+}
 
 export function Navbar() {
     const user = useUser()
     const logout = useAuthStore((s) => s.logout)
     const navigate = useNavigate()
+    const { pathname } = useLocation()
     const [showMenu, setShowMenu] = useState(false)
+    const current = pageTitles[pathname]
 
     const initials = user?.name
         ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -19,20 +27,20 @@ export function Navbar() {
     }
 
     return (
-        <header className="h-20 bg-white border-b-2 border-[#0a0a0d] px-8 flex items-center justify-between font-sans">
-            <div className="relative max-w-md w-full">
-                <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525252]" />
-                <input
-                    placeholder="Buscar archivos..."
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-[#737373] focus:border-[#0a0a0d] rounded text-base font-medium text-black placeholder:text-[#525252] focus:outline-none transition-colors"
-                />
+        <header className="h-20 bg-white border-b-2 border-neutral-950 px-8 flex items-center justify-between font-sans">
+            <div>
+                {current && (
+                    <div>
+                        <h1 className="text-3xl font-bold text-neutral-950">{current.label}</h1>
+                        <p className="text-sm font-medium text-neutral-500">{current.subtitle}</p>
+                    </div>
+                )}
             </div>
-
             <div className="flex items-center gap-6">
-                <button className="text-[#0a0a0d] hover:bg-[#a3e635] p-2 rounded-full border-2 border-transparent hover:border-[#0a0a0d] hover:shadow-[2px_2px_0_0_#0a0a0d] transition-all">
+                <button className="text-neutral-950 hover:bg-primary-400 p-2 rounded-full border-2 border-transparent hover:border-[#0a0a0d] hover:shadow-[2px_2px_0_0_#0a0a0d] transition-all">
                     <Bell size={22} />
                 </button>
-                <button className="text-[#0a0a0d] hover:bg-[#a3e635] p-2 rounded-full border-2 border-transparent hover:border-[#0a0a0d] hover:shadow-[2px_2px_0_0_#0a0a0d] transition-all">
+                <button className="text-neutral-950 hover:bg-primary-400 p-2 rounded-full border-2 border-transparent hover:border-[#0a0a0d] hover:shadow-[2px_2px_0_0_#0a0a0d] transition-all">
                     <HelpCircle size={22} />
                 </button>
 
