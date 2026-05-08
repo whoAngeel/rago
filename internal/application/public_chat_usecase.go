@@ -183,7 +183,7 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		sb.WriteString("No se encontró información relevante en los documentos.\n\n")
 	} else {
 		if lowConfidence {
-			sb.WriteString("NOTA: El contexto siguiente es de baja relevancia para la pregunta. Si no es suficiente para responder con precisión, pedile al usuario que reformule su pregunta con más detalle.\n\n")
+			sb.WriteString("NOTA: La pregunta es muy general. Usá el contexto disponible para describir brevemente de qué tratan los documentos o qué información contienen. Si el usuario quiere saber algo específico, pedile que reformule la pregunta con más detalle.\n\n")
 		}
 		sb.WriteString("CONTEXTO:\n")
 		sb.WriteString(contextStr)
