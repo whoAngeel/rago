@@ -42,3 +42,9 @@ func (r *UserRepository) FindById(ctx context.Context, id int) (*domain.User, er
 	}
 	return &user, nil
 }
+
+func (r *UserRepository) IncrementChatQuotaUsed(ctx context.Context, userID int) error {
+	return r.db.WithContext(ctx).Model(&domain.User{}).
+		Where("id = ?", userID).
+		UpdateColumn("chat_quota_used", gorm.Expr("chat_quota_used + 1")).Error
+}

@@ -13,6 +13,8 @@ type UserProfile struct {
 	Role          string `json:"role"`
 	MaxDocuments  int    `json:"max_documents"`
 	DocumentCount int64  `json:"document_count"`
+	ChatQuota     int    `json:"chat_quota"`
+	ChatQuotaUsed int    `json:"chat_quota_used"`
 }
 
 type UserUsecase struct {
@@ -42,5 +44,7 @@ func (uc *UserUsecase) GetProfile(ctx context.Context, userID int) (*UserProfile
 		Role:          resolveRoleName(user.RoleID),
 		MaxDocuments:  user.MaxDocuments,
 		DocumentCount: count,
+		ChatQuota:     user.ChatQuota,
+		ChatQuotaUsed: user.ChatQuotaUsed,
 	}, nil
 }

@@ -23,7 +23,9 @@ type User struct {
 	Password     string    `json:"-" gorm:"not null"`
 	Name         string    `json:"name,omitempty" gorm:"default:''"`
 	RoleID       int       `json:"role_id" gorm:"default:3;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT,ForeignKey:RoleIDReferences:ID"`
-	MaxDocuments int       `json:"max_documents" gorm:"default:10"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	MaxDocuments  int       `json:"max_documents" gorm:"default:10"`
+	ChatQuota     int       `json:"chat_quota" gorm:"default:500"`
+	ChatQuotaUsed int       `json:"chat_quota_used" gorm:"default:0"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

@@ -15,11 +15,12 @@ import (
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
 type mockGroupRepo struct {
-	group         *domain.DocumentGroup
-	findErr       error
-	documentIDs   []int
-	incrementErr  error
-	slugExistsVal bool
+	group               *domain.DocumentGroup
+	findErr             error
+	documentIDs         []int
+	incrementErr        error
+	slugExistsVal       bool
+	incrementQuotaCalled bool
 }
 
 func (m *mockGroupRepo) FindBySlug(_ context.Context, _ string) (*domain.DocumentGroup, error) {
@@ -29,10 +30,11 @@ func (m *mockGroupRepo) FindDocumentIDs(_ context.Context, _ int) ([]int, error)
 	return m.documentIDs, nil
 }
 func (m *mockGroupRepo) IncrementAttempts(_ context.Context, _ int) error  { return m.incrementErr }
-func (m *mockGroupRepo) IncrementQuotaUsed(_ context.Context, _ int) error { return nil }
-func (m *mockGroupRepo) Create(_ context.Context, _ *domain.DocumentGroup) error {
+func (m *mockGroupRepo) IncrementQuotaUsed(_ context.Context, _ int) error {
+	m.incrementQuotaCalled = true
 	return nil
 }
+func (m *mockGroupRepo) Create(_ context.Context, _ *domain.DocumentGroup) error { return nil }
 func (m *mockGroupRepo) FindByID(_ context.Context, _, _ int) (*domain.DocumentGroup, error) {
 	return m.group, m.findErr
 }
@@ -45,6 +47,26 @@ func (m *mockGroupRepo) AddDocuments(_ context.Context, _ int, _ []int) error   
 func (m *mockGroupRepo) RemoveDocument(_ context.Context, _, _ int) error        { return nil }
 func (m *mockGroupRepo) SlugExists(_ context.Context, _ string) (bool, error) {
 	return m.slugExistsVal, nil
+}
+
+type mockUserRepoPublic struct {
+	user           *domain.User
+	findErr        error
+	incrementCalled bool
+}
+
+func (m *mockUserRepoPublic) Create(_ context.Context, u *domain.User) (*domain.User, error) {
+	return u, nil
+}
+func (m *mockUserRepoPublic) FindByEmail(_ context.Context, _ string) (*domain.User, error) {
+	return m.user, m.findErr
+}
+func (m *mockUserRepoPublic) FindById(_ context.Context, _ int) (*domain.User, error) {
+	return m.user, m.findErr
+}
+func (m *mockUserRepoPublic) IncrementChatQuotaUsed(_ context.Context, _ int) error {
+	m.incrementCalled = true
+	return nil
 }
 
 type mockDocRepo struct {
@@ -61,7 +83,7 @@ func (m *mockDocRepo) CreateDocument(_ context.Context, d *domain.Document) (*do
 func (m *mockDocRepo) UpdateDocument(_ context.Context, d *domain.Document) (*domain.Document, error) {
 	return d, nil
 }
-func (m *mockDocRepo) FindDocumentByUserID(_ context.Context, _ int, _, _ int) ([]*domain.Document, int64, error) {
+func (m *mockDocRepo) FindDocumentByUserID(_ context.Context, _, _, _ int) ([]*domain.Document, int64, error) {
 	return nil, 0, nil
 }
 func (m *mockDocRepo) UpdateDocumentStatus(_ context.Context, _ int, _ domain.DocumentStatus) error {
@@ -135,18 +157,32 @@ func (m *mockConfigRepo) Set(_ context.Context, _, _ string) error         { ret
 
 type mockLogger struct{}
 
-func (m *mockLogger) Info(_ string, _ ...any)          {}
-func (m *mockLogger) Warn(_ string, _ ...any)          {}
-func (m *mockLogger) Debug(_ string, _ ...any)         {}
-func (m *mockLogger) Error(_ string, _ ...any)         {}
-func (m *mockLogger) Fatal(_ string, _ ...any)         {}
-func (m *mockLogger) With(_ ...any) ports.Logger       { return m }
+func (m *mockLogger) Info(_ string, _ ...any)    {}
+func (m *mockLogger) Warn(_ string, _ ...any)    {}
+func (m *mockLogger) Debug(_ string, _ ...any)   {}
+func (m *mockLogger) Error(_ string, _ ...any)   {}
+func (m *mockLogger) Fatal(_ string, _ ...any)   {}
+func (m *mockLogger) With(_ ...any) ports.Logger { return m }
 
-// ── Helper ─────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-func newTestUsecase(groupRepo ports.DocumentGroupRepository, docRepo ports.DocumentRepository, vs ports.VectorStore, llm ports.LLMProvider) *application.PublicChatUsecase {
+// unlimitedUser devuelve un usuario con cuota ilimitada (ChatQuota=0).
+func unlimitedUser() *mockUserRepoPublic {
+	return &mockUserRepoPublic{
+		user: &domain.User{ID: 1, ChatQuota: 0, ChatQuotaUsed: 0},
+	}
+}
+
+func newTestUsecase(
+	groupRepo ports.DocumentGroupRepository,
+	userRepo ports.UserRepository,
+	docRepo ports.DocumentRepository,
+	vs ports.VectorStore,
+	llm ports.LLMProvider,
+) *application.PublicChatUsecase {
 	return application.NewPublicChatUsecase(
 		groupRepo,
+		userRepo,
 		docRepo,
 		vs,
 		&mockEmbedder{vec: []float32{0.1, 0.2}},
@@ -161,7 +197,7 @@ func newTestUsecase(groupRepo ports.DocumentGroupRepository, docRepo ports.Docum
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 func TestPublicChat_GroupNotFound(t *testing.T) {
-	uc := newTestUsecase(&mockGroupRepo{group: nil}, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
+	uc := newTestUsecase(&mockGroupRepo{group: nil}, unlimitedUser(), &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
 
 	_, err := uc.Chat(context.Background(), "noexiste", "hola")
 
@@ -172,7 +208,7 @@ func TestPublicChat_GroupNotFound(t *testing.T) {
 
 func TestPublicChat_GroupInactive(t *testing.T) {
 	group := &domain.DocumentGroup{ID: 1, Slug: "abc", IsActive: false, DocumentIDs: []int{1}}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
 
 	_, err := uc.Chat(context.Background(), "abc", "hola")
 
@@ -181,13 +217,16 @@ func TestPublicChat_GroupInactive(t *testing.T) {
 	}
 }
 
-func TestPublicChat_QuotaExceeded(t *testing.T) {
+func TestPublicChat_UserQuotaExceeded(t *testing.T) {
 	group := &domain.DocumentGroup{
-		ID: 1, Slug: "abc", IsActive: true,
-		ChatQuota: 10, ChatQuotaUsed: 10,
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
+		ChatQuota: 0, ChatQuotaUsed: 0, // sin cap de grupo
 		DocumentIDs: []int{1},
 	}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
+	userRepo := &mockUserRepoPublic{
+		user: &domain.User{ID: 1, ChatQuota: 10, ChatQuotaUsed: 10},
+	}
+	uc := newTestUsecase(&mockGroupRepo{group: group}, userRepo, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
 
 	_, err := uc.Chat(context.Background(), "abc", "hola")
 
@@ -196,10 +235,80 @@ func TestPublicChat_QuotaExceeded(t *testing.T) {
 	}
 }
 
+func TestPublicChat_GroupCapExceeded(t *testing.T) {
+	group := &domain.DocumentGroup{
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
+		ChatQuota: 5, ChatQuotaUsed: 5, // cap de grupo agotado
+		DocumentIDs: []int{1},
+	}
+	userRepo := &mockUserRepoPublic{
+		user: &domain.User{ID: 1, ChatQuota: 500, ChatQuotaUsed: 10}, // usuario tiene saldo
+	}
+	uc := newTestUsecase(&mockGroupRepo{group: group}, userRepo, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
+
+	_, err := uc.Chat(context.Background(), "abc", "hola")
+
+	if !errors.Is(err, application.ErrQuotaExceeded) {
+		t.Errorf("esperaba ErrQuotaExceeded por cap de grupo, got: %v", err)
+	}
+}
+
+func TestPublicChat_AdminUnlimited(t *testing.T) {
+	group := &domain.DocumentGroup{
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
+		ChatQuota: 0, ChatQuotaUsed: 0,
+		DocumentIDs: []int{1},
+	}
+	userRepo := &mockUserRepoPublic{
+		user: &domain.User{ID: 1, ChatQuota: 0, ChatQuotaUsed: 9999}, // admin, ilimitado
+	}
+	vs := &mockVectorStore{results: []ports.SearchResult{
+		{Document: schema.Document{PageContent: "contenido"}},
+	}}
+	uc := newTestUsecase(&mockGroupRepo{group: group}, userRepo, &mockDocRepo{}, vs, &mockLLM{answer: "respuesta"})
+
+	answer, err := uc.Chat(context.Background(), "abc", "hola")
+
+	if err != nil {
+		t.Fatalf("admin no debería ser bloqueado, got: %v", err)
+	}
+	if answer != "respuesta" {
+		t.Errorf("esperaba 'respuesta', got: %q", answer)
+	}
+}
+
+func TestPublicChat_IncrementsBothQuotas(t *testing.T) {
+	group := &domain.DocumentGroup{
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
+		ChatQuota: 0, ChatQuotaUsed: 0,
+		DocumentIDs: []int{1},
+	}
+	groupRepo := &mockGroupRepo{group: group}
+	userRepo := &mockUserRepoPublic{
+		user: &domain.User{ID: 1, ChatQuota: 100, ChatQuotaUsed: 0},
+	}
+	vs := &mockVectorStore{results: []ports.SearchResult{
+		{Document: schema.Document{PageContent: "contenido relevante"}},
+	}}
+	uc := newTestUsecase(groupRepo, userRepo, &mockDocRepo{}, vs, &mockLLM{answer: "ok"})
+
+	_, err := uc.Chat(context.Background(), "abc", "pregunta")
+
+	if err != nil {
+		t.Fatalf("no esperaba error: %v", err)
+	}
+	if !groupRepo.incrementQuotaCalled {
+		t.Error("debería haber incrementado la cuota del grupo")
+	}
+	if !userRepo.incrementCalled {
+		t.Error("debería haber incrementado la cuota del usuario")
+	}
+}
+
 func TestPublicChat_PassesDocumentIDsToSearch(t *testing.T) {
 	wantDocIDs := []int{3, 7, 12}
 	group := &domain.DocumentGroup{
-		ID: 1, Slug: "abc", IsActive: true,
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
 		ChatQuota: 100, ChatQuotaUsed: 0,
 		DocumentIDs: wantDocIDs,
 	}
@@ -208,7 +317,7 @@ func TestPublicChat_PassesDocumentIDsToSearch(t *testing.T) {
 			{Document: schema.Document{PageContent: "contenido relevante"}},
 		},
 	}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{}, vs, &mockLLM{answer: "respuesta"})
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, vs, &mockLLM{answer: "respuesta"})
 
 	answer, err := uc.Chat(context.Background(), "abc", "pregunta")
 
@@ -233,13 +342,13 @@ func TestPublicChat_PassesDocumentIDsToSearch(t *testing.T) {
 
 func TestPublicChat_EmptySearchResultsCallsLLM(t *testing.T) {
 	group := &domain.DocumentGroup{
-		ID: 1, Slug: "abc", IsActive: true,
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
 		ChatQuota: 100, ChatQuotaUsed: 0,
 		DocumentIDs: []int{1},
 	}
-	vs := &mockVectorStore{results: []ports.SearchResult{}} // sin resultados
+	vs := &mockVectorStore{results: []ports.SearchResult{}}
 	llm := &mockLLM{answer: "No tengo información suficiente en tus documentos para responder a esto."}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{}, vs, llm)
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, vs, llm)
 
 	answer, err := uc.Chat(context.Background(), "abc", "pregunta")
 
@@ -253,12 +362,12 @@ func TestPublicChat_EmptySearchResultsCallsLLM(t *testing.T) {
 
 func TestPublicChat_SearchLimitIs5(t *testing.T) {
 	group := &domain.DocumentGroup{
-		ID: 1, Slug: "abc", IsActive: true,
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
 		ChatQuota: 100, ChatQuotaUsed: 0,
 		DocumentIDs: []int{1},
 	}
 	vs := &mockVectorStore{}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{}, vs, &mockLLM{answer: "ok"})
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, vs, &mockLLM{answer: "ok"})
 
 	_, _ = uc.Chat(context.Background(), "abc", "pregunta")
 
@@ -269,7 +378,7 @@ func TestPublicChat_SearchLimitIs5(t *testing.T) {
 
 func TestGetGroupInfo_InactiveGroup(t *testing.T) {
 	group := &domain.DocumentGroup{ID: 1, Slug: "abc", IsActive: false}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
 
 	_, err := uc.GetGroupInfo(context.Background(), "abc")
 
@@ -285,7 +394,7 @@ func TestGetGroupInfo_ActiveGroup(t *testing.T) {
 		Name:        "Mi grupo",
 		DocumentIDs: []int{5},
 	}
-	uc := newTestUsecase(&mockGroupRepo{group: group}, &mockDocRepo{doc: doc}, &mockVectorStore{}, &mockLLM{})
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{doc: doc}, &mockVectorStore{}, &mockLLM{})
 
 	info, err := uc.GetGroupInfo(context.Background(), "abc12345")
 

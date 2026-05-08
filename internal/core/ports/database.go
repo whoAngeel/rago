@@ -10,6 +10,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *domain.User) (*domain.User, error)
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	FindById(ctx context.Context, id int) (*domain.User, error)
+	IncrementChatQuotaUsed(ctx context.Context, userID int) error
 }
 
 type SessionRepository interface {

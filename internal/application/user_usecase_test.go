@@ -26,6 +26,7 @@ func (m *stubUserRepo) FindByEmail(_ context.Context, _ string) (*domain.User, e
 func (m *stubUserRepo) FindById(_ context.Context, _ int) (*domain.User, error) {
 	return m.user, m.findErr
 }
+func (m *stubUserRepo) IncrementChatQuotaUsed(_ context.Context, _ int) error { return nil }
 
 type stubDocRepo struct {
 	count    int64

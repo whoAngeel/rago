@@ -31,6 +31,7 @@ type GroupPublicInfo struct {
 
 type PublicChatUsecase struct {
 	GroupRepo   ports.DocumentGroupRepository
+	UserRepo    ports.UserRepository
 	DocRepo     ports.DocumentRepository
 	VectorStore ports.VectorStore
 	Embedder    ports.Embedder
@@ -43,6 +44,7 @@ type PublicChatUsecase struct {
 
 func NewPublicChatUsecase(
 	groupRepo ports.DocumentGroupRepository,
+	userRepo ports.UserRepository,
 	docRepo ports.DocumentRepository,
 	vectorStore ports.VectorStore,
 	embedder ports.Embedder,
@@ -54,6 +56,7 @@ func NewPublicChatUsecase(
 ) *PublicChatUsecase {
 	return &PublicChatUsecase{
 		GroupRepo:   groupRepo,
+		UserRepo:    userRepo,
 		DocRepo:     docRepo,
 		VectorStore: vectorStore,
 		Embedder:    embedder,
@@ -104,19 +107,33 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		return "", ErrGroupInactive
 	}
 
-	uc.Logger.Info("public: chat request",
-		"slug", slug,
-		"group_id", group.ID,
-		"document_ids", group.DocumentIDs,
-		"quota_used", group.ChatQuotaUsed,
-		"quota_total", group.ChatQuota,
-	)
-
 	// Contabilizar intento siempre, incluso si está bloqueado
 	_ = uc.GroupRepo.IncrementAttempts(ctx, group.ID)
 
-	if group.ChatQuotaUsed >= group.ChatQuota {
-		uc.Logger.Info("public: chat blocked — quota exceeded", "slug", slug, "quota_used", group.ChatQuotaUsed)
+	user, err := uc.UserRepo.FindById(ctx, group.UserID)
+	if err != nil {
+		return "", fmt.Errorf("finding group owner: %w", err)
+	}
+
+	uc.Logger.Info("public: chat request",
+		"slug", slug,
+		"group_id", group.ID,
+		"user_id", user.ID,
+		"user_quota_used", user.ChatQuotaUsed,
+		"user_quota_total", user.ChatQuota,
+		"group_cap", group.ChatQuota,
+		"group_cap_used", group.ChatQuotaUsed,
+	)
+
+	// Cuota global del usuario (0 = ilimitado)
+	if user.ChatQuota > 0 && user.ChatQuotaUsed >= user.ChatQuota {
+		uc.Logger.Info("public: chat blocked — user quota exceeded", "slug", slug, "user_id", user.ID)
+		return "", ErrQuotaExceeded
+	}
+
+	// Cap por grupo (0 = sin cap)
+	if group.ChatQuota > 0 && group.ChatQuotaUsed >= group.ChatQuota {
+		uc.Logger.Info("public: chat blocked — group cap exceeded", "slug", slug, "group_id", group.ID)
 		return "", ErrQuotaExceeded
 	}
 
@@ -199,6 +216,7 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 	}
 
 	_ = uc.GroupRepo.IncrementQuotaUsed(ctx, group.ID)
+	_ = uc.UserRepo.IncrementChatQuotaUsed(ctx, user.ID)
 	uc.Logger.Info("public: chat answered", "slug", slug, "answer_len", len(answer))
 
 	return answer, nil
