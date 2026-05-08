@@ -8,6 +8,13 @@ import { useEffect, useState } from 'react'
 import { useToastStore } from '../store/toastStore'
 import { useSSE } from '../hooks/useSSE'
 
+interface DocumentsResponse {
+  items: DocumentType[]
+  total: number
+  page: number
+  limit: number
+}
+
 export const Route = createFileRoute('/_authenticated/documents')({
   component: RouteComponent,
 })
@@ -18,20 +25,24 @@ function RouteComponent() {
   const addToast = useToastStore((s) => s.add)
   const queryClient = useQueryClient()
 
-  const { data, isLoading, error } = useQuery<DocumentType[]>({
-    queryKey: ["documents"],
+  const [page, setPage] = useState(1)
+  const limit = 8
+
+  const { data, isLoading, error } = useQuery<DocumentsResponse>({
+    queryKey: ["documents", page],
     queryFn: async () => {
-      const { data } = await api.get('/documents')
-      console.log('Fetch documents:', data)
-      return data.items
+      const { data } = await api.get(`/documents/?page=${page}&limit=${limit}`)
+      return data
     },
     refetchInterval: (query) => {
-      const docs = query.state.data
+      const docs = query.state.data?.items
       if (!docs) return false
       const hasActive = docs.some(d => d.status === 'uploading' || d.status === 'pending' || d.status === 'processing')
       return hasActive ? 3000 : false
     },
   })
+
+  const totalPages = data ? Math.ceil(data.total / data.limit) : 0
 
   useEffect(() => {
     if (error) {
@@ -43,7 +54,7 @@ function RouteComponent() {
 
   useEffect(() => {
     if (data) {
-      setDeletingIds(prev => prev.filter(id => data.some(doc => doc.id === id)))
+      setDeletingIds(prev => prev.filter(id => data.items.some(doc => doc.id === id)))
     }
   }, [data])
 
@@ -82,23 +93,20 @@ function RouteComponent() {
     }
   })
 
+  const documents = data?.items ?? []
+
   return (
     <div className='flex w-full h-full p-6 flex-col gap-6'>
 
-      {/* Header */}
       <div>
         <h1 className='text-4xl font-black text-neutral-950 tracking-tighter'>Documentos</h1>
         <p className='text-neutral-500'>Gestión de documentos</p>
       </div>
 
-      {/* Drag & Drop */}
       <div className='w-full'>
         <DropZone onUpload={(file) => uploadMutation.mutate(file)} />
       </div>
 
-
-
-      {/* Contenido Principal: Tabla o Estado de Carga Inicial */}
       {isLoading ? (
         <div className="flex-1 bg-white border-2 border-neutral-950 rounded-card p-12 flex flex-col items-center justify-center gap-4 shadow-hard-lg">
           <div className="w-12 h-12 bg-primary-400 border-2 border-neutral-950 rounded-full flex items-center justify-center animate-spin shadow-hard-sm">
@@ -107,10 +115,14 @@ function RouteComponent() {
           <span className="text-neutral-950 font-bold">Cargando tus documentos...</span>
         </div>
       ) : (
-        <DocumentTable documents={data || []}
+        <DocumentTable documents={documents}
           onDelete={(id) => deleteMutation.mutate(id)}
           onDownload={(id) => console.log(`download ${id}`)}
-          deletingIds={deletingIds} />
+          deletingIds={deletingIds}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={data?.total} />
       )}
 
     </div>

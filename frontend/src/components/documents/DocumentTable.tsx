@@ -8,11 +8,17 @@ import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import api from "../../lib/api"
 
+import { ChevronLeft, ChevronRight } from "lucide-react"
+
 interface DocumentsProps {
     documents: Document[]
     onDelete: (id: number) => void
     onDownload: (id: number) => void
     deletingIds?: number[]
+    page?: number
+    totalPages?: number
+    onPageChange?: (page: number) => void
+    totalItems?: number
 }
 
 const statusConfig = {
@@ -164,7 +170,7 @@ function ProgressDots({ doc }: { doc: Document }) {
     )
 }
 
-export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [] }: DocumentsProps) => {
+export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [], page, totalPages, onPageChange, totalItems }: DocumentsProps) => {
     return (
         <div className="bg-white border-2 border-neutral-950 rounded-card shadow-hard-lg overflow-hidden">
             <table className="w-full text-sm border-collapse">
@@ -198,7 +204,6 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                         const isDeleting = deletingIds.includes(document.id)
                         return (
                             <tr key={document.id} className={`hover:bg-neutral-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
-                                {/* Nombre */}
                                 <td className="px-6 py-5">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 ${getFileIconBg(document.content_type)} border-2 border-neutral-950 rounded flex items-center justify-center shadow-hard-sm shrink-0`}>
@@ -210,21 +215,15 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                                         </div>
                                     </div>
                                 </td>
-
-                                {/* Tamaño */}
                                 <td className="px-6 py-5 font-medium text-neutral-950">
                                     {formatSize(document.size)}
                                 </td>
-
-                                {/* Estado */}
                                 <td className="px-6 py-5">
                                     <span className={`px-3 py-1 ${statusConfig[document.status].bg} border border-neutral-950 rounded-md text-xs font-bold uppercase flex items-center gap-1 w-fit shadow-hard-sm`}>
                                         <span className={`w-2 h-2 ${statusConfig[document.status].dot} rounded-full`}></span>
                                         {statusConfig[document.status].label}
                                     </span>
                                 </td>
-
-                                {/* Progreso */}
                                 <td className="px-6 py-5">
                                     <div className="flex flex-col gap-1">
                                         <ProgressDots doc={document} />
@@ -236,13 +235,9 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                                         )}
                                     </div>
                                 </td>
-
-                                {/* Subido */}
                                 <td className="px-6 py-5 text-neutral-600 font-medium text-xs">
                                     {formatDistanceToNow(new Date(document.created_at), { addSuffix: true, locale: es })}
                                 </td>
-
-                                {/* Acciones */}
                                 <td className="px-6 py-5">
                                     <div className="flex items-center gap-2 justify-center">
                                         <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2
@@ -267,6 +262,45 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                     })}
                 </tbody>
             </table>
+
+            {totalPages && totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t-2 border-neutral-950 bg-neutral-100">
+                    <p className="text-xs font-bold text-neutral-600">
+                        {totalItems ?? 0} documentos
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => onPageChange?.(Math.max(1, (page ?? 1) - 1))}
+                            disabled={!page || page <= 1}
+                            className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => onPageChange?.(p)}
+                                className={`px-3 py-1 border-2 border-neutral-950 rounded text-xs font-bold transition-all cursor-pointer ${
+                                    p === page
+                                        ? "bg-primary-400 text-black shadow-hard-sm"
+                                        : "bg-white text-neutral-950 hover:shadow-hard-sm"
+                                }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
+
+                        <button
+                            onClick={() => onPageChange?.(Math.min(totalPages, (page ?? 1) + 1))}
+                            disabled={!page || page >= totalPages}
+                            className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
