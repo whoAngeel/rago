@@ -7,7 +7,7 @@ import { DocumentTable } from '../components/documents/DocumentTable'
 import { useEffect, useState } from 'react'
 import { useToastStore } from '../store/toastStore'
 import { useSSE } from '../hooks/useSSE'
-import { Search, SlidersHorizontal } from "lucide-react"
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface DocumentsResponse {
   items: DocumentType[]
@@ -125,14 +125,53 @@ function RouteComponent() {
           <span className="text-neutral-950 font-bold">Cargando tus documentos...</span>
         </div>
       ) : (
-        <DocumentTable documents={documents}
-          onDelete={(id) => deleteMutation.mutate(id)}
-          onDownload={(id) => console.log(`download ${id}`)}
-          deletingIds={deletingIds}
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          totalItems={data?.total} />
+        <div className="flex-1 min-h-0 flex flex-col bg-white border-2 border-neutral-950 rounded-card shadow-hard-lg overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-auto">
+            <DocumentTable documents={documents}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              onDownload={(id) => console.log(`download ${id}`)}
+              deletingIds={deletingIds} />
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t-2 border-neutral-950 bg-neutral-100 shrink-0">
+              <p className="text-xs font-bold text-neutral-600">
+                {data?.total ?? 0} documentos
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page <= 1}
+                  className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`px-3 py-1 border-2 border-neutral-950 rounded text-xs font-bold transition-all cursor-pointer ${
+                      p === page
+                        ? "bg-primary-400 text-black shadow-hard-sm"
+                        : "bg-white text-neutral-950 hover:shadow-hard-sm"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page >= totalPages}
+                  className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
     </div>

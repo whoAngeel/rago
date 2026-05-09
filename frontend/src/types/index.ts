@@ -18,10 +18,25 @@ interface Document {
     created_at: string
     updated_at: string
     processing_started_at: string | null
-    error_message: null
+    error_message: string | null
     retry_count: number
 }
 
+interface Group {
+    id: number
+    user_id: number
+    name: string
+    is_active: boolean
+    slug: string
+    allow_downloads: boolean
+    chat_quota: number
+    chat_quota_used: number
+    chat_attempts: number
+    document_ids: number[]
+    created_at: string
+    updated_at: string
+
+}
 interface ChatSession {
     id: number
     user_id: number
@@ -55,4 +70,4 @@ interface ProcessingStep {
     created_at: string
 }
 
-export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep }
+export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group }

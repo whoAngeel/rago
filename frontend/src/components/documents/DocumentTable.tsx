@@ -3,11 +3,10 @@ import { createPortal } from "react-dom"
 import { useQuery } from "@tanstack/react-query"
 import { formatSize } from "../../lib/formatter"
 import type { Document, ProcessingStep } from "../../types"
-import { Download, FileText, Trash2, FileSpreadsheet, FileJson, AlertCircle, Check, X, RefreshCw, Circle } from "lucide-react"
+import { Download, FileText, Trash2, FileSpreadsheet, FileJson, AlertCircle, Check, X, RefreshCw, Circle, RotateCcw } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import api from "../../lib/api"
-
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface DocumentsProps {
@@ -64,15 +63,50 @@ const formatDuration = (ms: number | null | undefined): string => {
     return `${(ms / 1000).toFixed(1)}s`
 }
 
+function StatusBadge({ doc }: { doc: Document }) {
+    const cfg = statusConfig[doc.status]
+    const isRetrying = doc.status === 'processing' && doc.retry_count > 0
+    const wasRecovered = doc.status === 'completed' && doc.retry_count > 0
+
+    return (
+        <div className="flex flex-col gap-1 items-start">
+            <span className={`px-3 py-1 ${isRetrying ? 'bg-amber-100' : cfg.bg} border border-neutral-950 rounded-md text-xs font-bold uppercase flex items-center gap-1.5 w-fit shadow-hard-sm`}>
+                {isRetrying
+                    ? <RotateCcw size={10} className="animate-spin text-amber-700" />
+                    : <span className={`w-2 h-2 ${cfg.dot} rounded-full`} />
+                }
+                {isRetrying ? 'Reintentando' : cfg.label}
+            </span>
+
+            {isRetrying && (
+                <span className="text-[10px] font-bold text-amber-700">
+                    Intento {doc.retry_count + 1} de 3
+                </span>
+            )}
+            {wasRecovered && (
+                <span className="text-[10px] font-bold text-neutral-400 flex items-center gap-1">
+                    <RotateCcw size={8} />
+                    {doc.retry_count} reintento{doc.retry_count !== 1 ? 's' : ''}
+                </span>
+            )}
+            {doc.status === 'failed' && (
+                <span className="text-[10px] font-bold text-accent-red-deep">
+                    Falló en {doc.retry_count} intento{doc.retry_count !== 1 ? 's' : ''}
+                </span>
+            )}
+        </div>
+    )
+}
+
 function ProgressDots({ doc }: { doc: Document }) {
     const [isHovered, setIsHovered] = useState(false)
     const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 })
     const ref = useRef<HTMLDivElement>(null)
 
-    const canHaveSteps = doc.status === 'completed' || doc.status === 'failed'
+    const canHaveSteps = doc.status !== 'uploading' && doc.status !== 'pending'
 
     const { data: steps } = useQuery<ProcessingStep[]>({
-        queryKey: ["documents", doc.id, "steps"],
+        queryKey: ["steps", doc.id],
         queryFn: async () => {
             const { data } = await api.get(`/documents/${doc.id}/steps`)
             return data
@@ -90,6 +124,8 @@ function ProgressDots({ doc }: { doc: Document }) {
     }
 
     const stepMap = new Map(steps?.map(s => [s.step_name, s]) ?? [])
+    const activeStep = steps?.find(s => s.status === 'started')
+    const failedStep = doc.status === 'failed' ? steps?.find(s => s.status === 'failed') : undefined
 
     const getDotClass = (name: string, i: number): string => {
         const base = "w-3 h-3 rounded-full border border-neutral-950 "
@@ -101,7 +137,7 @@ function ProgressDots({ doc }: { doc: Document }) {
             if (doc.status === 'completed') return base + "bg-primary-500"
             return base + "bg-neutral-100"
         }
-        // Fallback simulated state while steps not loaded
+        // Fallback when steps not loaded from SSE yet
         if (doc.status === 'completed') return base + "bg-primary-500"
         if (doc.status === 'processing') {
             if (i < 2) return base + "bg-primary-500"
@@ -116,24 +152,55 @@ function ProgressDots({ doc }: { doc: Document }) {
 
     return (
         <>
-            <div
-                ref={ref}
-                className={`flex items-center gap-1.5 w-fit ${canHaveSteps ? 'cursor-help' : 'cursor-default'}`}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                {STEP_NAMES.map((name, i) => (
-                    <div key={name} className={getDotClass(name, i)} />
-                ))}
+            <div className="flex flex-col gap-0.5">
+                <div
+                    ref={ref}
+                    className={`flex items-center gap-1.5 w-fit ${canHaveSteps ? 'cursor-help' : 'cursor-default'}`}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={() => setIsHovered(false)}
+                >
+                    {STEP_NAMES.map((name, i) => (
+                        <div key={name} className={getDotClass(name, i)} />
+                    ))}
+                </div>
+
+                {doc.status === 'processing' && activeStep && (
+                    <span className="text-[10px] font-bold text-blue-600 capitalize flex items-center gap-1">
+                        <RefreshCw size={8} className="animate-spin shrink-0" />
+                        {activeStep.step_name}...
+                    </span>
+                )}
+
+                {doc.status === 'failed' && failedStep && (
+                    <span className="text-[10px] font-bold text-accent-red-deep capitalize">
+                        falló en {failedStep.step_name}
+                    </span>
+                )}
+
+                {doc.status === 'failed' && doc.error_message && (
+                    <div
+                        className="flex items-start gap-1 text-accent-red-deep text-[10px] font-bold mt-0.5 max-w-[180px]"
+                        title={doc.error_message}
+                    >
+                        <AlertCircle size={10} className="shrink-0 mt-0.5" />
+                        <span className="line-clamp-2 leading-tight">{doc.error_message}</span>
+                    </div>
+                )}
             </div>
 
             {isHovered && canHaveSteps && createPortal(
                 <div
                     style={{ top: tooltipPos.top, left: tooltipPos.left }}
-                    className="fixed z-50 pointer-events-none bg-white border-2 border-neutral-950 rounded shadow-hard-sm w-44"
+                    className="fixed z-50 pointer-events-none bg-white border-2 border-neutral-950 rounded shadow-hard-sm w-48"
                 >
-                    <div className="px-2 py-1 bg-neutral-100 border-b-2 border-neutral-950">
+                    <div className="px-2 py-1 bg-neutral-100 border-b-2 border-neutral-950 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-950">Pipeline</span>
+                        {doc.retry_count > 0 && (
+                            <span className="text-[9px] font-bold text-neutral-500 flex items-center gap-0.5">
+                                <RotateCcw size={8} />
+                                {doc.retry_count} reintento{doc.retry_count !== 1 ? 's' : ''}
+                            </span>
+                        )}
                     </div>
                     {steps !== undefined ? (
                         <div className="divide-y divide-neutral-200">
@@ -172,7 +239,7 @@ function ProgressDots({ doc }: { doc: Document }) {
 
 export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [], page, totalPages, onPageChange, totalItems }: DocumentsProps) => {
     return (
-        <div className="bg-white border-2 border-neutral-950 rounded-card shadow-hard-lg overflow-hidden">
+        <div>
             <table className="w-full text-sm border-collapse">
                 <thead>
                     <tr className="bg-neutral-200 border-b-2 border-neutral-950">
@@ -219,21 +286,10 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                                     {formatSize(document.size)}
                                 </td>
                                 <td className="px-6 py-5">
-                                    <span className={`px-3 py-1 ${statusConfig[document.status].bg} border border-neutral-950 rounded-md text-xs font-bold uppercase flex items-center gap-1 w-fit shadow-hard-sm`}>
-                                        <span className={`w-2 h-2 ${statusConfig[document.status].dot} rounded-full`}></span>
-                                        {statusConfig[document.status].label}
-                                    </span>
+                                    <StatusBadge doc={document} />
                                 </td>
                                 <td className="px-6 py-5">
-                                    <div className="flex flex-col gap-1">
-                                        <ProgressDots doc={document} />
-                                        {document.status === "failed" && (
-                                            <div className="flex items-center gap-1 text-accent-red-deep font-bold text-xs mt-1">
-                                                <AlertCircle size={12} />
-                                                <span className="break-all">{document.error_message || "Error de procesamiento"}</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <ProgressDots doc={document} />
                                 </td>
                                 <td className="px-6 py-5 text-neutral-600 font-medium text-xs">
                                     {formatDistanceToNow(new Date(document.created_at), { addSuffix: true, locale: es })}
