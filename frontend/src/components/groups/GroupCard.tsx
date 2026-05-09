@@ -3,14 +3,15 @@ import type { Group } from "../../types"
 
 interface GroupCardProps {
     group: Group
-    onToggle: (id: number) => void
+    onToggle: (id: number, is_active: boolean, name: string) => void
     onDelete: (id: number) => void
+    isLoading?: boolean
 }
 
-export function GroupCard({ group, onToggle, onDelete }: GroupCardProps) {
+export function GroupCard({ group, onToggle, onDelete, isLoading }: GroupCardProps) {
     return (
         <div
-            className="group bg-white border-2 border-neutral-950 rounded shadow-hard-lg overflow-hidden flex flex-col h-full hover:border-primary-500 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0_0_#0a0a0d] cursor-pointer transition-all duration-300"
+            className="group bg-white border-2 border-neutral-950 rounded-card shadow-hard-lg overflow-hidden flex flex-col h-full hover:border-primary-500 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0_0_#0a0a0d] cursor-pointer transition-all duration-300 z-auto"
             onClick={() => console.log(`Clicked group ${group.id} (${group.name})`)}
         >
             {/* Header */}
@@ -66,19 +67,18 @@ export function GroupCard({ group, onToggle, onDelete }: GroupCardProps) {
                         <Copy size={18} />
                     </button>
                     <button
-                        onClick={(e) => { e.stopPropagation(); onToggle(group.id); }}
-                        className={`w-14 h-[34px] flex items-center border-2 border-neutral-950 rounded p-0.5 transition-colors cursor-pointer ${group.is_active ? 'bg-primary-400' : 'bg-neutral-200'}`}
-                        title={group.is_active ? "Desactivar" : "Activar"}
+                        onClick={(e) => { e.stopPropagation(); onToggle(group.id, !group.is_active, group.name); }}
+                        disabled={isLoading}
+                        className={`w-14 h-7 border-2 border-neutral-950 rounded-btn flex items-center transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${group.is_active ? 'bg-primary-400 justify-end' : 'bg-neutral-200 justify-start'}`}
                     >
-                        <div
-                            className={`w-5 h-[26px] bg-white border-2 border-neutral-950 rounded-sm shadow-hard-sm transition-transform duration-200 ${group.is_active ? 'translate-x-8' : 'translate-x-0'}`}
-                        />
+                        <div className="w-5 h-5 bg-white border-2 border-neutral-950 rounded-btn mx-0.5 shadow-hard-sm" />
                     </button>
                 </div>
 
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(group.id); }}
-                    className="p-2 border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10 rounded text-neutral-600 hover:text-accent-red-deep hover:shadow-hard-sm transition-all cursor-pointer"
+                    disabled={isLoading}
+                    className="p-2 border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10 rounded text-neutral-600 hover:text-accent-red-deep hover:shadow-hard-sm transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                     title="Eliminar grupo"
                 >
                     <Trash2 size={18} />
