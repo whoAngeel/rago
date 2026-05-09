@@ -69,6 +69,7 @@ func main() {
 		&domain.ChatSession{},
 		&domain.DocumentGroup{},
 		&domain.DocumentGroupItem{},
+		&domain.LLMUsage{},
 	}
 	for _, model := range models {
 		if err := gormDB.AutoMigrate(model); err != nil {
@@ -129,6 +130,7 @@ func main() {
 	groupRepo := postgres.NewDocumentGroupRepository(gormDB)
 	chatRepo := postgres.NewChatRepository(gormDB)
 	systemRepo := postgres.NewSystemConfigRepository(gormDB)
+	usageRepo := postgres.NewLLMUsageRepository(gormDB)
 
 	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
 
@@ -144,7 +146,9 @@ func main() {
 		log,
 		cfg.ChatHistoryLimit,
 		cfg.QdrantCollection,
-		cfg.ContextWindowLimit)
+		cfg.ContextWindowLimit,
+		usageRepo,
+	)
 
 	parserRegistry := parserpkg.NewRegistry()
 	parserRegistry.Register("text/plain", parserpkg.NewPlainTextAdapter())
@@ -160,7 +164,7 @@ func main() {
 
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(
-			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
+			application.NewAskUsecase(vStore, llm, log, embedder, cfg, usageRepo),
 			log,
 		),
 		AuthHandler: handlers.NewAuthHandler(
@@ -191,7 +195,7 @@ func main() {
 			application.NewDocumentGroupUsecase(groupRepo, docRepo),
 		),
 		PublicGroupHandler: handlers.NewPublicGroupHandler(
-			application.NewPublicChatUsecase(groupRepo, userRepo, docRepo, vStore, embedder, llm, minio, systemRepo, log, *cfg),
+			application.NewPublicChatUsecase(groupRepo, userRepo, docRepo, vStore, embedder, llm, minio, systemRepo, usageRepo, log, *cfg),
 		),
 		ChatHandler: handlers.NewChatHandler(
 			chatUC,

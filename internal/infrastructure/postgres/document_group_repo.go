@@ -41,23 +41,32 @@ func (r *DocumentGroupRepository) FindByID(ctx context.Context, id, userID int) 
 	return &group, nil
 }
 
-func (r *DocumentGroupRepository) FindByUserID(ctx context.Context, userID int) ([]*domain.DocumentGroup, error) {
+func (r *DocumentGroupRepository) FindByUserID(ctx context.Context, userID, page, limit int) ([]*domain.DocumentGroup, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&domain.DocumentGroup{}).
+		Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
 	var groups []*domain.DocumentGroup
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
 		Find(&groups).Error
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	for _, g := range groups {
 		ids, err := r.FindDocumentIDs(ctx, g.ID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		g.DocumentIDs = ids
 	}
-	return groups, nil
+	return groups, total, nil
 }
 
 func (r *DocumentGroupRepository) Update(ctx context.Context, group *domain.DocumentGroup) error {

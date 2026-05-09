@@ -15,11 +15,11 @@ import (
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
 type mockGroupRepo struct {
-	group               *domain.DocumentGroup
-	findErr             error
-	documentIDs         []int
-	incrementErr        error
-	slugExistsVal       bool
+	group                *domain.DocumentGroup
+	findErr              error
+	documentIDs          []int
+	incrementErr         error
+	slugExistsVal        bool
 	incrementQuotaCalled bool
 }
 
@@ -29,7 +29,7 @@ func (m *mockGroupRepo) FindBySlug(_ context.Context, _ string) (*domain.Documen
 func (m *mockGroupRepo) FindDocumentIDs(_ context.Context, _ int) ([]int, error) {
 	return m.documentIDs, nil
 }
-func (m *mockGroupRepo) IncrementAttempts(_ context.Context, _ int) error  { return m.incrementErr }
+func (m *mockGroupRepo) IncrementAttempts(_ context.Context, _ int) error { return m.incrementErr }
 func (m *mockGroupRepo) IncrementQuotaUsed(_ context.Context, _ int) error {
 	m.incrementQuotaCalled = true
 	return nil
@@ -38,8 +38,8 @@ func (m *mockGroupRepo) Create(_ context.Context, _ *domain.DocumentGroup) error
 func (m *mockGroupRepo) FindByID(_ context.Context, _, _ int) (*domain.DocumentGroup, error) {
 	return m.group, m.findErr
 }
-func (m *mockGroupRepo) FindByUserID(_ context.Context, _ int) ([]*domain.DocumentGroup, error) {
-	return nil, nil
+func (m *mockGroupRepo) FindByUserID(_ context.Context, _, _, _ int) ([]*domain.DocumentGroup, int64, error) {
+	return nil, 0, nil
 }
 func (m *mockGroupRepo) Update(_ context.Context, _ *domain.DocumentGroup) error { return nil }
 func (m *mockGroupRepo) Delete(_ context.Context, _, _ int) error                { return nil }
@@ -50,8 +50,8 @@ func (m *mockGroupRepo) SlugExists(_ context.Context, _ string) (bool, error) {
 }
 
 type mockUserRepoPublic struct {
-	user           *domain.User
-	findErr        error
+	user            *domain.User
+	findErr         error
 	incrementCalled bool
 }
 
@@ -143,11 +143,11 @@ func (m *mockEmbedder) ComputeEmbeddings(_ context.Context, _ []string) ([][]flo
 
 type mockLLM struct{ answer string }
 
-func (m *mockLLM) GenerateAnswer(_ context.Context, _ string) (string, error) {
-	return m.answer, nil
+func (m *mockLLM) GenerateAnswer(_ context.Context, _ string) (ports.LLMResult, error) {
+	return ports.LLMResult{Answer: m.answer, Model: "test-model", InputTokens: 10, OutputTokens: 5}, nil
 }
-func (m *mockLLM) Stream(_ context.Context, _ string, _ func(string) error) (string, error) {
-	return m.answer, nil
+func (m *mockLLM) Stream(_ context.Context, _ string, _ func(string) error) (ports.LLMResult, error) {
+	return ports.LLMResult{Answer: m.answer, Model: "test-model", InputTokens: 10, OutputTokens: 5}, nil
 }
 
 type mockConfigRepo struct{ val string }
@@ -164,9 +164,17 @@ func (m *mockLogger) Error(_ string, _ ...any)   {}
 func (m *mockLogger) Fatal(_ string, _ ...any)   {}
 func (m *mockLogger) With(_ ...any) ports.Logger { return m }
 
+type mockLLMUsageRepo struct {
+	created []*domain.LLMUsage
+}
+
+func (m *mockLLMUsageRepo) Create(_ context.Context, u *domain.LLMUsage) error {
+	m.created = append(m.created, u)
+	return nil
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-// unlimitedUser devuelve un usuario con cuota ilimitada (ChatQuota=0).
 func unlimitedUser() *mockUserRepoPublic {
 	return &mockUserRepoPublic{
 		user: &domain.User{ID: 1, ChatQuota: 0, ChatQuotaUsed: 0},
@@ -189,6 +197,7 @@ func newTestUsecase(
 		llm,
 		nil,
 		&mockConfigRepo{val: "Eres un asistente."},
+		nil, // usageRepo: nil es válido, se guarda con guard
 		&mockLogger{},
 		config.Config{QdrantCollection: "test"},
 	)
@@ -220,7 +229,7 @@ func TestPublicChat_GroupInactive(t *testing.T) {
 func TestPublicChat_UserQuotaExceeded(t *testing.T) {
 	group := &domain.DocumentGroup{
 		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
-		ChatQuota: 0, ChatQuotaUsed: 0, // sin cap de grupo
+		ChatQuota: 0, ChatQuotaUsed: 0,
 		DocumentIDs: []int{1},
 	}
 	userRepo := &mockUserRepoPublic{
@@ -238,11 +247,11 @@ func TestPublicChat_UserQuotaExceeded(t *testing.T) {
 func TestPublicChat_GroupCapExceeded(t *testing.T) {
 	group := &domain.DocumentGroup{
 		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
-		ChatQuota: 5, ChatQuotaUsed: 5, // cap de grupo agotado
+		ChatQuota: 5, ChatQuotaUsed: 5,
 		DocumentIDs: []int{1},
 	}
 	userRepo := &mockUserRepoPublic{
-		user: &domain.User{ID: 1, ChatQuota: 500, ChatQuotaUsed: 10}, // usuario tiene saldo
+		user: &domain.User{ID: 1, ChatQuota: 500, ChatQuotaUsed: 10},
 	}
 	uc := newTestUsecase(&mockGroupRepo{group: group}, userRepo, &mockDocRepo{}, &mockVectorStore{}, &mockLLM{})
 
@@ -260,7 +269,7 @@ func TestPublicChat_AdminUnlimited(t *testing.T) {
 		DocumentIDs: []int{1},
 	}
 	userRepo := &mockUserRepoPublic{
-		user: &domain.User{ID: 1, ChatQuota: 0, ChatQuotaUsed: 9999}, // admin, ilimitado
+		user: &domain.User{ID: 1, ChatQuota: 0, ChatQuotaUsed: 9999},
 	}
 	vs := &mockVectorStore{results: []ports.SearchResult{
 		{Document: schema.Document{PageContent: "contenido"}},
@@ -302,6 +311,54 @@ func TestPublicChat_IncrementsBothQuotas(t *testing.T) {
 	}
 	if !userRepo.incrementCalled {
 		t.Error("debería haber incrementado la cuota del usuario")
+	}
+}
+
+func TestPublicChat_RecordsTokenUsage(t *testing.T) {
+	group := &domain.DocumentGroup{
+		ID: 5, Slug: "abc", IsActive: true, UserID: 42,
+		ChatQuota: 0, ChatQuotaUsed: 0,
+		DocumentIDs: []int{1},
+	}
+	userRepo := &mockUserRepoPublic{
+		user: &domain.User{ID: 42, ChatQuota: 0},
+	}
+	vs := &mockVectorStore{results: []ports.SearchResult{
+		{Document: schema.Document{PageContent: "contenido"}},
+	}}
+	usageRepo := &mockLLMUsageRepo{}
+
+	uc := application.NewPublicChatUsecase(
+		&mockGroupRepo{group: group},
+		userRepo,
+		&mockDocRepo{},
+		vs,
+		&mockEmbedder{vec: []float32{0.1}},
+		&mockLLM{answer: "respuesta"},
+		nil,
+		&mockConfigRepo{val: "Eres un asistente."},
+		usageRepo,
+		&mockLogger{},
+		config.Config{QdrantCollection: "test"},
+	)
+
+	_, err := uc.Chat(context.Background(), "abc", "pregunta")
+
+	if err != nil {
+		t.Fatalf("no esperaba error: %v", err)
+	}
+	if len(usageRepo.created) != 1 {
+		t.Fatalf("esperaba 1 registro de uso, got: %d", len(usageRepo.created))
+	}
+	rec := usageRepo.created[0]
+	if rec.UserID != 42 {
+		t.Errorf("user_id: esperaba 42, got %d", rec.UserID)
+	}
+	if rec.GroupID == nil || *rec.GroupID != 5 {
+		t.Errorf("group_id: esperaba 5, got %v", rec.GroupID)
+	}
+	if rec.Model != "test-model" {
+		t.Errorf("model: esperaba 'test-model', got %q", rec.Model)
 	}
 }
 

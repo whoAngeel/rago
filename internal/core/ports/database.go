@@ -51,11 +51,15 @@ type SystemConfigRepository interface {
 	Set(ctx context.Context, key, value string) error
 }
 
+type LLMUsageRepository interface {
+	Create(ctx context.Context, usage *domain.LLMUsage) error
+}
+
 type DocumentGroupRepository interface {
 	Create(ctx context.Context, group *domain.DocumentGroup) error
 	FindByID(ctx context.Context, id, userID int) (*domain.DocumentGroup, error)
 	FindBySlug(ctx context.Context, slug string) (*domain.DocumentGroup, error)
-	FindByUserID(ctx context.Context, userID int) ([]*domain.DocumentGroup, error)
+	FindByUserID(ctx context.Context, userID, page, limit int) ([]*domain.DocumentGroup, int64, error)
 	Update(ctx context.Context, group *domain.DocumentGroup) error
 	Delete(ctx context.Context, id, userID int) error
 	AddDocuments(ctx context.Context, groupID int, documentIDs []int) error

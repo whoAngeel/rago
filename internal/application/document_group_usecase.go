@@ -58,8 +58,8 @@ func (uc *DocumentGroupUsecase) Create(ctx context.Context, userID int, name str
 	return group, nil
 }
 
-func (uc *DocumentGroupUsecase) List(ctx context.Context, userID int) ([]*domain.DocumentGroup, error) {
-	return uc.GroupRepo.FindByUserID(ctx, userID)
+func (uc *DocumentGroupUsecase) List(ctx context.Context, userID, page, limit int) ([]*domain.DocumentGroup, int64, error) {
+	return uc.GroupRepo.FindByUserID(ctx, userID, page, limit)
 }
 
 func (uc *DocumentGroupUsecase) Get(ctx context.Context, id, userID int) (*domain.DocumentGroup, error) {

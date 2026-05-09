@@ -9,8 +9,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/whoAngeel/rago/internal/application"
+	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
 )
+
+type groupListResponse struct {
+	Items []*domain.DocumentGroup `json:"items"`
+	Total int64                   `json:"total"`
+	Page  int                     `json:"page"`
+	Limit int                     `json:"limit"`
+}
 
 type DocumentGroupHandler struct {
 	usecase *application.DocumentGroupUsecase
@@ -69,14 +77,20 @@ func (h *DocumentGroupHandler) List(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	params := parsePagination(c, 20)
 	userID := c.GetInt("user_id")
-	groups, err := h.usecase.List(ctx, userID)
+	groups, total, err := h.usecase.List(ctx, userID, params.Page, params.Limit)
 	if err != nil {
 		rest.RespondError(c, http.StatusInternalServerError, "Failed to list groups", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, groups)
+	c.JSON(http.StatusOK, groupListResponse{
+		Items: groups,
+		Total: total,
+		Page:  params.Page,
+		Limit: params.Limit,
+	})
 }
 
 func (h *DocumentGroupHandler) Get(c *gin.Context) {

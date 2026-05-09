@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
@@ -38,6 +39,7 @@ type PublicChatUsecase struct {
 	LLM         ports.LLMProvider
 	BlobStorage ports.BlobStorage
 	ConfigRepo  ports.SystemConfigRepository
+	UsageRepo   ports.LLMUsageRepository
 	Logger      ports.Logger
 	config      config.Config
 }
@@ -51,6 +53,7 @@ func NewPublicChatUsecase(
 	llm ports.LLMProvider,
 	blobStorage ports.BlobStorage,
 	configRepo ports.SystemConfigRepository,
+	usageRepo ports.LLMUsageRepository,
 	logger ports.Logger,
 	cfg config.Config,
 ) *PublicChatUsecase {
@@ -63,6 +66,7 @@ func NewPublicChatUsecase(
 		LLM:         llm,
 		BlobStorage: blobStorage,
 		ConfigRepo:  configRepo,
+		UsageRepo:   usageRepo,
 		Logger:      logger,
 		config:      cfg,
 	}
@@ -210,16 +214,26 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 	sb.WriteString(message)
 	sb.WriteString("\n\nRESPUESTA:")
 
-	answer, err := uc.LLM.GenerateAnswer(ctx, sb.String())
+	llmResult, err := uc.LLM.GenerateAnswer(ctx, sb.String())
 	if err != nil {
 		return "", fmt.Errorf("generating answer: %w", err)
 	}
 
 	_ = uc.GroupRepo.IncrementQuotaUsed(ctx, group.ID)
 	_ = uc.UserRepo.IncrementChatQuotaUsed(ctx, user.ID)
-	uc.Logger.Info("public: chat answered", "slug", slug, "answer_len", len(answer))
+	if uc.UsageRepo != nil {
+		groupID := group.ID
+		_ = uc.UsageRepo.Create(ctx, &domain.LLMUsage{
+			UserID:       user.ID,
+			GroupID:      &groupID,
+			Model:        llmResult.Model,
+			InputTokens:  llmResult.InputTokens,
+			OutputTokens: llmResult.OutputTokens,
+		})
+	}
+	uc.Logger.Info("public: chat answered", "slug", slug, "answer_len", len(llmResult.Answer))
 
-	return answer, nil
+	return llmResult.Answer, nil
 }
 
 func (uc *PublicChatUsecase) DownloadDocument(ctx context.Context, slug string, docID int) (io.ReadCloser, string, error) {
