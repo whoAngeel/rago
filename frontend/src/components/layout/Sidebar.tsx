@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { LayoutDashboard, FileText, Settings, Fish, HardDrive } from "lucide-react"
+import { LayoutDashboard, FileText, Settings, Fish, HardDrive, Group } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import api from "../../lib/api"
 import type { User } from "../../types"
@@ -8,6 +8,7 @@ const links = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/documents", label: "Documentos", icon: FileText },
     { to: "/settings", label: "Configuración", icon: Settings },
+    { to: "/groups", label: "Grupos", icon: Group },
 ]
 
 export const SideBar = () => {
@@ -45,7 +46,7 @@ export const SideBar = () => {
                             className="flex items-center gap-3 px-4 py-3 rounded text-neutral-600 font-medium border-2 border-transparent hover:border-neutral-950 hover:bg-white hover:text-black hover:shadow-hard-md transition-all"
                             activeOptions={{ exact: link.to === "/dashboard" }}
                             activeProps={{ className: "bg-primary-400 text-black border-neutral-950 shadow-hard-md" }}>
-                            <link.icon size={22} />
+                            <link.icon size={32} />
                             <span className="text-lg">{link.label}</span>
                         </Link>
                     ))

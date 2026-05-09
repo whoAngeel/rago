@@ -7,6 +7,7 @@ const pageTitles: Record<string, { label: string; subtitle: string }> = {
     "/dashboard": { label: "Dashboard", subtitle: "Visión general del sistema" },
     "/documents": { label: "Documentos", subtitle: "Gestión de documentos" },
     "/settings": { label: "Configuración", subtitle: "Preferencias del sistema" },
+    "/groups": { label: "Grupos", subtitle: "Gestión de grupos de documentos" },
 }
 
 export function Navbar() {
