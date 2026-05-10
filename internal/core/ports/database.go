@@ -52,8 +52,15 @@ type SystemConfigRepository interface {
 	Set(ctx context.Context, key, value string) error
 }
 
+type GroupUsageSummary struct {
+	TotalCalls   int64 `json:"total_calls"`
+	InputTokens  int64 `json:"input_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
+}
+
 type LLMUsageRepository interface {
 	Create(ctx context.Context, usage *domain.LLMUsage) error
+	SumByGroupID(ctx context.Context, groupID int) (GroupUsageSummary, error)
 }
 
 type DocumentGroupRepository interface {

@@ -192,7 +192,7 @@ func main() {
 			*cfg,
 		),
 		DocumentGroupHandler: handlers.NewDocumentGroupHandler(
-			application.NewDocumentGroupUsecase(groupRepo, docRepo),
+			application.NewDocumentGroupUsecase(groupRepo, docRepo, usageRepo),
 		),
 		PublicGroupHandler: handlers.NewPublicGroupHandler(
 			application.NewPublicChatUsecase(groupRepo, userRepo, docRepo, vStore, embedder, llm, minio, systemRepo, usageRepo, log, *cfg),

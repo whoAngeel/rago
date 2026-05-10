@@ -84,6 +84,7 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 			groups.POST("/", h.DocumentGroupHandler.Create)
 			groups.GET("/", h.DocumentGroupHandler.List)
 			groups.GET("/:id", h.DocumentGroupHandler.Get)
+			groups.GET("/:id/usage", h.DocumentGroupHandler.GetUsage)
 			groups.PATCH("/:id", h.DocumentGroupHandler.Update)
 			groups.DELETE("/:id", h.DocumentGroupHandler.Delete)
 			groups.POST("/:id/documents", h.DocumentGroupHandler.AddDocuments)

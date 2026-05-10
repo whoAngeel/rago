@@ -18,13 +18,15 @@ var (
 type DocumentGroupUsecase struct {
 	GroupRepo ports.DocumentGroupRepository
 	DocRepo   ports.DocumentRepository
+	UsageRepo ports.LLMUsageRepository
 }
 
 func NewDocumentGroupUsecase(
 	groupRepo ports.DocumentGroupRepository,
 	docRepo ports.DocumentRepository,
+	usageRepo ports.LLMUsageRepository,
 ) *DocumentGroupUsecase {
-	return &DocumentGroupUsecase{GroupRepo: groupRepo, DocRepo: docRepo}
+	return &DocumentGroupUsecase{GroupRepo: groupRepo, DocRepo: docRepo, UsageRepo: usageRepo}
 }
 
 func (uc *DocumentGroupUsecase) Create(ctx context.Context, userID int, name string, documentIDs []int, allowDownloads bool) (*domain.DocumentGroup, error) {
@@ -73,7 +75,7 @@ func (uc *DocumentGroupUsecase) Get(ctx context.Context, id, userID int) (*domai
 	return group, nil
 }
 
-func (uc *DocumentGroupUsecase) Update(ctx context.Context, id, userID int, name string, isActive, allowDownloads bool) error {
+func (uc *DocumentGroupUsecase) Update(ctx context.Context, id, userID int, name *string, isActive, allowDownloads *bool) error {
 	group, err := uc.GroupRepo.FindByID(ctx, id, userID)
 	if err != nil {
 		return err
@@ -81,9 +83,15 @@ func (uc *DocumentGroupUsecase) Update(ctx context.Context, id, userID int, name
 	if group == nil {
 		return ErrGroupNotFound
 	}
-	group.Name = name
-	group.IsActive = isActive
-	group.AllowDownloads = allowDownloads
+	if name != nil {
+		group.Name = *name
+	}
+	if isActive != nil {
+		group.IsActive = *isActive
+	}
+	if allowDownloads != nil {
+		group.AllowDownloads = *allowDownloads
+	}
 	return uc.GroupRepo.Update(ctx, group)
 }
 
@@ -133,6 +141,17 @@ func (uc *DocumentGroupUsecase) RemoveDocument(ctx context.Context, groupID, doc
 		return uc.GroupRepo.Update(ctx, group)
 	}
 	return nil
+}
+
+func (uc *DocumentGroupUsecase) GetUsage(ctx context.Context, groupID, userID int) (ports.GroupUsageSummary, error) {
+	group, err := uc.GroupRepo.FindByID(ctx, groupID, userID)
+	if err != nil {
+		return ports.GroupUsageSummary{}, err
+	}
+	if group == nil {
+		return ports.GroupUsageSummary{}, ErrGroupNotFound
+	}
+	return uc.UsageRepo.SumByGroupID(ctx, groupID)
 }
 
 func (uc *DocumentGroupUsecase) validateDocuments(ctx context.Context, userID int, documentIDs []int) error {

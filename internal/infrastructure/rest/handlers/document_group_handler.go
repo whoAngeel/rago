@@ -35,9 +35,9 @@ type createGroupRequest struct {
 }
 
 type updateGroupRequest struct {
-	Name           string `json:"name" binding:"required"`
-	IsActive       bool   `json:"is_active"`
-	AllowDownloads bool   `json:"allow_downloads"`
+	Name           *string `json:"name,omitempty"`
+	IsActive       *bool   `json:"is_active,omitempty"`
+	AllowDownloads *bool   `json:"allow_downloads,omitempty"`
 }
 
 type addDocumentsRequest struct {
@@ -167,6 +167,30 @@ func (h *DocumentGroupHandler) Delete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func (h *DocumentGroupHandler) GetUsage(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	groupID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid group ID", "")
+		return
+	}
+
+	userID := c.GetInt("user_id")
+	summary, err := h.usecase.GetUsage(ctx, groupID, userID)
+	if err != nil {
+		if errors.Is(err, application.ErrGroupNotFound) {
+			rest.RespondError(c, http.StatusNotFound, "Group not found", "")
+			return
+		}
+		rest.RespondError(c, http.StatusInternalServerError, "Failed to get usage", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
 }
 
 func (h *DocumentGroupHandler) AddDocuments(c *gin.Context) {
