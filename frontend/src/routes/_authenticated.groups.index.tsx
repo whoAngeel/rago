@@ -86,12 +86,29 @@ function RouteComponent() {
   })
 
 
+  const createMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return api.post(`/groups/`, { name, document_ids: [] })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      addToast("Éxito", "Grupo creado correctamente", "success")
+    },
+    onError: (err: any) => {
+      addToast("Error", `No se pudo crear el grupo: ${err.message}`, "error")
+    }
+  })
+
   const handleOpenModal = () => {
     setShowCreateModal(true)
   }
 
   const handleCloseModal = () => {
     setShowCreateModal(false)
+  }
+
+  const handleCreateGroup = (name: string) => {
+    createMutation.mutate(name)
   }
 
 
@@ -143,7 +160,7 @@ function RouteComponent() {
 
       )}
 
-      <CreateGroupModal isOpen={showCreateModal} onClose={handleCloseModal} />
+      <CreateGroupModal isOpen={showCreateModal} onClose={handleCloseModal} onCreate={handleCreateGroup} isPending={createMutation.isPending} />
     </div>
   )
 }

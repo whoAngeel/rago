@@ -34,7 +34,7 @@ export const Button = ({
             ref={ref}
             disabled={disabled || isLoading}
             className={`
-            inline-flex items-center gap-2 border-2 border-neutral-900 rounded-lg 
+            inline-flex items-center gap-2 border-2 border-neutral-900 rounded-b-btn 
             shadow-hard-md shadow-hover font-medium 
             cursor-pointer 
             transition-all

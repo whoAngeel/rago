@@ -1,14 +1,21 @@
-import { Bell, HelpCircle } from "lucide-react"
+import { Bell, HelpCircle, ArrowLeft } from "lucide-react"
 import { useAuthStore, useUser } from "../../store/authStore"
 import { useNavigate, useLocation } from "@tanstack/react-router"
 import { useState } from "react"
 
-const pageTitles: Record<string, { label: string; subtitle: string }> = {
+const pageTitles: Record<string, { label: string; subtitle: string; parent?: string }> = {
     "/dashboard": { label: "Dashboard", subtitle: "Visión general del sistema" },
     "/documents": { label: "Documentos", subtitle: "Gestión de documentos" },
     "/settings": { label: "Configuración", subtitle: "Preferencias del sistema" },
     "/groups": { label: "Grupos", subtitle: "Gestión de grupos de documentos" },
-    "/groups/new": { label: "Detalle Del Grupo", subtitle: '' }
+}
+
+function getCurrentPage(pathname: string) {
+    if (pageTitles[pathname]) return pageTitles[pathname]
+    if (pathname.startsWith("/groups/") && pathname !== "/groups") {
+        return { label: "Detalle del Grupo", subtitle: "", parent: "/groups" as const }
+    }
+    return null
 }
 
 export function Navbar() {
@@ -17,7 +24,7 @@ export function Navbar() {
     const navigate = useNavigate()
     const { pathname } = useLocation()
     const [showMenu, setShowMenu] = useState(false)
-    const current = pageTitles[pathname]
+    const current = getCurrentPage(pathname)
 
     const initials = user?.name
         ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -30,11 +37,19 @@ export function Navbar() {
 
     return (
         <header className="h-20 bg-white border-b-2 border-neutral-950 px-8 flex items-center justify-between font-sans">
-            <div>
+            <div className="flex items-center gap-4">
+                {current?.parent && (
+                    <button
+                        onClick={() => navigate({ to: current.parent })}
+                        className="p-2 border-2 border-neutral-950 rounded hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                )}
                 {current && (
                     <div>
-                        <h1 className="text-3xl font-bold text-neutral-950">{current.label}</h1>
-                        <p className="text-sm font-medium text-neutral-500">{current.subtitle}</p>
+                        <h1 className="text-xl font-bold text-neutral-950">{current.label}</h1>
+                        <p className="text-xs font-medium text-neutral-500">{current.subtitle}</p>
                     </div>
                 )}
             </div>

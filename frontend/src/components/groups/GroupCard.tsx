@@ -1,4 +1,5 @@
 import { Copy, QrCode, FileText, MessageSquare, BarChart2, Trash2 } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
 import type { Group } from "../../types"
 
 interface GroupCardProps {
@@ -9,10 +10,12 @@ interface GroupCardProps {
 }
 
 export function GroupCard({ group, onToggle, onDelete, isLoading }: GroupCardProps) {
+    const navigate = useNavigate()
+
     return (
-        <div
-            className="group bg-white border-2 border-neutral-950 rounded-card shadow-hard-lg overflow-hidden flex flex-col h-full hover:border-primary-500 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0_0_#0a0a0d] cursor-pointer transition-all duration-300 z-auto"
-            onClick={() => console.log(`Clicked group ${group.id} (${group.name})`)}
+        <div 
+            className="group bg-white border-2 border-neutral-950 rounded shadow-hard-lg overflow-hidden flex flex-col h-full hover:border-primary-500 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0_0_#0a0a0d] cursor-pointer transition-all duration-300"
+            onClick={() => navigate({ to: "/groups/$id", params: { id: String(group.id) } })}
         >
             {/* Header */}
             <div className="p-6 border-b-2 border-neutral-950 group-hover:border-primary-500 bg-neutral-50 flex justify-between items-start transition-colors">
