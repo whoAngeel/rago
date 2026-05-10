@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import type { Document, Group } from '../types'
+import type { Document, Group, User, GroupUsage } from '../types'
 import api from '../lib/api'
 import { Button } from '../components/ui'
 import { Loader2 } from 'lucide-react'
@@ -35,6 +35,34 @@ function RouteComponent() {
   const docsNotInGroup = availableDocs?.filter(
     (doc) => !group?.document_ids?.includes(doc.id)
   ) ?? []
+
+  const { data: userProfile } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: async () => {
+      const { data } = await api.get('/users/me')
+      return data
+    },
+  })
+
+  const { data: usage } = useQuery<GroupUsage>({
+    queryKey: ['group-usage', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/groups/${id}/usage`)
+      return data
+    },
+  })
+
+  const rejectedAttempts = (group?.chat_attempts ?? 0) - (group?.chat_quota_used ?? 0)
+
+  const isGroupQuotaExhausted =
+    (group?.chat_quota ?? 0) > 0 &&
+    (group?.chat_quota_used ?? 0) >= (group?.chat_quota ?? 0)
+
+  const isUserQuotaExhausted =
+    (userProfile?.chat_quota ?? 0) > 0 &&
+    (userProfile?.chat_quota_used ?? 0) >= (userProfile?.chat_quota ?? 0)
+
+  const isBlocked = isGroupQuotaExhausted || isUserQuotaExhausted
 
   const updateMutation = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
@@ -97,43 +125,60 @@ function RouteComponent() {
         {/* Stats Section */}
         <div className="border-2 border-neutral-950 p-6 bg-white rounded shadow-hard-md">
           <h4 className="font-bold mb-4 text-lg text-neutral-950">Estadísticas de Uso</h4>
+
+          {isBlocked && (
+            <div className="mb-4 p-3 border-2 border-neutral-950 rounded bg-amber-100">
+              <p className="text-sm font-bold text-neutral-950">
+                {isUserQuotaExhausted
+                  ? "Tu cuota global de mensajes se agotó. Todos tus grupos están bloqueados."
+                  : "La cuota de mensajes de este grupo se agotó. Los visitantes no pueden chatear."}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
-            {/* Quota Usage */}
+            {/* Card 1 — Cuota del grupo */}
             <div className="p-4 bg-neutral-50 border-2 border-neutral-950 rounded shadow-hard-sm flex flex-col gap-2">
-              <div className="flex justify-between items-baseline">
-                <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1">Cuota de Mensajes</p>
-                <p className="text-sm font-black text-neutral-950">{group?.chat_quota_used} / {group?.chat_quota}</p>
-              </div>
+              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Cuota del Grupo</p>
+              <p className="text-sm font-black text-neutral-950">{group?.chat_quota_used} / {group?.chat_quota}</p>
               <div className="w-full h-4 bg-white border-2 border-neutral-950 rounded-full overflow-hidden shadow-hard-sm">
-                <div 
-                  className="h-full bg-primary-400 border-r-2 border-neutral-950" 
+                <div
+                  className={`h-full border-r-2 border-neutral-950 ${isGroupQuotaExhausted ? 'bg-accent-red-deep' : 'bg-primary-400'}`}
                   style={{ width: `${Math.min(100, (group?.chat_quota_used ?? 0) / (group?.chat_quota ?? 1) * 100)}%` }}
                 />
               </div>
-              <p className="text-xs font-bold text-neutral-500 uppercase mt-auto">Mensajes completados con éxito</p>
             </div>
 
-            {/* Traffic & Effectiveness */}
+            {/* Card 2 — Cuota del usuario */}
             <div className="p-4 bg-neutral-50 border-2 border-neutral-950 rounded shadow-hard-sm flex flex-col gap-2">
-              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1">Tráfico y Efectividad</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-black text-neutral-950">{group?.chat_attempts}</p>
-                <p className="text-xs font-bold text-neutral-500 uppercase">Intentos totales</p>
+              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Cuota Global</p>
+              <p className="text-sm font-black text-neutral-950">{userProfile?.chat_quota_used} / {userProfile?.chat_quota}</p>
+              <div className="w-full h-4 bg-white border-2 border-neutral-950 rounded-full overflow-hidden shadow-hard-sm">
+                <div
+                  className={`h-full border-r-2 border-neutral-950 ${isUserQuotaExhausted ? 'bg-accent-red-deep' : 'bg-primary-400'}`}
+                  style={{ width: `${Math.min(100, (userProfile?.chat_quota_used ?? 0) / (userProfile?.chat_quota ?? 1) * 100)}%` }}
+                />
               </div>
-              
-              <div className="flex gap-6 mt-1 border-t-2 border-neutral-200 pt-2">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-neutral-500 uppercase">Completados</span>
-                  <span className="text-xl font-black text-primary-600">{group?.chat_quota_used}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-neutral-500 uppercase">Rechazados</span>
-                  <span className="text-xl font-black text-red-600">{(group?.chat_attempts ?? 0) - (group?.chat_quota_used ?? 0)}</span>
-                </div>
+            </div>
+
+            {/* Card 3 — Tráfico */}
+            <div className="p-4 bg-neutral-50 border-2 border-neutral-950 rounded shadow-hard-sm flex flex-col gap-2">
+              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Tráfico y Efectividad</p>
+              <p className="text-2xl font-black text-neutral-950">{group?.chat_attempts} intentos</p>
+              <div className="flex gap-4 text-xs font-bold">
+                <span className="text-primary-600">{group?.chat_quota_used} completados</span>
+                <span className="text-accent-red-deep">{rejectedAttempts} rechazados</span>
               </div>
-              <p className="text-xs font-medium text-neutral-500 mt-2 border-t border-neutral-200 pt-1">
-                * Los rechazos incluyen intentos por cuota de grupo agotada o grupo inactivo.
-              </p>
+            </div>
+
+            {/* Card 4 — Uso LLM */}
+            <div className="p-4 bg-neutral-50 border-2 border-neutral-950 rounded shadow-hard-sm flex flex-col gap-2">
+              <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Uso LLM</p>
+              <p className="text-2xl font-black text-neutral-950">{usage?.total_calls ?? 0} llamadas</p>
+              <div className="flex gap-4 text-xs font-bold">
+                <span className="text-neutral-600">{usage?.input_tokens ?? 0} tokens entrada</span>
+                <span className="text-neutral-600">{usage?.output_tokens ?? 0} tokens salida</span>
+              </div>
             </div>
           </div>
         </div>

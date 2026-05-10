@@ -64,12 +64,8 @@ function RouteComponent() {
   })
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, is_active, name }: { id: number; is_active: boolean; name: string }) => {
-      return api.patch(`/groups/${id}/`, {
-        name,
-        is_active,
-        allow_downloads: true,
-      })
+    mutationFn: async ({ id, is_active }: { id: number; is_active: boolean }) => {
+      return api.patch(`/groups/${id}/`, { is_active })
     },
     onMutate: ({ id }) => {
       setLoadingIds(prev => [...prev, id])

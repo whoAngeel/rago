@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Pencil, Check, X, Dot } from 'lucide-react'
+import { useState } from 'react'
+import { Pencil, Check, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -59,11 +59,11 @@ export function GroupHeader({ name, createdAt, updatedAt, documentCount, onSaveN
           </div>
         )}
       </div>
-      <div className='flex flex-wrap items-center gap-x-1 gap-y-1 text-xs font-bold text-neutral-500 uppercase tracking-wider mt-1'>
-        {createdAt && <span>Creado el {createdAt.slice(0, 10)}</span>}
-        {createdAt && <Dot size={16} className="text-neutral-400" />}
-        {updatedAt && <span>Actualizado {formatTimeAgo(updatedAt)}</span>}
-        {updatedAt && <Dot size={16} className="text-neutral-400" />}
+      <div className='flex flex-col flex-wrap items-start gap-x-1 gap-y-1 text-xs font-bold text-neutral-500 uppercase tracking-wider mt-1'>
+        <span>{createdAt && <span>Creado el {createdAt.slice(0, 10)}</span>}</span>
+
+        <span>{updatedAt && <span>Actualizado {formatTimeAgo(updatedAt)}</span>}</span>
+
         <span>{documentCount} documentos</span>
       </div>
     </div>

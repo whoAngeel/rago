@@ -5,6 +5,8 @@ interface User {
     role: 'editor' | 'admin' | 'viewer'
     max_documents: number
     document_count: number
+    chat_quota: number
+    chat_quota_used: number
 }
 
 interface Document {
@@ -70,4 +72,10 @@ interface ProcessingStep {
     created_at: string
 }
 
-export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group }
+interface GroupUsage {
+    total_calls: number
+    input_tokens: number
+    output_tokens: number
+}
+
+export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group, GroupUsage }
