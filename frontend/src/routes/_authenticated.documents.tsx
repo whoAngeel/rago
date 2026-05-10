@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { DropZone } from '../components/documents/DropZone'
 import api from '../lib/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Document as DocumentType } from '../types'
+import { type Document as DocumentType, type User } from '../types'
 import { DocumentTable } from '../components/documents/DocumentTable'
 import { useEffect, useState } from 'react'
 import { useToastStore } from '../store/toastStore'
@@ -28,6 +28,18 @@ function RouteComponent() {
 
   const [page, setPage] = useState(1)
   const limit = 8
+
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ["users", "me"],
+    queryFn: async () => {
+      const { data } = await api.get("/users/me")
+      return data
+    },
+    staleTime: 10000,
+  })
+
+  const isAtLimit = (currentUser?.max_documents ?? 0) > 0 &&
+    (currentUser?.document_count ?? 0) >= (currentUser?.max_documents ?? 0)
 
   const { data, isLoading, error } = useQuery<DocumentsResponse>({
     queryKey: ["documents", page],
@@ -70,6 +82,7 @@ function RouteComponent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] })
+      queryClient.invalidateQueries({ queryKey: ["users", "me"] })
       addToast("Éxito", "Documento subido correctamente", "success")
     },
     onError: (err: any) => {
@@ -86,6 +99,7 @@ function RouteComponent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] })
+      queryClient.invalidateQueries({ queryKey: ["users", "me"] })
       addToast("Éxito", "Documento borrado correctamente", "success")
     },
     onError: (err: any, id: number) => {
@@ -100,8 +114,13 @@ function RouteComponent() {
     <div className='flex w-full h-full p-6 flex-col gap-6'>
 
       <div className='w-full'>
-        <DropZone onUpload={(file) => uploadMutation.mutate(file)} />
+        <DropZone onUpload={(file) => uploadMutation.mutate(file)} disabled={isAtLimit} />
       </div>
+      {isAtLimit && (
+        <p className="text-sm text-accent-red-deep font-bold">
+          Has alcanzado el límite de {currentUser?.max_documents} documentos.
+        </p>
+      )}
 
       <div className="flex items-center justify-between w-full">
         <div className="relative flex-1 max-w-md">

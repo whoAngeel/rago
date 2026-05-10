@@ -131,6 +131,9 @@ function RouteComponent() {
                   <span className="text-xl font-black text-red-600">{(group?.chat_attempts ?? 0) - (group?.chat_quota_used ?? 0)}</span>
                 </div>
               </div>
+              <p className="text-xs font-medium text-neutral-500 mt-2 border-t border-neutral-200 pt-1">
+                * Los rechazos incluyen intentos por cuota de grupo agotada o grupo inactivo.
+              </p>
             </div>
           </div>
         </div>
