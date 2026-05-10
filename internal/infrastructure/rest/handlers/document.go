@@ -193,7 +193,7 @@ func (h *DocumentHandler) ListSelect(c *gin.Context) {
 	defer cancel()
 
 	userId := c.GetInt("user_id")
-	docs, _, err := h.usecase.GetUsersDocuments(ctx, userId, 1, 9999)
+	docs, err := h.usecase.GetDocumentsForSelect(ctx, userId)
 	if err != nil {
 		rest.RespondError(c, http.StatusInternalServerError, "Error", err.Error())
 		return
@@ -201,6 +201,9 @@ func (h *DocumentHandler) ListSelect(c *gin.Context) {
 
 	items := make([]SelectItem, 0, len(docs))
 	for _, d := range docs {
+		if d.Status == domain.StatusFailed {
+			continue
+		}
 		items = append(items, SelectItem{ID: d.ID, Filename: d.Filename})
 	}
 

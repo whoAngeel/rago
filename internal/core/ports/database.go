@@ -32,6 +32,7 @@ type DocumentRepository interface {
 	FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error)
 	FindByChecksum(ctx context.Context, userID int, checksum string) (*domain.Document, error)
 	CountDocumentsByUserID(ctx context.Context, userID int) (int64, error)
+	FindDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error)
 }
 
 type ChatRepository interface {

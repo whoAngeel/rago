@@ -138,3 +138,7 @@ func (i *IngestDocumentUsecase) GetDocumentSteps(ctx context.Context, docID, use
 	}
 	return steps, nil
 }
+
+func (uc *IngestDocumentUsecase) GetDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error) {
+	return uc.DocRepo.FindDocumentsForSelect(ctx, userID)
+}

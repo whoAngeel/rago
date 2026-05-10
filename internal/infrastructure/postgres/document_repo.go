@@ -121,3 +121,11 @@ func (r *DocumentRepository) CountDocumentsByUserID(ctx context.Context, userID 
 		Count(&count).Error
 	return count, err
 }
+
+func (r *DocumentRepository) FindDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error) {
+	var docs []*domain.Document
+	err := r.db.WithContext(ctx).Where("user_id = ? AND status != ?", userID, domain.StatusFailed).
+		Order("created_at desc").Find(&docs).Error
+	return docs, err
+
+}

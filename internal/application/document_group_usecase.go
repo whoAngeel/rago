@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	ErrGroupNotFound      = errors.New("group not found")
-	ErrInvalidDocument    = errors.New("invalid document: must be completed and owned by user")
-	ErrSlugCollision      = errors.New("slug collision after max retries")
+	ErrGroupNotFound   = errors.New("group not found")
+	ErrInvalidDocument = errors.New("invalid document: must be completed and owned by user")
+	ErrSlugCollision   = errors.New("slug collision after max retries")
 )
 
 type DocumentGroupUsecase struct {
