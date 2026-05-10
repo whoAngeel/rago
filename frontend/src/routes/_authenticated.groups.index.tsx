@@ -107,6 +107,11 @@ function RouteComponent() {
     createMutation.mutate(name)
   }
 
+  const handleCopy = (slug: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/c/${slug}`)
+    addToast("Link copiado", "El enlace fue copiado al portapapeles", "success")
+  }
+
 
   return (
     <div className='flex w-full h-full p-6 flex-col gap-6'>
@@ -131,8 +136,9 @@ function RouteComponent() {
             <div className='flex-1 min-h-0 overflow-y-auto overflow-x-visible p-2'>
               <GroupList
                 groups={data?.items ?? []}
-                onToggle={(id, is_active, name) => toggleMutation.mutate({ id, is_active, name })}
+                onToggle={(id, is_active) => toggleMutation.mutate({ id, is_active })}
                 onDelete={(id) => deleteMutation.mutate(id)}
+                onCopy={handleCopy}
                 loadingIds={loadingIds}
               />
             </div>

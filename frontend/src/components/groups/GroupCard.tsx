@@ -1,16 +1,17 @@
-import { Copy, QrCode, FileText, MessageSquare, BarChart2, Trash2 } from "lucide-react"
+import { Copy, MessageCircle, FileText, MessageSquare, BarChart2, Trash2 } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
 import type { Group } from "../../types"
 import { Switch } from "../ui"
 
 interface GroupCardProps {
     group: Group
-    onToggle: (id: number, is_active: boolean, name: string) => void
+    onToggle: (id: number, is_active: boolean) => void
     onDelete: (id: number) => void
+    onCopy?: (slug: string) => void
     isLoading?: boolean
 }
 
-export function GroupCard({ group, onToggle, onDelete, isLoading }: GroupCardProps) {
+export function GroupCard({ group, onToggle, onDelete, onCopy, isLoading }: GroupCardProps) {
     const navigate = useNavigate()
 
     return (
@@ -64,15 +65,15 @@ export function GroupCard({ group, onToggle, onDelete, isLoading }: GroupCardPro
             <div className="px-6 py-4 border-t-2 border-neutral-950 bg-neutral-50 flex items-center justify-between mt-auto">
                 <div className="flex items-center gap-2">
 
-                    <button onClick={(e) => e.stopPropagation()} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Compartir QR">
-                        <QrCode size={18} />
+                    <button onClick={(e) => { e.stopPropagation(); navigate({ to: "/c/$slug", params: { slug: group.slug } }); }} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Chat público">
+                        <MessageCircle size={18} />
                     </button>
-                    <button onClick={(e) => e.stopPropagation()} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Copiar enlace">
+                    <button onClick={(e) => { e.stopPropagation(); onCopy?.(group.slug); }} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Copiar enlace">
                         <Copy size={18} />
                     </button>
                     <Switch
                         checked={group.is_active}
-                        onChange={(checked) => onToggle(group.id, checked, group.name)}
+                        onChange={(checked) => onToggle(group.id, checked)}
                         disabled={isLoading}
                     />
                 </div>

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated.groups'
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated.documents'
@@ -28,6 +29,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/documents': typeof AuthenticatedDocumentsRoute
   '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/c/$slug': typeof CSlugRoute
   '/groups/$id': typeof AuthenticatedGroupsIdRoute
   '/groups/': typeof AuthenticatedGroupsIndexRoute
 }
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/c/$slug': typeof CSlugRoute
   '/groups/$id': typeof AuthenticatedGroupsIdRoute
   '/groups': typeof AuthenticatedGroupsIndexRoute
 }
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/c/$slug': typeof CSlugRoute
   '/_authenticated/groups/$id': typeof AuthenticatedGroupsIdRoute
   '/_authenticated/groups/': typeof AuthenticatedGroupsIndexRoute
 }
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/groups'
     | '/settings'
+    | '/c/$slug'
     | '/groups/$id'
     | '/groups/'
   fileRoutesByTo: FileRoutesByTo
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/settings'
+    | '/c/$slug'
     | '/groups/$id'
     | '/groups'
   id:
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_authenticated/documents'
     | '/_authenticated/groups'
     | '/_authenticated/settings'
+    | '/c/$slug'
     | '/_authenticated/groups/$id'
     | '/_authenticated/groups/'
   fileRoutesById: FileRoutesById
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   authLoginRoute: typeof authLoginRoute
   authRegisterRoute: typeof authRegisterRoute
+  CSlugRoute: typeof CSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/settings': {
@@ -280,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   authLoginRoute: authLoginRoute,
   authRegisterRoute: authRegisterRoute,
+  CSlugRoute: CSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
