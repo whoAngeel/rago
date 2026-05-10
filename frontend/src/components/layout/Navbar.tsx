@@ -8,6 +8,7 @@ const pageTitles: Record<string, { label: string; subtitle: string }> = {
     "/documents": { label: "Documentos", subtitle: "Gestión de documentos" },
     "/settings": { label: "Configuración", subtitle: "Preferencias del sistema" },
     "/groups": { label: "Grupos", subtitle: "Gestión de grupos de documentos" },
+    "/groups/new": { label: "Detalle Del Grupo", subtitle: '' }
 }
 
 export function Navbar() {
@@ -48,7 +49,7 @@ export function Navbar() {
                 <div className="relative">
                     <button
                         onClick={() => setShowMenu(!showMenu)}
-                        className="w-11 h-11 rounded-full bg-[#a3e635] text-black font-bold text-base flex items-center justify-center border-2 border-[#0a0a0d] shadow-[2px_2px_0_0_#0a0a0d] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                        className="w-11 h-11 rounded-full bg-primary-400 text-black font-bold text-base flex items-center justify-center border-2 border-[#0a0a0d] shadow-[2px_2px_0_0_#0a0a0d] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
                     >
                         {initials}
                     </button>
@@ -57,13 +58,13 @@ export function Navbar() {
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
                             <div className="absolute right-0 top-14 z-20 bg-white border-2 border-[#0a0a0d] rounded-[10px] shadow-[4px_4px_0_0_#0a0a0d] p-3 min-w-56 flex flex-col gap-2">
-                                <div className="px-2 py-2 border-b-2 border-[#e5e5e5] mb-1">
+                                <div className="px-2 py-2 border-b-2 border-neutral-200 mb-1">
                                     <p className="text-base font-bold text-black tracking-[-0.02em]">{user?.name}</p>
-                                    <p className="text-sm font-medium text-[#525252]">{user?.email}</p>
+                                    <p className="text-sm font-medium text-neutral-600">{user?.email}</p>
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full text-left px-3 py-2 text-base font-bold text-[#f4405e] hover:bg-[#ffe5e6] border-2 border-transparent hover:border-[#f4405e] rounded transition-colors"
+                                    className="w-full text-left px-3 py-2 text-base font-bold text-[#f4405e] hover:bg-accent-red border-2 border-transparent hover:border-accent-red-deep rounded transition-colors"
                                 >
                                     Cerrar sesión
                                 </button>

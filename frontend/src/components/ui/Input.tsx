@@ -16,29 +16,29 @@ export const Input = ({
     ...rest                     // onChange, onBlur, name, type, placeholder, etc.
 }: InputProps) => {
 
-    return <div className="flex flex-col gap-1">
+    return <div className="flex flex-col gap-1.5">
         {
             label && (
-                <label className="text-sm font-medium text-neutral-900">
-                    {label}: {required && <span className="text-accent-red-deep text-sm font-bold">*</span>}
+                <label className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                    {label} {required && <span className="text-accent-red-deep text-sm font-bold">*</span>}
                 </label>
             )
         }
         <input ref={ref}
             className={`
-            bg-neutral-0
-            border border-neutral-500
-            rounded-btn
+            bg-white
+            border-2 border-neutral-950
+            rounded
             px-3 py-3 
             text-base font-medium text-neutral-900
             placeholder:text-neutral-400
-            focus:border-neutral-900 focus:outline-none
+            focus:outline-none focus:border-primary-500 focus:shadow-hard-lg
+            transition-all
             ${error ? "border-accent-red-deep" : ""}
             ${className}
-            
         `} {...rest} />
 
-        {error && <p className="text-accent-red-deep text-sm">{error}</p>}
+        {error && <p className="text-accent-red-deep text-sm font-bold mt-0.5">{error}</p>}
     </div>
 
 }

@@ -9,6 +9,7 @@ const links = [
     { to: "/documents", label: "Documentos", icon: FileText },
     { to: "/settings", label: "Configuración", icon: Settings },
     { to: "/groups", label: "Grupos", icon: Group },
+
 ]
 
 export const SideBar = () => {
