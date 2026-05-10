@@ -1,6 +1,7 @@
 import { Copy, QrCode, FileText, MessageSquare, BarChart2, Trash2 } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
 import type { Group } from "../../types"
+import { Switch } from "../ui"
 
 interface GroupCardProps {
     group: Group
@@ -69,13 +70,11 @@ export function GroupCard({ group, onToggle, onDelete, isLoading }: GroupCardPro
                     <button onClick={(e) => e.stopPropagation()} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Copiar enlace">
                         <Copy size={18} />
                     </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onToggle(group.id, !group.is_active, group.name); }}
+                    <Switch
+                        checked={group.is_active}
+                        onChange={(checked) => onToggle(group.id, checked, group.name)}
                         disabled={isLoading}
-                        className={`w-14 h-7 border-2 border-neutral-950 rounded-btn flex items-center transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${group.is_active ? 'bg-primary-400 justify-end' : 'bg-neutral-200 justify-start'}`}
-                    >
-                        <div className="w-5 h-5 bg-white border-2 border-neutral-950 rounded-btn mx-0.5 shadow-hard-sm" />
-                    </button>
+                    />
                 </div>
 
                 <button
