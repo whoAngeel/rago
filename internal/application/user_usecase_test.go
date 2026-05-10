@@ -65,6 +65,9 @@ func (m *stubDocRepo) FindByChecksum(_ context.Context, _ int, _ string) (*domai
 func (m *stubDocRepo) CountDocumentsByUserID(_ context.Context, _ int) (int64, error) {
 	return m.count, m.countErr
 }
+func (m *stubDocRepo) FindDocumentsForSelect(_ context.Context, _ int) ([]*domain.Document, error) {
+	return nil, nil
+}
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 

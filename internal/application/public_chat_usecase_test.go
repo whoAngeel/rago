@@ -108,6 +108,9 @@ func (m *mockDocRepo) FindByChecksum(_ context.Context, _ int, _ string) (*domai
 func (m *mockDocRepo) CountDocumentsByUserID(_ context.Context, _ int) (int64, error) {
 	return 0, nil
 }
+func (m *mockDocRepo) FindDocumentsForSelect(_ context.Context, _ int) ([]*domain.Document, error) {
+	return nil, nil
+}
 
 type mockVectorStore struct {
 	results      []ports.SearchResult
@@ -171,6 +174,9 @@ type mockLLMUsageRepo struct {
 func (m *mockLLMUsageRepo) Create(_ context.Context, u *domain.LLMUsage) error {
 	m.created = append(m.created, u)
 	return nil
+}
+func (m *mockLLMUsageRepo) SumByGroupID(_ context.Context, _ int) (ports.GroupUsageSummary, error) {
+	return ports.GroupUsageSummary{}, nil
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
