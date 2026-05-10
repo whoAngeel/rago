@@ -123,6 +123,61 @@ func TestPaginationStruct(t *testing.T) {
 	}
 }
 
+func TestSelectItemStruct(t *testing.T) {
+	item := SelectItem{ID: 42, Filename: "test.pdf"}
+
+	if item.ID != 42 {
+		t.Errorf("esperaba ID=42, obtuve %d", item.ID)
+	}
+	if item.Filename != "test.pdf" {
+		t.Errorf("esperaba Filename='test.pdf', obtuve '%s'", item.Filename)
+	}
+}
+
+func TestDocumentsToSelectItems(t *testing.T) {
+	type doc struct {
+		ID       int
+		Filename string
+		Status   string
+	}
+
+	docs := []doc{
+		{ID: 1, Filename: "a.pdf", Status: "completed"},
+		{ID: 2, Filename: "b.csv", Status: "pending"},
+	}
+
+	items := make([]SelectItem, 0, len(docs))
+	for _, d := range docs {
+		items = append(items, SelectItem{ID: d.ID, Filename: d.Filename})
+	}
+
+	if len(items) != 2 {
+		t.Errorf("esperaba 2 items, obtuve %d", len(items))
+	}
+	if items[0].Filename != "a.pdf" {
+		t.Errorf("esperaba 'a.pdf', obtuve '%s'", items[0].Filename)
+	}
+	if items[1].ID != 2 {
+		t.Errorf("esperaba ID=2, obtuve %d", items[1].ID)
+	}
+}
+
+func TestSelectItem_OnlyExposesIDAndFilename(t *testing.T) {
+	type selectItemJSON struct {
+		ID       int    `json:"id"`
+		Filename string `json:"filename"`
+	}
+
+	item := selectItemJSON{ID: 10, Filename: "doc.txt"}
+
+	if item.ID != 10 {
+		t.Errorf("esperaba ID=10, obtuve %d", item.ID)
+	}
+	if item.Filename != "doc.txt" {
+		t.Errorf("esperaba 'doc.txt', obtuve '%s'", item.Filename)
+	}
+}
+
 func TestDefaultQuery(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)

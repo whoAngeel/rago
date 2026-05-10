@@ -72,6 +72,7 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 
 		documents := protected.Group("/documents")
 		{
+			documents.GET("/select", h.DocumentHandler.ListSelect)
 			documents.GET("/", h.DocumentHandler.List)
 			documents.POST("/", h.DocumentHandler.Upload)
 			documents.DELETE("/:id", h.DocumentHandler.Delete)

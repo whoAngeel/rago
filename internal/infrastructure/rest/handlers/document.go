@@ -182,3 +182,27 @@ func (h *DocumentHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusNoContent, nil)
 }
+
+type SelectItem struct {
+	ID       int    `json:"id"`
+	Filename string `json:"filename"`
+}
+
+func (h *DocumentHandler) ListSelect(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	userId := c.GetInt("user_id")
+	docs, _, err := h.usecase.GetUsersDocuments(ctx, userId, 1, 9999)
+	if err != nil {
+		rest.RespondError(c, http.StatusInternalServerError, "Error", err.Error())
+		return
+	}
+
+	items := make([]SelectItem, 0, len(docs))
+	for _, d := range docs {
+		items = append(items, SelectItem{ID: d.ID, Filename: d.Filename})
+	}
+
+	c.JSON(http.StatusOK, items)
+}
