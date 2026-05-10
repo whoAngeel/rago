@@ -1,5 +1,5 @@
 import { Copy, MessageCircle, FileText, MessageSquare, BarChart2, Trash2 } from "lucide-react"
-import { useNavigate } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import type { Group } from "../../types"
 import { Switch } from "../ui"
 
@@ -15,7 +15,7 @@ export function GroupCard({ group, onToggle, onDelete, onCopy, isLoading }: Grou
     const navigate = useNavigate()
 
     return (
-        <div 
+        <div
             className="group bg-white border-2 border-neutral-950 rounded shadow-hard-lg overflow-hidden flex flex-col h-full hover:border-primary-500 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0_0_#0a0a0d] cursor-pointer transition-all duration-300"
             onClick={() => navigate({ to: "/groups/$id", params: { id: String(group.id) } })}
         >
@@ -65,9 +65,19 @@ export function GroupCard({ group, onToggle, onDelete, onCopy, isLoading }: Grou
             <div className="px-6 py-4 border-t-2 border-neutral-950 bg-neutral-50 flex items-center justify-between mt-auto">
                 <div className="flex items-center gap-2">
 
-                    <button onClick={(e) => { e.stopPropagation(); navigate({ to: "/c/$slug", params: { slug: group.slug } }); }} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Chat público">
+                    <Link
+                        to="/c/$slug"
+                        params={{
+                            slug: group.slug,
+                        }}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer inline-flex items-center"
+                        title="Chat público"
+                    >
                         <MessageCircle size={18} />
-                    </button>
+                    </Link>
                     <button onClick={(e) => { e.stopPropagation(); onCopy?.(group.slug); }} className="p-2 border-2 border-neutral-950 rounded bg-white hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer" title="Copiar enlace">
                         <Copy size={18} />
                     </button>
