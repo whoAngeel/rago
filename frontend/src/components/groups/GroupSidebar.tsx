@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Switch } from '../ui'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, ExternalLink } from 'lucide-react'
 import { GroupQRCode } from './GroupQRCode'
 
 interface GroupSidebarProps {
@@ -11,7 +11,7 @@ interface GroupSidebarProps {
 }
 
 export function GroupSidebar({ slug, allowDownloads, isActive, onUpdate }: GroupSidebarProps) {
-  const shareableLink = slug ? `${window.location.origin}/chat/${slug}` : '—'
+  const shareableLink = slug ? `${window.location.origin}/c/${slug}` : '—'
 
   const [copied, setCopied] = useState(false)
 
@@ -36,6 +36,16 @@ export function GroupSidebar({ slug, allowDownloads, isActive, onUpdate }: Group
             {copied ? <Check size={16} className="text-primary-600" /> : <Copy size={16} />}
           </button>
         </div>
+
+        <a 
+          href={shareableLink} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-full border-2 border-neutral-950 p-2 bg-white rounded shadow-hard-sm font-bold text-sm text-center hover:translate-x-px hover:translate-y-px hover:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2"
+        >
+          <ExternalLink size={16} />
+          Ver Chat Público
+        </a>
 
         <div className='border-t-2 border-neutral-950 my-2' />
 

@@ -78,4 +78,16 @@ interface GroupUsage {
     output_tokens: number
 }
 
-export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group, GroupUsage }
+interface PublicDocument {
+    id: number
+    filename: string
+}
+
+interface GroupPublicInfo {
+    name: string
+    slug: string
+    allow_downloads: boolean
+    documents: PublicDocument[]
+}
+
+export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group, GroupUsage, PublicDocument, GroupPublicInfo }
