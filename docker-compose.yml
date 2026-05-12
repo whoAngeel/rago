@@ -6,16 +6,6 @@ services:
         published: 8080
     networks:
       - backend
-    deploy:
-      replicas: 1
-      update_config:
-        order: start-first
-        parallelism: 1
-        delay: 5s
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 128M
 
   app:
     image: rago:latest
@@ -34,19 +24,6 @@ services:
       timeout: 10s
       start_period: 15s
       retries: 3
-    deploy:
-      replicas: 1
-      update_config:
-        order: start-first
-        parallelism: 1
-        delay: 10s
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
 
   postgres:
     image: postgres:17-alpine
@@ -67,8 +44,6 @@ services:
       timeout: 5s
       retries: 20
       start_period: 30s
-    deploy:
-      replicas: 1
 
 volumes:
   pg_data:
@@ -76,7 +51,3 @@ volumes:
 networks:
   backend:
     driver: bridge
-    attachable: true
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
