@@ -23,7 +23,6 @@ jobs:
         run: |
           mkdir -p /home/whoangel/rago
           cp docker-compose.yml /home/whoangel/rago/
-          cp .env /home/whoangel/rago/
           cd /home/whoangel/rago
           docker stack deploy -c docker-compose.yml rago --resolve-image=always
           docker image prune -f
