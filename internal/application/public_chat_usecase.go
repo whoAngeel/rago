@@ -27,6 +27,7 @@ type GroupPublicInfo struct {
 	Name           string           `json:"name"`
 	Slug           string           `json:"slug"`
 	AllowDownloads bool             `json:"allow_downloads"`
+	IsActive       bool             `json:"is_active"`
 	Documents      []PublicDocument `json:"documents"`
 }
 
@@ -40,6 +41,7 @@ type PublicChatUsecase struct {
 	BlobStorage ports.BlobStorage
 	ConfigRepo  ports.SystemConfigRepository
 	UsageRepo   ports.LLMUsageRepository
+	SSEManager  ports.SSEManager
 	Logger      ports.Logger
 	config      config.Config
 }
@@ -54,6 +56,7 @@ func NewPublicChatUsecase(
 	blobStorage ports.BlobStorage,
 	configRepo ports.SystemConfigRepository,
 	usageRepo ports.LLMUsageRepository,
+	sseManager ports.SSEManager,
 	logger ports.Logger,
 	cfg config.Config,
 ) *PublicChatUsecase {
@@ -67,6 +70,7 @@ func NewPublicChatUsecase(
 		BlobStorage: blobStorage,
 		ConfigRepo:  configRepo,
 		UsageRepo:   usageRepo,
+		SSEManager:  sseManager,
 		Logger:      logger,
 		config:      cfg,
 	}
@@ -77,9 +81,20 @@ func (uc *PublicChatUsecase) GetGroupInfo(ctx context.Context, slug string) (*Gr
 	if err != nil {
 		return nil, err
 	}
-	if group == nil || !group.IsActive {
-		uc.Logger.Info("public: group not found or inactive", "slug", slug)
+	if group == nil {
+		uc.Logger.Info("public: group not found", "slug", slug)
 		return nil, ErrGroupInactive
+	}
+
+	if !group.IsActive {
+		uc.Logger.Info("public: group inactive", "slug", slug)
+		return &GroupPublicInfo{
+			Name:           group.Name,
+			Slug:           group.Slug,
+			AllowDownloads: false,
+			IsActive:       false,
+			Documents:      []PublicDocument{},
+		}, nil
 	}
 
 	docs := make([]PublicDocument, 0, len(group.DocumentIDs))
@@ -97,6 +112,7 @@ func (uc *PublicChatUsecase) GetGroupInfo(ctx context.Context, slug string) (*Gr
 		Name:           group.Name,
 		Slug:           group.Slug,
 		AllowDownloads: group.AllowDownloads,
+		IsActive:       true,
 		Documents:      docs,
 	}, nil
 }
@@ -106,13 +122,28 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 	if err != nil {
 		return "", err
 	}
-	if group == nil || !group.IsActive {
-		uc.Logger.Info("public: chat blocked — group not found or inactive", "slug", slug)
+	if group == nil {
+		uc.Logger.Info("public: chat blocked — group not found", "slug", slug)
 		return "", ErrGroupInactive
 	}
 
-	// Contabilizar intento siempre, incluso si está bloqueado
+	// Contabilizar intento siempre, incluso si está inactivo o bloqueado
 	_ = uc.GroupRepo.IncrementAttempts(ctx, group.ID)
+
+	if uc.SSEManager != nil {
+		uc.SSEManager.SendToUser(group.UserID, ports.SSEEvent{
+			Type: "group_usage_updated",
+			Data: map[string]any{
+				"group_id":      group.ID,
+				"chat_attempts": group.ChatAttempts + 1,
+			},
+		})
+	}
+
+	if !group.IsActive {
+		uc.Logger.Info("public: chat blocked — group inactive", "slug", slug)
+		return "", ErrGroupInactive
+	}
 
 	user, err := uc.UserRepo.FindById(ctx, group.UserID)
 	if err != nil {

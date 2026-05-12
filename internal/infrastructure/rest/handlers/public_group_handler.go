@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +29,7 @@ func (h *PublicGroupHandler) GetGroupInfo(c *gin.Context) {
 	info, err := h.usecase.GetGroupInfo(ctx, slug)
 	if err != nil {
 		if errors.Is(err, application.ErrGroupInactive) {
-			rest.RespondError(c, http.StatusNotFound, "Este chat no está disponible", "")
+			rest.RespondError(c, http.StatusNotFound, "Grupo no encontrado", "")
 			return
 		}
 		rest.RespondError(c, http.StatusInternalServerError, "Error getting group info", err.Error())
@@ -56,7 +57,10 @@ func (h *PublicGroupHandler) Chat(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, application.ErrGroupInactive):
-			rest.RespondError(c, http.StatusNotFound, "Este chat no está disponible", "")
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":   "group_inactive",
+				"message": "El grupo está desactivado. Tu intento de chat fue registrado.",
+			})
 		case errors.Is(err, application.ErrQuotaExceeded):
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":   "quota_exceeded",
@@ -93,7 +97,18 @@ func (h *PublicGroupHandler) DownloadDocument(c *gin.Context) {
 	}
 	defer reader.Close()
 
-	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	c.Header("Content-Type", "application/octet-stream")
-	c.DataFromReader(http.StatusOK, -1, "application/octet-stream", reader, nil)
+	isView := c.Query("view") == "true" || strings.Contains(c.Request.URL.Path, "/view")
+
+	contentType := "application/octet-stream"
+	disposition := "attachment"
+	if isView {
+		disposition = "inline"
+		if len(filename) > 4 && filename[len(filename)-4:] == ".pdf" {
+			contentType = "application/pdf"
+		}
+	}
+
+	c.Header("Content-Disposition", disposition+"; filename=\""+filename+"\"")
+	c.Header("Content-Type", contentType)
+	c.DataFromReader(http.StatusOK, -1, contentType, reader, nil)
 }

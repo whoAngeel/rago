@@ -59,6 +59,7 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 		public.GET("/groups/:slug", h.PublicGroupHandler.GetGroupInfo)
 		public.POST("/groups/:slug/chat", h.PublicGroupHandler.Chat)
 		public.GET("/groups/:slug/documents/:doc_id/download", h.PublicGroupHandler.DownloadDocument)
+		public.GET("/groups/:slug/documents/:doc_id/view", h.PublicGroupHandler.DownloadDocument)
 	}
 
 	// Rutas protegidas
