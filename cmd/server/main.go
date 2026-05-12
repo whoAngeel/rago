@@ -195,7 +195,7 @@ func main() {
 			application.NewDocumentGroupUsecase(groupRepo, docRepo, usageRepo),
 		),
 		PublicGroupHandler: handlers.NewPublicGroupHandler(
-			application.NewPublicChatUsecase(groupRepo, userRepo, docRepo, vStore, embedder, llm, minio, systemRepo, usageRepo, log, *cfg),
+			application.NewPublicChatUsecase(groupRepo, userRepo, docRepo, vStore, embedder, llm, minio, systemRepo, usageRepo, sseManager, log, *cfg),
 		),
 		ChatHandler: handlers.NewChatHandler(
 			chatUC,
