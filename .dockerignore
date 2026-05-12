@@ -5,7 +5,6 @@ frontend/node_modules/
 # === Build outputs (se compilan dentro del Dockerfile) ===
 *.exe
 *.exe~
-server
 rago
 inspect
 frontend/dist/
