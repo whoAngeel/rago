@@ -1,15 +1,17 @@
 services:
   frontend:
     image: rago-frontend:latest
-    restart: unless-stopped
     ports:
-      - "8080:80"
-    depends_on:
-      app:
-        condition: service_healthy
+      - target: 80
+        published: 8080
     networks:
       - backend
     deploy:
+      replicas: 1
+      update_config:
+        order: start-first
+        parallelism: 1
+        delay: 5s
       resources:
         limits:
           cpus: "0.5"
@@ -17,16 +19,13 @@ services:
 
   app:
     image: rago:latest
-    restart: unless-stopped
-    ports:
-      - "4000:4000"
     env_file: .env
     environment:
       PORT: "4000"
       ENV: "production"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    ports:
+      - target: 4000
+        published: 4000
     networks:
       - backend
     healthcheck:
@@ -36,6 +35,11 @@ services:
       start_period: 15s
       retries: 3
     deploy:
+      replicas: 1
+      update_config:
+        order: start-first
+        parallelism: 1
+        delay: 10s
       resources:
         limits:
           cpus: "1.0"
@@ -46,9 +50,9 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    restart: unless-stopped
     ports:
-      - "5433:5432"
+      - target: 5432
+        published: 5433
     environment:
       POSTGRES_USER: rago
       POSTGRES_PASSWORD: rago
@@ -64,14 +68,12 @@ services:
       retries: 20
       start_period: 30s
     deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
+      replicas: 1
 
 volumes:
   pg_data:
 
 networks:
   backend:
-    driver: bridge
+    driver: overlay
+    attachable: true

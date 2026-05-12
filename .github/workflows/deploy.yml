@@ -19,24 +19,27 @@ jobs:
       - name: Build frontend Docker image
         run: docker build -t rago-frontend:latest ./frontend/
 
-      - name: Sync compose and deploy
+      - name: Deploy stack
         run: |
+          mkdir -p /home/whoangel/rago
           cp docker-compose.yml /home/whoangel/rago/
+          cp .env /home/whoangel/rago/
           cd /home/whoangel/rago
-          docker compose up -d --remove-orphans
+          docker stack deploy -c docker-compose.yml rago --resolve-image=always
           docker image prune -f
 
       - name: Smoke test
         run: |
-          echo "Waiting for frontend container..."
-          for i in $(seq 1 30); do
-            STATUS=$(docker inspect --format='{{.State.Status}}' rago-frontend-1 2>/dev/null || echo "missing")
-            if [ "$STATUS" = "running" ]; then
-              echo "Frontend running!"
+          echo "Waiting for services..."
+          for i in $(seq 1 15); do
+            REPLICAS=$(docker stack services rago --format '{{.Replicas}}' | grep -v "0/1" | wc -l)
+            TOTAL=$(docker stack services rago --format '{{.Replicas}}' | wc -l)
+            if [ "$REPLICAS" = "$TOTAL" ]; then
+              echo "All services ready!"
               break
             fi
-            echo "  [$i/30] status=$STATUS, waiting..."
-            sleep 2
+            echo "  [$i/15] waiting for all replicas..."
+            sleep 4
           done
 
           echo "Testing frontend via Caddy..."
@@ -46,7 +49,7 @@ jobs:
             sleep 3
             if [ "$i" = "10" ]; then
               echo "FAIL: frontend not responding"
-              docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30 frontend
+              docker service logs rago_frontend --tail=30
               exit 1
             fi
           done
@@ -54,6 +57,7 @@ jobs:
           echo "Testing API proxy through Caddy..."
           curl -f -m 5 http://localhost:8080/health && echo "OK: API proxy responds" || {
             echo "FAIL: API proxy not working"
-            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30
+            docker service logs rago_frontend --tail=30
+            docker service logs rago_app --tail=30
             exit 1
           }
