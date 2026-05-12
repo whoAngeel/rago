@@ -21,6 +21,9 @@ services:
     ports:
       - "4000:4000"
     env_file: .env
+    environment:
+      PORT: "4000"
+      ENV: "production"
     depends_on:
       postgres:
         condition: service_healthy
