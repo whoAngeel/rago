@@ -87,6 +87,7 @@ interface GroupPublicInfo {
     name: string
     slug: string
     allow_downloads: boolean
+    is_active: boolean
     documents: PublicDocument[]
 }
 

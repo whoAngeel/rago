@@ -53,6 +53,12 @@ export function useSSE() {
             )
         })
 
+        eventSource.addEventListener("group_usage_updated", (event) => {
+            const data = JSON.parse(event.data) as { group_id: number; chat_attempts: number }
+            queryClient.invalidateQueries({ queryKey: ["group", String(data.group_id)] })
+            queryClient.invalidateQueries({ queryKey: ["groups"] })
+        })
+
         return () => eventSource.close()
 
     }, [token, queryClient])

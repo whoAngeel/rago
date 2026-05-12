@@ -50,9 +50,15 @@ function RouteComponent() {
       }
     },
     onError: (err: any) => {
-      console.error(err)
       if (err?.response?.data?.error === "quota_exceeded") {
         setIsQuotaExceeded(true)
+      }
+      if (err?.response?.data?.error === "group_inactive") {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "El administrador fue notificado de tu interés en este chat.",
+          timestamp: new Date().toISOString(),
+        }])
       }
     },
     onSettled: () => { setIsSending(false) }
@@ -69,31 +75,41 @@ function RouteComponent() {
   if (error) {
     const isNotFound = (error as any)?.response?.status === 404
     return (
-      <div className="flex items-center justify-center min-h-screen bg-neutral-50 text-neutral-950 font-bold">
-        {isNotFound ? "Este chat no está disponible" : "Error al cargar el grupo"}
+      <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50 gap-4">
+        <p className="text-2xl font-black text-neutral-950">
+          {isNotFound ? "Chat no encontrado" : "Error al cargar"}
+        </p>
+        <p className="text-sm text-neutral-500">
+          {isNotFound ? "El enlace que buscas no existe o ya no está disponible." : "Intenta recargar la página."}
+        </p>
       </div>
     )
   }
+
+  const isActive = group?.is_active ?? false
 
   return (
     <div className="flex flex-col h-screen bg-neutral-50 font-sans">
       <PublicChatNavbar groupName={group?.name} />
 
       <div className='grid grid-cols-12 w-full flex-1 overflow-hidden'>
+        <PublicDocumentsPanel
+          documents={group?.documents}
+          allowDownloads={group?.allow_downloads ?? false}
+          isActive={isActive}
+          slug={slug}
+        />
         <PublicChatArea
           messages={messages}
           input={input}
           setInput={setInput}
           isSending={isSendig}
           isQuotaExceeded={isQuotaExceeded}
+          isDisabled={!isActive}
           onSubmit={handleSubmit}
         />
 
-        <PublicDocumentsPanel
-          documents={group?.documents}
-          allowDownloads={group?.allow_downloads ?? false}
-          slug={slug}
-        />
+
       </div>
     </div>
   )

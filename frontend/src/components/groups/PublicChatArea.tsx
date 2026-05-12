@@ -14,15 +14,22 @@ interface PublicChatAreaProps {
   setInput: (value: string) => void
   isSending: boolean
   isQuotaExceeded: boolean
+  isDisabled?: boolean
   onSubmit: (e: SyntheticEvent<HTMLFormElement>) => void
 }
 
-export function PublicChatArea({ messages, input, setInput, isSending, isQuotaExceeded, onSubmit }: PublicChatAreaProps) {
+export function PublicChatArea({ messages, input, setInput, isSending, isQuotaExceeded, isDisabled, onSubmit }: PublicChatAreaProps) {
   return (
     <div className='col-span-8 flex flex-col h-full bg-white'>
       {/* Messages Area */}
       <div className='flex-1 overflow-y-auto p-6 flex flex-col gap-4'>
-        {messages.length === 0 ? (
+        {isDisabled && (
+          <div className='self-center bg-amber-100 p-4 border-2 border-neutral-950 rounded shadow-hard-sm max-w-[90%]'>
+            <p className='text-sm font-bold text-neutral-900'>Este chat está desactivado por el administrador del grupo.</p>
+            <p className='text-xs text-neutral-600 mt-1'>Mientras el grupo esté inactivo no se pueden enviar mensajes.</p>
+          </div>
+        )}
+        {messages.length === 0 && !isDisabled ? (
           <div className='flex-1 flex flex-col items-center justify-center text-neutral-500'>
             <p className='text-lg font-bold mb-1'>¡Bienvenido al chat!</p>
             <p className='text-sm font-medium'>Haz una pregunta sobre los documentos del grupo.</p>
@@ -80,13 +87,13 @@ export function PublicChatArea({ messages, input, setInput, isSending, isQuotaEx
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder='Escribe tu mensaje aquí...'
-            disabled={isSending || isQuotaExceeded}
+            placeholder={isDisabled ? "El chat está desactivado" : "Escribe tu mensaje aquí..."}
+            disabled={isSending || isQuotaExceeded || isDisabled}
             className='flex-1 border-2 border-neutral-950 p-3 rounded focus:outline-none focus:border-primary-500 shadow-hard-sm disabled:bg-neutral-100 disabled:cursor-not-allowed font-medium text-sm'
           />
           <button
             type='submit'
-            disabled={isSending || isQuotaExceeded || !input.trim()}
+            disabled={isSending || isQuotaExceeded || isDisabled || !input.trim()}
             className='border-2 border-neutral-950 p-3 bg-primary-400 rounded shadow-hard-sm font-bold hover:translate-x-px hover:translate-y-px hover:shadow-none transition-all disabled:bg-neutral-200 disabled:cursor-not-allowed disabled:shadow-none cursor-pointer'
           >
             <Send size={18} />
