@@ -40,11 +40,16 @@ jobs:
           done
 
           echo "Testing frontend via Caddy..."
-          curl -f -m 5 http://localhost:8080/ && echo "OK: frontend responds" || {
-            echo "FAIL: frontend not responding"
-            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30 frontend
-            exit 1
-          }
+          for i in $(seq 1 10); do
+            curl -f -m 5 http://localhost:8080/ >/dev/null 2>&1 && { echo "OK: frontend responds"; break; }
+            echo "  [$i/10] waiting..."
+            sleep 3
+            if [ "$i" = "10" ]; then
+              echo "FAIL: frontend not responding"
+              docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30 frontend
+              exit 1
+            fi
+          done
 
           echo "Testing API proxy through Caddy..."
           curl -f -m 5 http://localhost:8080/health && echo "OK: API proxy responds" || {
