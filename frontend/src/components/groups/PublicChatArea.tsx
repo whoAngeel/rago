@@ -1,5 +1,6 @@
 import { Send, Loader2 } from 'lucide-react'
 import type { SyntheticEvent } from 'react'
+import { useEffect, useRef } from 'react'
 import ReactMarkdown from "react-markdown"
 
 interface ChatMessage {
@@ -19,10 +20,44 @@ interface PublicChatAreaProps {
 }
 
 export function PublicChatArea({ messages, input, setInput, isSending, isQuotaExceeded, isDisabled, onSubmit }: PublicChatAreaProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const prevSending = useRef(isSending)
+
+  useEffect(() => {
+    const el = messagesContainerRef.current
+    if (el) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [messages.length, isSending])
+
+  useEffect(() => {
+    if (prevSending.current && !isSending && !isQuotaExceeded && !isDisabled) {
+      inputRef.current?.focus()
+    }
+    prevSending.current = isSending
+  }, [isSending, isQuotaExceeded, isDisabled])
+
   return (
-    <div className='col-span-full lg:col-span-8 flex flex-col h-full bg-white'>
+    <div className='col-span-full lg:col-span-8 flex flex-col min-h-0 bg-white'>
       {/* Messages Area */}
-      <div className='flex-1 overflow-y-auto p-4 lg:p-6 flex flex-col gap-4'>
+      <div ref={messagesContainerRef} className='flex-1 overflow-y-auto p-4 lg:p-6'>
+        <div className='min-h-full flex flex-col justify-end gap-4'>
+        {isSending && (
+          <div className='self-start bg-neutral-50 p-4 border-2 border-neutral-950 rounded-t-lg rounded-br-lg rounded-bl-none shadow-hard-sm max-w-[85%] lg:max-w-[70%]'>
+            <div className='flex items-center gap-2'>
+              <Loader2 className='animate-spin text-neutral-600' size={16} />
+              <span className='text-sm font-bold text-neutral-600'>Generando respuesta...</span>
+            </div>
+          </div>
+        )}
+        {isQuotaExceeded && (
+          <div className='self-center bg-red-100 p-4 border-2 border-neutral-950 rounded shadow-hard-sm max-w-full lg:max-w-[90%]'>
+            <p className='text-sm font-bold text-red-700'>
+              Se ha excedido la cuota de mensajes para este grupo. No se pueden procesar más mensajes en este momento.
+            </p>
+          </div>
+        )}
         {isDisabled && (
           <div className='self-center bg-amber-100 p-4 border-2 border-neutral-950 rounded shadow-hard-sm max-w-full lg:max-w-[90%]'>
             <p className='text-sm font-bold text-neutral-900'>Este chat está desactivado por el administrador del grupo.</p>
@@ -64,27 +99,14 @@ export function PublicChatArea({ messages, input, setInput, isSending, isQuotaEx
             </div>
           ))
         )}
-        {isSending && (
-          <div className='self-start bg-neutral-50 p-4 border-2 border-neutral-950 rounded-t-lg rounded-br-lg rounded-bl-none shadow-hard-sm max-w-[85%] lg:max-w-[70%]'>
-            <div className='flex items-center gap-2'>
-              <Loader2 className='animate-spin text-neutral-600' size={16} />
-              <span className='text-sm font-bold text-neutral-600'>Generando respuesta...</span>
-            </div>
-          </div>
-        )}
-        {isQuotaExceeded && (
-          <div className='self-center bg-red-100 p-4 border-2 border-neutral-950 rounded shadow-hard-sm max-w-full lg:max-w-[90%] mt-2'>
-            <p className='text-sm font-bold text-red-700'>
-              Se ha excedido la cuota de mensajes para este grupo. No se pueden procesar más mensajes en este momento.
-            </p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Input Area */}
-      <div className='p-4 border-t-2 border-neutral-950 bg-white'>
+      <div className='p-4 border-t-2 border-neutral-950 bg-white shrink-0'>
         <form onSubmit={onSubmit} className='flex gap-2 lg:gap-3'>
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isDisabled ? "El chat está desactivado" : "Escribe tu mensaje aquí..."}
