@@ -142,3 +142,23 @@ func (i *IngestDocumentUsecase) GetDocumentSteps(ctx context.Context, docID, use
 func (uc *IngestDocumentUsecase) GetDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error) {
 	return uc.DocRepo.FindDocumentsForSelect(ctx, userID)
 }
+
+func (uc *IngestDocumentUsecase) ReprocessDocument(ctx context.Context, docID, userID int) error {
+	doc, err := uc.DocRepo.FindByID(ctx, docID)
+	if err != nil || doc.UserID != userID {
+		return ErrNotFound
+	}
+	if doc.Status != domain.StatusFailed {
+		return fmt.Errorf("solo se pueden reprocesar documentos fallidos")
+	}
+	if err := uc.DocRepo.DeleteProcessingStepsByDocumentID(ctx, docID); err != nil {
+		return err
+	}
+	doc.Status = domain.StatusPending
+	doc.ErrorMessage = ""
+	doc.ProcessingStartedAt = nil
+	if _, err := uc.DocRepo.UpdateDocument(ctx, doc); err != nil {
+		return err
+	}
+	return nil
+}

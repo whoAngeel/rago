@@ -33,6 +33,7 @@ type DocumentRepository interface {
 	FindByChecksum(ctx context.Context, userID int, checksum string) (*domain.Document, error)
 	CountDocumentsByUserID(ctx context.Context, userID int) (int64, error)
 	FindDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error)
+	DeleteProcessingStepsByDocumentID(ctx context.Context, docID int) error
 }
 
 type ChatRepository interface {

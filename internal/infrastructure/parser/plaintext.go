@@ -16,7 +16,7 @@ func NewPlainTextAdapter() *PlainTextAdapter {
 }
 
 func (p *PlainTextAdapter) Parse(ctx context.Context, reader io.Reader, contentType string) ([]schema.Document, error) {
-	if contentType != "text/plain" {
+	if contentType != "text/plain" && contentType != "text/markdown" {
 		return nil, fmt.Errorf("unsupported content type")
 	}
 
