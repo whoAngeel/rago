@@ -1,4 +1,4 @@
-import { FileText, Download, Eye } from 'lucide-react'
+import { FileText, Download, Eye, X } from 'lucide-react'
 import type { PublicDocument } from '../../types'
 
 interface PublicDocumentsPanelProps {
@@ -6,13 +6,15 @@ interface PublicDocumentsPanelProps {
   allowDownloads: boolean
   isActive?: boolean
   slug: string
+  visible?: boolean
+  onClose?: () => void
 }
 
 const isPdf = (filename: string) => filename.toLowerCase().endsWith('.pdf')
 
-export function PublicDocumentsPanel({ documents, allowDownloads, isActive = true, slug }: PublicDocumentsPanelProps) {
+function DocList({ documents, allowDownloads, isActive, slug }: Omit<PublicDocumentsPanelProps, 'visible' | 'onClose'>) {
   return (
-    <div className='col-span-4 border-r-2 border-neutral-950 bg-neutral-50 p-6 flex flex-col gap-4 overflow-y-auto'>
+    <>
       <h4 className='font-bold text-lg text-neutral-950 mb-2'>Documentos Adjuntos</h4>
 
       {!isActive && (
@@ -64,6 +66,31 @@ export function PublicDocumentsPanel({ documents, allowDownloads, isActive = tru
       ) : (
         <p className='text-sm text-neutral-500 font-medium'>No hay documentos en este grupo.</p>
       )}
-    </div>
+    </>
+  )
+}
+
+export function PublicDocumentsPanel({ visible, onClose, ...props }: PublicDocumentsPanelProps) {
+  return (
+    <>
+      {visible && (
+        <div className="fixed inset-0 z-30 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+          <div className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm bg-neutral-50 border-r-2 border-neutral-950 p-6 flex flex-col gap-4 overflow-y-auto shadow-hard-lg">
+            <button
+              onClick={onClose}
+              className="self-end p-2 border-2 border-neutral-950 rounded hover:bg-neutral-100 transition-all cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+            <DocList {...props} />
+          </div>
+        </div>
+      )}
+
+      <div className='hidden lg:flex lg:col-span-4 border-r-2 border-neutral-950 bg-neutral-50 p-6 flex flex-col gap-4 overflow-y-auto'>
+        <DocList {...props} />
+      </div>
+    </>
   )
 }
