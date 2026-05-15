@@ -34,6 +34,7 @@ interface Group {
     chat_quota: number
     chat_quota_used: number
     chat_attempts: number
+    unanswered_count: number
     document_ids: number[]
     created_at: string
     updated_at: string

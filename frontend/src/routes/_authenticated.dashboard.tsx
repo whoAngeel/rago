@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import type { User } from '../types'
-import { FileText, MessageSquare, HardDrive, Layers, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { FileText, Layers, HardDrive, MessageSquare, AlertTriangle, CheckCircle2, XCircle, Clock, Users } from 'lucide-react'
 
 interface DashboardStats {
   total_documents: number
@@ -12,8 +12,10 @@ interface DashboardStats {
     pending: number
   }
   storage_used: number
-  chat_sessions: number
   total_groups: number
+  active_groups: number
+  total_attempts: number
+  unanswered_total: number
 }
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
@@ -28,16 +30,17 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
-function StatCard({ icon: Icon, label, value, sub }: {
+function StatCard({ icon: Icon, label, value, sub, variant }: {
   icon: React.ComponentType<{ size?: number; className?: string }>
   label: string
   value: string
   sub?: string
+  variant?: 'default' | 'warning'
 }) {
   return (
-    <div className="bg-white border-2 border-neutral-200 rounded-xl p-4 sm:p-5 flex items-start gap-3 sm:gap-4 hover:border-neutral-400 transition-colors">
-      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-neutral-100 border-2 border-neutral-950 rounded-lg flex items-center justify-center shrink-0">
-        <Icon size={20} className="text-neutral-700" />
+    <div className={`bg-white border-2 rounded-xl p-4 sm:p-5 flex items-start gap-3 sm:gap-4 transition-colors ${variant === 'warning' ? 'border-orange-200' : 'border-neutral-200 hover:border-neutral-400'}`}>
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 border-2 border-neutral-950 rounded-lg flex items-center justify-center shrink-0 ${variant === 'warning' ? 'bg-orange-100' : 'bg-neutral-100'}`}>
+        <Icon size={20} className={variant === 'warning' ? 'text-orange-700' : 'text-neutral-700'} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{label}</p>
@@ -73,6 +76,9 @@ function DashboardPage() {
   const pending = stats?.by_status?.pending ?? 0
   const processing = Math.max(0, total - completed - failed - pending)
   const storage = stats?.storage_used ?? 0
+  const unanswered = stats?.unanswered_total ?? 0
+  const attempts = stats?.total_attempts ?? 0
+  const unansweredRate = attempts > 0 ? Math.round((unanswered / attempts) * 100) : 0
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto flex flex-col gap-4 sm:gap-6">
@@ -103,16 +109,16 @@ function DashboardPage() {
             sub={`${completed} completados`}
           />
           <StatCard
-            icon={MessageSquare}
-            label="Chats"
-            value={String(stats?.chat_sessions ?? 0)}
-            sub="sesiones"
-          />
-          <StatCard
             icon={Layers}
             label="Grupos"
-            value={String(stats?.total_groups ?? 0)}
-            sub="activos"
+            value={String(stats?.active_groups ?? 0)}
+            sub={`de ${stats?.total_groups ?? 0} totales`}
+          />
+          <StatCard
+            icon={MessageSquare}
+            label="Consultas"
+            value={String(attempts)}
+            sub={`${unansweredRate > 0 ? `${unansweredRate}% sin respuesta` : 'todas respondidas'}`}
           />
           <StatCard
             icon={HardDrive}
@@ -123,31 +129,43 @@ function DashboardPage() {
         </div>
       )}
 
+      {stats && unanswered > 0 && (
+        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 flex items-center gap-3">
+          <AlertTriangle size={20} className="text-orange-600 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-orange-800">{unanswered} preguntas sin respuesta suficiente</p>
+            <p className="text-xs text-orange-600">
+              El agente no encontró suficiente contexto en los documentos del grupo. Revisa los documentos subidos.
+            </p>
+          </div>
+        </div>
+      )}
+
       {stats && total > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
-            <CheckCircle2 size={20} className="text-green-600 shrink-0" />
+            <CheckCircle2 size={18} className="text-green-600 shrink-0" />
             <div>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Completados</p>
               <p className="text-lg font-black text-green-700">{completed}</p>
             </div>
           </div>
           <div className="bg-white border-2 border-orange-200 rounded-xl p-4 flex items-center gap-3">
-            <Clock size={20} className="text-orange-600 shrink-0" />
+            <Clock size={18} className="text-orange-600 shrink-0" />
             <div>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Procesando</p>
               <p className="text-lg font-black text-orange-700">{processing}</p>
             </div>
           </div>
           <div className="bg-white border-2 border-amber-200 rounded-xl p-4 flex items-center gap-3">
-            <Clock size={20} className="text-amber-600 shrink-0" />
+            <Clock size={18} className="text-amber-600 shrink-0" />
             <div>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Pendientes</p>
               <p className="text-lg font-black text-amber-700">{pending}</p>
             </div>
           </div>
           <div className="bg-white border-2 border-red-200 rounded-xl p-4 flex items-center gap-3">
-            <XCircle size={20} className="text-red-600 shrink-0" />
+            <XCircle size={18} className="text-red-600 shrink-0" />
             <div>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Fallidos</p>
               <p className="text-lg font-black text-red-700">{failed}</p>
@@ -156,12 +174,12 @@ function DashboardPage() {
         </div>
       )}
 
-      {stats && total === 0 && (
+      {stats && total === 0 && stats?.total_groups === 0 && (
         <div className="bg-white border-2 border-neutral-200 rounded-xl p-12 text-center">
-          <FileText size={40} className="text-neutral-300 mx-auto mb-4" />
+          <Users size={40} className="text-neutral-300 mx-auto mb-4" />
           <p className="font-bold text-neutral-600 text-lg">Sin actividad aún</p>
           <p className="text-sm text-neutral-500 mt-1">
-            Sube tu primer documento desde la sección Documentos
+            Crea tu primer grupo y sube documentos para empezar
           </p>
         </div>
       )}

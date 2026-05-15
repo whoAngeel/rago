@@ -25,11 +25,26 @@ type DocStatusCount struct {
 }
 
 type DashboardStats struct {
-	TotalDocuments int64          `json:"total_documents"`
-	ByStatus       DocStatusCount `json:"by_status"`
-	StorageUsed    int64          `json:"storage_used"`
-	ChatSessions   int64          `json:"chat_sessions"`
-	TotalGroups    int64          `json:"total_groups"`
+	TotalDocuments  int64          `json:"total_documents"`
+	ByStatus        DocStatusCount `json:"by_status"`
+	StorageUsed     int64          `json:"storage_used"`
+	TotalGroups     int64          `json:"total_groups"`
+	ActiveGroups    int64          `json:"active_groups"`
+	TotalAttempts   int64          `json:"total_attempts"`
+	UnansweredTotal int64          `json:"unanswered_total"`
+	Groups          []GroupSummary `json:"groups"`
+}
+
+type GroupSummary struct {
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	Slug            string `json:"slug"`
+	IsActive        bool   `json:"is_active"`
+	DocumentCount   int    `json:"document_count"`
+	ChatAttempts    int    `json:"chat_attempts"`
+	ChatQuotaUsed   int    `json:"chat_quota_used"`
+	ChatQuota       int    `json:"chat_quota"`
+	UnansweredCount int    `json:"unanswered_count"`
 }
 
 type UserUsecase struct {
@@ -90,31 +105,35 @@ func (uc *UserUsecase) GetDashboardStats(ctx context.Context, userID int) (*Dash
 		return nil, err
 	}
 
-	var chatSessions int64
-	if uc.ChatRepo != nil {
-		sessions, err := uc.ChatRepo.GetUserSessions(ctx, userID)
-		if err == nil {
-			chatSessions = int64(len(sessions))
-		}
-	}
-
 	var totalGroups int64
+	var activeGroups int64
+	var totalAttempts int64
+	var unansweredTotal int64
 	if uc.GroupRepo != nil {
-		_, total, err := uc.GroupRepo.FindByUserID(ctx, userID, 1, 100)
+		groups, _, err := uc.GroupRepo.FindByUserID(ctx, userID, 1, 1000)
 		if err == nil {
-			totalGroups = total
+			totalGroups = int64(len(groups))
+			for _, g := range groups {
+				if g.IsActive {
+					activeGroups++
+				}
+				totalAttempts += int64(g.ChatAttempts)
+				unansweredTotal += int64(g.UnansweredCount)
+			}
 		}
 	}
 
 	return &DashboardStats{
-		TotalDocuments: total,
+		TotalDocuments:  total,
 		ByStatus: DocStatusCount{
 			Completed: completed,
 			Failed:    failed,
 			Pending:   pending,
 		},
-		StorageUsed:  storage,
-		ChatSessions: chatSessions,
-		TotalGroups:  totalGroups,
+		StorageUsed:     storage,
+		TotalGroups:     totalGroups,
+		ActiveGroups:    activeGroups,
+		TotalAttempts:   totalAttempts,
+		UnansweredTotal: unansweredTotal,
 	}, nil
 }

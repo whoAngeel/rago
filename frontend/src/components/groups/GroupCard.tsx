@@ -57,7 +57,14 @@ export function GroupCard({ group, onToggle, onDelete, onCopy, isLoading }: Grou
                         <BarChart2 size={16} className="text-neutral-600" />
                         <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Interacciones</span>
                     </div>
-                    <p className="text-lg font-black text-neutral-950">{group.chat_attempts} intentos</p>
+                    <div className="flex items-center gap-2">
+                        {group.unanswered_count > 0 && (
+                            <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded border border-orange-300">
+                                {group.unanswered_count} sin respuesta
+                            </span>
+                        )}
+                        <p className="text-lg font-black text-neutral-950">{group.chat_attempts} intentos</p>
+                    </div>
                 </div>
             </div>
 

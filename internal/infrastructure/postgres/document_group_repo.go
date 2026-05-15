@@ -159,3 +159,9 @@ func (r *DocumentGroupRepository) IncrementQuotaUsed(ctx context.Context, groupI
 		Where("id = ?", groupID).
 		UpdateColumn("chat_quota_used", gorm.Expr("chat_quota_used + 1")).Error
 }
+
+func (r *DocumentGroupRepository) IncrementUnansweredCount(ctx context.Context, groupID int) error {
+	return r.db.WithContext(ctx).Model(&domain.DocumentGroup{}).
+		Where("id = ?", groupID).
+		UpdateColumn("unanswered_count", gorm.Expr("unanswered_count + 1")).Error
+}

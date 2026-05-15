@@ -15,6 +15,7 @@ type DocumentGroup struct {
 	ChatQuota      int       `gorm:"default:100" json:"chat_quota"`
 	ChatQuotaUsed  int       `gorm:"default:0" json:"chat_quota_used"`
 	ChatAttempts   int       `gorm:"default:0" json:"chat_attempts"`
+	UnansweredCount int      `gorm:"default:0" json:"unanswered_count"`
 	DocumentIDs    []int     `gorm:"-" json:"document_ids"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

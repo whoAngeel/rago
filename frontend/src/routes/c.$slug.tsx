@@ -51,16 +51,24 @@ function RouteComponent() {
       }
     },
     onError: (err: any) => {
-      if (err?.response?.data?.error === "quota_exceeded") {
+      const code = err?.response?.data?.error
+      if (code === "quota_exceeded") {
         setIsQuotaExceeded(true)
+        return
       }
-      if (err?.response?.data?.error === "group_inactive") {
+      if (code === "group_inactive") {
         setMessages(prev => [...prev, {
           role: "assistant",
           content: "El administrador fue notificado de tu interés en este chat.",
           timestamp: new Date().toISOString(),
         }])
+        return
       }
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Lo siento, ocurrió un error. Intenta de nuevo en unos segundos.",
+        timestamp: new Date().toISOString(),
+      }])
     },
     onSettled: () => { setIsSending(false) }
   })

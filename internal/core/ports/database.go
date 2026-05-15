@@ -79,4 +79,5 @@ type DocumentGroupRepository interface {
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	IncrementAttempts(ctx context.Context, groupID int) error
 	IncrementQuotaUsed(ctx context.Context, groupID int) error
+	IncrementUnansweredCount(ctx context.Context, groupID int) error
 }

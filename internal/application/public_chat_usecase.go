@@ -127,8 +127,15 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		return "", ErrGroupInactive
 	}
 
-	// Contabilizar intento siempre, incluso si está inactivo o bloqueado
-	_ = uc.GroupRepo.IncrementAttempts(ctx, group.ID)
+	if !group.IsActive {
+		uc.Logger.Info("public: chat blocked — group inactive", "slug", slug)
+		return "", ErrGroupInactive
+	}
+
+	user, err := uc.UserRepo.FindById(ctx, group.UserID)
+	if err != nil {
+		return "", fmt.Errorf("finding group owner: %w", err)
+	}
 
 	if uc.SSEManager != nil {
 		uc.SSEManager.SendToUser(group.UserID, ports.SSEEvent{
@@ -138,16 +145,6 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 				"chat_attempts": group.ChatAttempts + 1,
 			},
 		})
-	}
-
-	if !group.IsActive {
-		uc.Logger.Info("public: chat blocked — group inactive", "slug", slug)
-		return "", ErrGroupInactive
-	}
-
-	user, err := uc.UserRepo.FindById(ctx, group.UserID)
-	if err != nil {
-		return "", fmt.Errorf("finding group owner: %w", err)
 	}
 
 	uc.Logger.Info("public: chat request",
@@ -250,8 +247,16 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		return "", fmt.Errorf("generating answer: %w", err)
 	}
 
+	_ = uc.GroupRepo.IncrementAttempts(ctx, group.ID)
 	_ = uc.GroupRepo.IncrementQuotaUsed(ctx, group.ID)
 	_ = uc.UserRepo.IncrementChatQuotaUsed(ctx, user.ID)
+
+	if isUnansweredAnswer(llmResult.Answer) {
+		_ = uc.GroupRepo.IncrementUnansweredCount(ctx, group.ID)
+		uc.Logger.Info("public: unanswered chat", "slug", slug, "answer_len", len(llmResult.Answer))
+	} else {
+		uc.Logger.Info("public: chat answered", "slug", slug, "answer_len", len(llmResult.Answer))
+	}
 	if uc.UsageRepo != nil {
 		groupID := group.ID
 		_ = uc.UsageRepo.Create(ctx, &domain.LLMUsage{
@@ -262,7 +267,6 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 			OutputTokens: llmResult.OutputTokens,
 		})
 	}
-	uc.Logger.Info("public: chat answered", "slug", slug, "answer_len", len(llmResult.Answer))
 
 	return llmResult.Answer, nil
 }
@@ -302,4 +306,24 @@ func (uc *PublicChatUsecase) DownloadDocument(ctx context.Context, slug string, 
 	}
 
 	return reader, doc.Filename, nil
+}
+
+var unansweredPatterns = []string{
+	"no tengo información suficiente",
+	"no tengo suficiente información",
+	"no se encontró información",
+	"no tengo información",
+	"sin información suficiente",
+	"i don't have enough information",
+	"insufficient information",
+}
+
+func isUnansweredAnswer(answer string) bool {
+	lower := strings.ToLower(answer)
+	for _, p := range unansweredPatterns {
+		if strings.Contains(lower, p) {
+			return true
+		}
+	}
+	return false
 }
