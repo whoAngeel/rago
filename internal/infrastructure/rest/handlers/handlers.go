@@ -11,14 +11,15 @@ import (
 )
 
 type Handlers struct {
-	AskHandler           *AskHandler
-	AuthHandler          *AuthHandler
-	UserHandler          *UserHandler
-	DocumentHandler      *DocumentHandler
+	AskHandler          *AskHandler
+	AuthHandler         *AuthHandler
+	ChatHandler         *ChatHandler
+	ConfigHandler       *ConfigHandler
+	DocumentHandler     *DocumentHandler
 	DocumentGroupHandler *DocumentGroupHandler
-	PublicGroupHandler   *PublicGroupHandler
-	ChatHandler          *ChatHandler
-	SSEHandler           *SSEHandler
+	PublicGroupHandler  *PublicGroupHandler
+	SSEHandler          *SSEHandler
+	UserHandler         *UserHandler
 }
 
 func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
@@ -44,7 +45,6 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 func setupRoutes(router *gin.Engine, h *Handlers) {
 	v1 := router.Group("/api/v1")
 
-	// Auth (público)
 	auth := v1.Group("/auth")
 	{
 		auth.POST("/register", h.AuthHandler.Register)
@@ -53,7 +53,6 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 		auth.POST("/logout", h.AuthHandler.Logout)
 	}
 
-	// Rutas públicas sin auth (chat compartido)
 	public := v1.Group("/public")
 	{
 		public.GET("/groups/:slug", h.PublicGroupHandler.GetGroupInfo)
@@ -62,7 +61,6 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 		public.GET("/groups/:slug/documents/:doc_id/view", h.PublicGroupHandler.DownloadDocument)
 	}
 
-	// Rutas protegidas
 	protected := v1.Group("")
 	protected.Use(middleware.AuthMiddleware())
 	{
@@ -70,6 +68,12 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 
 		protected.POST("/ask", h.AskHandler.Ask)
 		protected.GET("/stream", h.SSEHandler.Stream)
+
+		config := protected.Group("/config")
+		{
+			config.GET("/system-prompt", h.ConfigHandler.GetSystemPrompt)
+			config.PUT("/system-prompt", h.ConfigHandler.UpdateSystemPrompt)
+		}
 
 		documents := protected.Group("/documents")
 		{

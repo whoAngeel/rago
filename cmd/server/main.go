@@ -178,6 +178,7 @@ func main() {
 			),
 			log,
 		),
+		ConfigHandler: handlers.NewConfigHandler(systemRepo, log),
 		UserHandler: handlers.NewUserHandler(
 			application.NewUserUsecase(userRepo, docRepo),
 		),
