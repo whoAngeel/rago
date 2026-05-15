@@ -32,3 +32,18 @@ func (h *UserHandler) Me(c *gin.Context) {
 
 	c.JSON(http.StatusOK, profile)
 }
+
+func (h *UserHandler) Stats(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID := c.GetInt("user_id")
+
+	stats, err := h.usecase.GetDashboardStats(ctx, userID)
+	if err != nil {
+		rest.RespondError(c, http.StatusInternalServerError, "Error fetching stats", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
+}

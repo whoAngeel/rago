@@ -132,3 +132,20 @@ func (r *DocumentRepository) FindDocumentsForSelect(ctx context.Context, userID 
 func (r *DocumentRepository) DeleteProcessingStepsByDocumentID(ctx context.Context, docID int) error {
 	return r.db.WithContext(ctx).Where("document_id = ?", docID).Delete(&domain.ProcessingStep{}).Error
 }
+
+func (r *DocumentRepository) CountByStatus(ctx context.Context, userID int, status domain.DocumentStatus) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).
+		Where("user_id = ? AND status = ?", userID, status).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *DocumentRepository) SumSizeByUserID(ctx context.Context, userID int) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).
+		Where("user_id = ?", userID).
+		Select("COALESCE(SUM(size), 0)").
+		Scan(&total).Error
+	return total, err
+}

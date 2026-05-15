@@ -181,7 +181,7 @@ func main() {
 		),
 		ConfigHandler: handlers.NewConfigHandler(systemRepo, log),
 		UserHandler: handlers.NewUserHandler(
-			application.NewUserUsecase(userRepo, docRepo),
+			application.NewUserUsecase(userRepo, docRepo, chatRepo, groupRepo),
 		),
 		DocumentHandler: handlers.NewDocumentHandler(
 			application.NewIngestDocumentUsecase(

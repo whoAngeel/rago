@@ -31,9 +31,11 @@ type DocumentRepository interface {
 	UpdateProcessingStep(ctx context.Context, id, duration int, status, errMsg string) error
 	FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error)
 	FindByChecksum(ctx context.Context, userID int, checksum string) (*domain.Document, error)
+	DeleteProcessingStepsByDocumentID(ctx context.Context, docID int) error
 	CountDocumentsByUserID(ctx context.Context, userID int) (int64, error)
 	FindDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error)
-	DeleteProcessingStepsByDocumentID(ctx context.Context, docID int) error
+	CountByStatus(ctx context.Context, userID int, status domain.DocumentStatus) (int64, error)
+	SumSizeByUserID(ctx context.Context, userID int) (int64, error)
 }
 
 type ChatRepository interface {

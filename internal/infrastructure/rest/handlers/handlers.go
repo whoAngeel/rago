@@ -65,6 +65,7 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 	protected.Use(middleware.AuthMiddleware())
 	{
 		protected.GET("/users/me", h.UserHandler.Me)
+		protected.GET("/users/me/stats", h.UserHandler.Stats)
 
 		protected.POST("/ask", h.AskHandler.Ask)
 		protected.GET("/stream", h.SSEHandler.Stream)

@@ -111,6 +111,15 @@ func (m *mockDocRepo) CountDocumentsByUserID(_ context.Context, _ int) (int64, e
 func (m *mockDocRepo) FindDocumentsForSelect(_ context.Context, _ int) ([]*domain.Document, error) {
 	return nil, nil
 }
+func (m *mockDocRepo) DeleteProcessingStepsByDocumentID(_ context.Context, _ int) error {
+	return nil
+}
+func (m *mockDocRepo) CountByStatus(_ context.Context, _ int, _ domain.DocumentStatus) (int64, error) {
+	return 0, nil
+}
+func (m *mockDocRepo) SumSizeByUserID(_ context.Context, _ int) (int64, error) {
+	return 0, nil
+}
 
 type mockVectorStore struct {
 	results      []ports.SearchResult

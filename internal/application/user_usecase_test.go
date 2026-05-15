@@ -59,6 +59,9 @@ func (m *stubDocRepo) UpdateProcessingStep(_ context.Context, _, _ int, _, _ str
 func (m *stubDocRepo) FindStepsByDocumentID(_ context.Context, _ int) ([]*domain.ProcessingStep, error) {
 	return nil, nil
 }
+func (m *stubDocRepo) DeleteProcessingStepsByDocumentID(_ context.Context, _ int) error {
+	return nil
+}
 func (m *stubDocRepo) FindByChecksum(_ context.Context, _ int, _ string) (*domain.Document, error) {
 	return nil, nil
 }
@@ -68,12 +71,18 @@ func (m *stubDocRepo) CountDocumentsByUserID(_ context.Context, _ int) (int64, e
 func (m *stubDocRepo) FindDocumentsForSelect(_ context.Context, _ int) ([]*domain.Document, error) {
 	return nil, nil
 }
+func (m *stubDocRepo) CountByStatus(_ context.Context, _ int, _ domain.DocumentStatus) (int64, error) {
+	return 0, nil
+}
+func (m *stubDocRepo) SumSizeByUserID(_ context.Context, _ int) (int64, error) {
+	return 0, nil
+}
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 func TestGetProfile_ReturnsProfileWithCount(t *testing.T) {
 	user := &domain.User{ID: 1, Name: "Juan", Email: "juan@test.com", RoleID: 3, MaxDocuments: 10}
-	uc := application.NewUserUsecase(&stubUserRepo{user: user}, &stubDocRepo{count: 7})
+	uc := application.NewUserUsecase(&stubUserRepo{user: user}, &stubDocRepo{count: 7}, nil, nil)
 
 	profile, err := uc.GetProfile(context.Background(), 1)
 
@@ -93,7 +102,7 @@ func TestGetProfile_ReturnsProfileWithCount(t *testing.T) {
 
 func TestGetProfile_AdminUnlimited(t *testing.T) {
 	user := &domain.User{ID: 2, Name: "Admin", Email: "admin@test.com", RoleID: 1, MaxDocuments: 0}
-	uc := application.NewUserUsecase(&stubUserRepo{user: user}, &stubDocRepo{count: 42})
+	uc := application.NewUserUsecase(&stubUserRepo{user: user}, &stubDocRepo{count: 42}, nil, nil)
 
 	profile, err := uc.GetProfile(context.Background(), 2)
 
@@ -114,7 +123,7 @@ func TestGetProfile_AdminUnlimited(t *testing.T) {
 func TestGetProfile_UserNotFound(t *testing.T) {
 	uc := application.NewUserUsecase(
 		&stubUserRepo{findErr: errors.New("not found")},
-		&stubDocRepo{},
+		&stubDocRepo{}, nil, nil,
 	)
 
 	_, err := uc.GetProfile(context.Background(), 99)
@@ -128,7 +137,7 @@ func TestGetProfile_CountError(t *testing.T) {
 	user := &domain.User{ID: 1, RoleID: 3, MaxDocuments: 10}
 	uc := application.NewUserUsecase(
 		&stubUserRepo{user: user},
-		&stubDocRepo{countErr: errors.New("db error")},
+		&stubDocRepo{countErr: errors.New("db error")}, nil, nil,
 	)
 
 	_, err := uc.GetProfile(context.Background(), 1)
