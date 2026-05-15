@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\whoan\\\\Documents\\\\DEV\\\\golang\\\\rago\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)",
+      "Bash(go build *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\whoan\\\\Documents\\\\DEV\\\\golang\\\\rago\" -Recurse -Directory | Select-Object -First 20 | ForEach-Object { $_.FullName })",
+      "Bash(go test *)"
+    ]
+  },
+  "skillOverrides": {
+    "write-a-skill": "off",
+    "docker-expert": "off",
+    "llm-schema-prompt": "off",
+    "web-design-guidelines": "off"
+  }
+}
