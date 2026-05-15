@@ -29,21 +29,22 @@ jobs:
 
       - name: Smoke test
         run: |
-          echo "Waiting for services..."
-          for i in $(seq 1 15); do
-            curl -f -m 5 http://localhost:8080/ >/dev/null 2>&1 && { echo "OK: frontend responds"; break; }
-            echo "  [$i/15] waiting..."
+          echo "Waiting for API proxy (backend) to be ready..."
+          for i in $(seq 1 30); do
+            curl -f -m 5 http://localhost:8080/health >/dev/null 2>&1 && { echo "OK: API proxy responds"; backend_ok=1; break; }
+            echo "  [$i/30] waiting for backend..."
             sleep 4
-            if [ "$i" = "15" ]; then
-              echo "FAIL: frontend not responding"
-              docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30
-              exit 1
-            fi
           done
 
-          echo "Testing API proxy through Caddy..."
-          curl -f -m 5 http://localhost:8080/health && echo "OK: API proxy responds" || {
-            echo "FAIL: API proxy not working"
-            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30
+          if [ -z "$backend_ok" ]; then
+            echo "FAIL: API proxy not responding"
+            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=50
+            exit 1
+          fi
+
+          echo "Testing frontend serving..."
+          curl -f -m 5 http://localhost:8080/ >/dev/null 2>&1 && echo "OK: frontend responds" || {
+            echo "FAIL: frontend not working"
+            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=50
             exit 1
           }

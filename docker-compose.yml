@@ -1,6 +1,7 @@
 services:
   frontend:
     image: rago-frontend:latest
+    restart: unless-stopped
     ports:
       - target: 80
         published: 8080
@@ -9,6 +10,10 @@ services:
 
   app:
     image: rago:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file: .env
     environment:
       PORT: "4000"
@@ -28,6 +33,7 @@ services:
 
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     ports:
       - target: 5432
         published: 5433
