@@ -237,87 +237,155 @@ function ProgressDots({ doc }: { doc: Document }) {
     )
 }
 
+function DocumentCard({ document, onDelete, onDownload, isDeleting }: { document: Document; onDelete: (id: number) => void; onDownload: (id: number) => void; isDeleting: boolean }) {
+    return (
+        <div className={`bg-white border-2 border-neutral-950 rounded-[var(--radius-card)] p-4 flex flex-col gap-4 shadow-[var(--shadow-hard-md)] ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 ${getFileIconBg(document.content_type)} border-2 border-neutral-950 rounded-[var(--radius-btn)] flex items-center justify-center shadow-[var(--shadow-hard-sm)] shrink-0`}>
+                    {getFileIcon(document.content_type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="font-bold text-neutral-950 truncate text-sm">{document.filename}</p>
+                    <p className="text-xs text-neutral-500 font-medium">{getFileTypeLabel(document.content_type)}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                    <span className="text-neutral-500 font-bold uppercase tracking-wider">Tamaño</span>
+                    <p className="font-bold text-neutral-950">{formatSize(document.size)}</p>
+                </div>
+                <div>
+                    <span className="text-neutral-500 font-bold uppercase tracking-wider">Subido</span>
+                    <p className="font-bold text-neutral-950">{formatDistanceToNow(new Date(document.created_at), { addSuffix: true, locale: es })}</p>
+                </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+                <StatusBadge doc={document} />
+                <div className="flex items-center gap-1">
+                    <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2 border-transparent hover:border-neutral-950 hover:bg-white hover:shadow-hard-sm rounded transition-all cursor-pointer" title="Descargar" onClick={() => onDownload(document.id)}>
+                        <Download size={16} />
+                    </button>
+                    <button className="p-2 text-neutral-600 hover:text-accent-red-deep border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10 hover:shadow-hard-sm rounded transition-all cursor-pointer" title="Eliminar" onClick={() => onDelete(document.id)}>
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            <ProgressDots doc={document} />
+        </div>
+    )
+}
+
 export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [], page, totalPages, onPageChange, totalItems }: DocumentsProps) => {
     return (
         <div>
-            <table className="w-full text-sm border-collapse">
-                <thead>
-                    <tr className="bg-neutral-200 border-b-2 border-neutral-950">
-                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Nombre</th>
-                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Tamaño</th>
-                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Estado</th>
-                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Progreso</th>
-                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Subido</th>
-                        <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200">
-                    {documents.length === 0 && (
-                        <tr>
-                            <td colSpan={6} className="px-6 py-12 text-center">
-                                <div className="flex flex-col items-center justify-center gap-3">
-                                    <div className="w-16 h-16 bg-neutral-100 border-2 border-neutral-950 rounded-full flex items-center justify-center shadow-hard-sm">
-                                        <FileText size={32} className="text-neutral-400" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-neutral-950 text-lg">No hay documentos aún</p>
-                                        <p className="text-sm text-neutral-500">Sube un archivo para empezar a procesarlo</p>
-                                    </div>
-                                </div>
-                            </td>
+            {/* Mobile cards */}
+            <div className="block md:hidden space-y-3 p-4">
+                {documents.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-3 py-12">
+                        <div className="w-16 h-16 bg-neutral-100 border-2 border-neutral-950 rounded-full flex items-center justify-center shadow-hard-sm">
+                            <FileText size={32} className="text-neutral-400" />
+                        </div>
+                        <div>
+                            <p className="font-bold text-neutral-950 text-lg">No hay documentos aún</p>
+                            <p className="text-sm text-neutral-500">Sube un archivo para empezar a procesarlo</p>
+                        </div>
+                    </div>
+                )}
+                {documents.map(document => (
+                    <DocumentCard
+                        key={document.id}
+                        document={document}
+                        onDelete={onDelete}
+                        onDownload={onDownload}
+                        isDeleting={deletingIds.includes(document.id)}
+                    />
+                ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr className="bg-neutral-200 border-b-2 border-neutral-950">
+                            <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Nombre</th>
+                            <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Tamaño</th>
+                            <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Estado</th>
+                            <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Progreso</th>
+                            <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">Subido</th>
+                            <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-center">Acciones</th>
                         </tr>
-                    )}
-                    {documents.map(document => {
-                        const isDeleting = deletingIds.includes(document.id)
-                        return (
-                            <tr key={document.id} className={`hover:bg-neutral-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
-                                <td className="px-6 py-5">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 ${getFileIconBg(document.content_type)} border-2 border-neutral-950 rounded flex items-center justify-center shadow-hard-sm shrink-0`}>
-                                            {getFileIcon(document.content_type)}
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200">
+                        {documents.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <div className="w-16 h-16 bg-neutral-100 border-2 border-neutral-950 rounded-full flex items-center justify-center shadow-hard-sm">
+                                            <FileText size={32} className="text-neutral-400" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-neutral-950 break-all">{document.filename}</p>
-                                            <p className="text-xs text-neutral-500 font-medium">{getFileTypeLabel(document.content_type)}</p>
+                                            <p className="font-bold text-neutral-950 text-lg">No hay documentos aún</p>
+                                            <p className="text-sm text-neutral-500">Sube un archivo para empezar a procesarlo</p>
                                         </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-5 font-medium text-neutral-950">
-                                    {formatSize(document.size)}
-                                </td>
-                                <td className="px-6 py-5">
-                                    <StatusBadge doc={document} />
-                                </td>
-                                <td className="px-6 py-5">
-                                    <ProgressDots doc={document} />
-                                </td>
-                                <td className="px-6 py-5 text-neutral-600 font-medium text-xs">
-                                    {formatDistanceToNow(new Date(document.created_at), { addSuffix: true, locale: es })}
-                                </td>
-                                <td className="px-6 py-5">
-                                    <div className="flex items-center gap-2 justify-center">
-                                        <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2
-                                        border-transparent hover:border-neutral-950 hover:bg-white
-                                        hover:shadow-hard-sm rounded transition-all cursor-pointer"
-                                            title="Descargar"
-                                            onClick={() => onDownload(document.id)}
-                                        >
-                                            <Download size={16} />
-                                        </button>
-                                        <button className="p-2 text-neutral-600 hover:text-accent-red-deep
-                                        border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10
-                                        hover:shadow-hard-sm rounded transition-all cursor-pointer" title="Eliminar"
-                                            onClick={() => onDelete(document.id)}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
-                        )
-                    })}
-                </tbody>
-            </table>
+                        )}
+                        {documents.map(document => {
+                            const isDeleting = deletingIds.includes(document.id)
+                            return (
+                                <tr key={document.id} className={`hover:bg-neutral-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 ${getFileIconBg(document.content_type)} border-2 border-neutral-950 rounded flex items-center justify-center shadow-hard-sm shrink-0`}>
+                                                {getFileIcon(document.content_type)}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-neutral-950 break-all">{document.filename}</p>
+                                                <p className="text-xs text-neutral-500 font-medium">{getFileTypeLabel(document.content_type)}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 font-medium text-neutral-950">
+                                        {formatSize(document.size)}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <StatusBadge doc={document} />
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <ProgressDots doc={document} />
+                                    </td>
+                                    <td className="px-6 py-5 text-neutral-600 font-medium text-xs">
+                                        {formatDistanceToNow(new Date(document.created_at), { addSuffix: true, locale: es })}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center gap-2 justify-center">
+                                            <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2
+                                            border-transparent hover:border-neutral-950 hover:bg-white
+                                            hover:shadow-hard-sm rounded transition-all cursor-pointer"
+                                                title="Descargar"
+                                                onClick={() => onDownload(document.id)}
+                                            >
+                                                <Download size={16} />
+                                            </button>
+                                            <button className="p-2 text-neutral-600 hover:text-accent-red-deep
+                                            border-2 border-transparent hover:border-neutral-950 hover:bg-accent-red/10
+                                            hover:shadow-hard-sm rounded transition-all cursor-pointer" title="Eliminar"
+                                                onClick={() => onDelete(document.id)}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            </div>
 
             {totalPages && totalPages > 1 && (
                 <div className="flex items-center justify-between px-6 py-4 border-t-2 border-neutral-950 bg-neutral-100">

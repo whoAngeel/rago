@@ -11,7 +11,7 @@ interface GroupListProps {
 
 export function GroupList({ groups, onToggle, onDelete, onCopy, loadingIds = [] }: GroupListProps) {
     return (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {groups.map(group => (
                 <GroupCard key={group.id} group={group} onToggle={onToggle} onDelete={onDelete} onCopy={onCopy} isLoading={loadingIds.includes(group.id)} />
             ))}

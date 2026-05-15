@@ -36,8 +36,8 @@ export function Navbar() {
     }
 
     return (
-        <header className="h-20 bg-white border-b-2 border-neutral-950 px-8 flex items-center justify-between font-sans">
-            <div className="flex items-center gap-4">
+        <header className="h-20 bg-white border-b-2 border-neutral-950 px-4 sm:px-8 flex items-center justify-between font-sans shrink-0">
+            <div className="flex items-center gap-2 sm:gap-4">
                 {current?.parent && (
                     <button
                         onClick={() => navigate({ to: current.parent })}

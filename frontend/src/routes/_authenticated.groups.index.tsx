@@ -114,7 +114,7 @@ function RouteComponent() {
 
 
   return (
-    <div className='flex w-full h-full p-6 flex-col gap-6'>
+    <div className='flex w-full h-full p-4 sm:p-6 flex-col gap-4 sm:gap-6'>
 
       {isLoading ? (
         <div className="flex-1 bg-white border-2 border-neutral-950 rounded-card p-12 flex flex-col items-center justify-center gap-4 shadow-hard-lg">
@@ -124,9 +124,9 @@ function RouteComponent() {
           <span className="text-neutral-950 font-bold">Cargando grupos...</span>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col gap-6">
+          <div className="flex-1 min-h-0 flex flex-col gap-4 sm:gap-6">
           <div className='flex w-full shrink-0 justify-end'>
-            <Button variant='primary' size='lg' className="flex items-center gap-2" onClick={handleOpenModal}>
+            <Button variant='primary' size='lg' className="flex items-center gap-2 w-full sm:w-auto justify-center" onClick={handleOpenModal}>
               <Plus size={16} strokeWidth={3} />
               Nuevo grupo
             </Button>
@@ -144,9 +144,9 @@ function RouteComponent() {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between py-4">
-                <p className="text-xs font-bold text-neutral-600">{data?.total ?? 0} grupos</p>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 gap-2">
+                <p className="text-xs font-bold text-neutral-600 order-2 sm:order-1">{data?.total ?? 0} grupos</p>
+                <div className="flex items-center gap-2 order-1 sm:order-2">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}
                     className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
                   ><ChevronLeft size={16} /></button>

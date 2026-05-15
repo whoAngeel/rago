@@ -111,7 +111,7 @@ function RouteComponent() {
   const documents = data?.items ?? []
 
   return (
-    <div className='flex w-full h-full p-6 flex-col gap-6'>
+    <div className='flex w-full h-full p-4 sm:p-6 flex-col gap-4 sm:gap-6'>
 
       <div className='w-full'>
         <DropZone onUpload={(file) => uploadMutation.mutate(file)} disabled={isAtLimit} />
@@ -122,7 +122,7 @@ function RouteComponent() {
         </p>
       )}
 
-      <div className="flex items-center justify-between w-full">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between w-full gap-3">
         <div className="relative flex-1 max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
           <input
@@ -130,7 +130,7 @@ function RouteComponent() {
             className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-neutral-950 rounded text-sm font-bold text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:shadow-hard-sm focus:bg-neutral-50 transition-all"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-neutral-950 rounded text-sm font-black text-neutral-950 hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer">
+        <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-neutral-950 rounded text-sm font-black text-neutral-950 hover:bg-neutral-100 hover:shadow-hard-sm transition-all cursor-pointer">
           <SlidersHorizontal size={16} strokeWidth={3} />
           Filtros
         </button>
@@ -153,37 +153,39 @@ function RouteComponent() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t-2 border-neutral-950 bg-neutral-100 shrink-0">
-              <p className="text-xs font-bold text-neutral-600">
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-t-2 border-neutral-950 bg-neutral-100 shrink-0 gap-4">
+              <p className="text-xs font-bold text-neutral-600 w-full sm:w-auto text-center sm:text-left">
                 {data?.total ?? 0} documentos
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 max-w-full overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page <= 1}
-                  className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
+                  className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer shrink-0"
                 >
                   <ChevronLeft size={16} />
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`px-3 py-1 border-2 border-neutral-950 rounded text-xs font-bold transition-all cursor-pointer ${
-                      p === page
-                        ? "bg-primary-400 text-black shadow-hard-sm"
-                        : "bg-white text-neutral-950 hover:shadow-hard-sm"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`px-3 py-1 border-2 border-neutral-950 rounded text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        p === page
+                          ? "bg-primary-400 text-black shadow-hard-sm"
+                          : "bg-white text-neutral-950 hover:shadow-hard-sm"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
 
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page >= totalPages}
-                  className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer"
+                  className="p-1.5 border-2 border-neutral-950 rounded disabled:opacity-30 disabled:pointer-events-none hover:bg-white transition-all cursor-pointer shrink-0"
                 >
                   <ChevronRight size={16} />
                 </button>
