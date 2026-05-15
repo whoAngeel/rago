@@ -1,4 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
   ArrowRight,
   Bot,
@@ -9,13 +12,47 @@ import {
   GitGraph,
 } from "lucide-react";
 
+gsap.registerPlugin(useGSAP);
+
 export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
 function LandingPage() {
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    // Hero Elements Animation
+    gsap.from(".hero-elem", {
+      y: 30,
+      opacity: 0,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: "power3.out",
+    });
+
+    // Chat Mockup Animation
+    gsap.from(".chat-mockup", {
+      x: 40,
+      opacity: 0,
+      duration: 1,
+      delay: 0.4,
+      ease: "power3.out",
+    });
+
+    // Feature Cards Stagger
+    gsap.from(".feature-card", {
+      y: 40,
+      opacity: 0,
+      duration: 0.6,
+      stagger: 0.15,
+      ease: "back.out(1.5)",
+      delay: 0.6,
+    });
+  }, { scope: container });
+
   return (
-    <div className="min-h-screen bg-white text-black selection:bg-[#bef265]">
+    <div ref={container} className="min-h-screen bg-white text-black selection:bg-[#bef265]">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white border-b-2 border-neutral-950">
         <div className="max-w-[1376px] mx-auto px-6 h-20 flex items-center justify-between">
@@ -40,22 +77,22 @@ function LandingPage() {
       <div className="relative pt-40 pb-24 overflow-hidden bg-[#fafafa] border-b-2 border-neutral-950">
         <div className="max-w-[1312px] mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-[var(--radius-pill)] bg-[#f5d1fe] border-2 border-neutral-950 text-sm font-bold mb-8 shadow-[var(--shadow-hard-sm)]">
+            <div className="hero-elem inline-flex items-center gap-2 px-4 py-1.5 rounded-[var(--radius-pill)] bg-[#f5d1fe] border-2 border-neutral-950 text-sm font-bold mb-8 shadow-[var(--shadow-hard-sm)]">
               <span className="flex h-2.5 w-2.5 rounded-full bg-neutral-950"></span>
               Go + React
             </div>
 
-            <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight mb-8 leading-[var(--text-h1--line-height)]">
+            <h1 className="hero-elem text-5xl sm:text-7xl font-extrabold tracking-tight mb-8 leading-[var(--text-h1--line-height)]">
               Porque ya nadie lee las instrucciones.
             </h1>
 
-            <p className="text-xl text-neutral-700 mb-10 leading-relaxed font-medium">
+            <p className="hero-elem text-xl text-neutral-700 mb-10 leading-relaxed font-medium">
               Transforma tus aburridos manuales y PDFs en asistentes de IA
               públicos e interactivos. Agrupa tus documentos, obtén un enlace y
               deja que tus usuarios simplemente pregunten.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="hero-elem flex flex-col sm:flex-row items-center gap-4">
               <Link
                 to="/dashboard"
                 className="flex items-center justify-center gap-2 bg-[#84cc17] text-neutral-950 border-2 border-neutral-950 px-8 py-4 rounded-[var(--radius-btn)] font-bold text-lg shadow-[var(--shadow-hard-md)] shadow-hover w-full sm:w-auto"
@@ -72,7 +109,7 @@ function LandingPage() {
             </div>
           </div>
 
-          <div className="relative hidden lg:block">
+          <div className="relative hidden lg:block chat-mockup">
             <div className="absolute inset-0 bg-[#35d399] rounded-[var(--radius-card)] translate-x-4 translate-y-4 border-2 border-neutral-950"></div>
             <div className="relative bg-white border-2 border-neutral-950 rounded-[var(--radius-card)] p-8 shadow-[var(--shadow-hard-lg)] flex flex-col h-[400px]">
               <div className="flex items-center gap-4 border-b-2 border-neutral-200 pb-4 mb-4">
@@ -212,7 +249,7 @@ function FeatureCard({
 }) {
   return (
     <div
-      className={`bg-white border-2 border-neutral-950 p-8 rounded-[var(--radius-card)] shadow-[var(--shadow-hard-lg)] shadow-hover transition-transform`}
+      className={`feature-card bg-white border-2 border-neutral-950 p-8 rounded-[var(--radius-card)] shadow-[var(--shadow-hard-lg)] shadow-hover transition-transform`}
     >
       <div
         className={`w-16 h-16 ${bgColor} border-2 border-neutral-950 rounded-[var(--radius-btn)] flex items-center justify-center mb-8 shadow-[var(--shadow-hard-sm)]`}
