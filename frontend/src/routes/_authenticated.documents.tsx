@@ -64,10 +64,12 @@ function RouteComponent() {
   }, [error, addToast])
 
   const [deletingIds, setDeletingIds] = useState<number[]>([])
+  const [reprocessingIds, setReprocessingIds] = useState<number[]>([])
 
   useEffect(() => {
     if (data) {
       setDeletingIds(prev => prev.filter(id => data.items.some(doc => doc.id === id)))
+      setReprocessingIds(prev => prev.filter(id => data.items.some(doc => doc.id === id)))
     }
   }, [data])
 
@@ -105,6 +107,24 @@ function RouteComponent() {
     onError: (err: any, id: number) => {
       setDeletingIds(prev => prev.filter(itemId => itemId !== id))
       addToast("Error", `No se pudo borrar el documento: ${err.message}`, "error")
+    }
+  })
+
+  const reprocessMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return api.post(`/documents/${id}/reprocess`)
+    },
+    onMutate: (id: number) => {
+      setReprocessingIds(prev => [...prev, id])
+    },
+    onSuccess: (_, id: number) => {
+      setReprocessingIds(prev => prev.filter(itemId => itemId !== id))
+      queryClient.invalidateQueries({ queryKey: ["documents"] })
+      addToast("Éxito", "Documento puesto en cola para reprocesar", "success")
+    },
+    onError: (err: any, id: number) => {
+      setReprocessingIds(prev => prev.filter(itemId => itemId !== id))
+      addToast("Error", `No se pudo reprocesar el documento: ${err.message}`, "error")
     }
   })
 
@@ -149,7 +169,9 @@ function RouteComponent() {
             <DocumentTable documents={documents}
               onDelete={(id) => deleteMutation.mutate(id)}
               onDownload={(id) => console.log(`download ${id}`)}
-              deletingIds={deletingIds} />
+              onReprocess={(id) => reprocessMutation.mutate(id)}
+              deletingIds={deletingIds}
+              reprocessingIds={reprocessingIds} />
           </div>
 
           {totalPages > 1 && (

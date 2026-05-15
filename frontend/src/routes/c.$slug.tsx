@@ -25,6 +25,7 @@ function RouteComponent() {
   const [input, setInput] = useState("")
   const [isSendig, setIsSending] = useState<boolean>(false)
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false)
+  const [showDocs, setShowDocs] = useState(false)
 
   const { data: group, isLoading, error } = useQuery<GroupPublicInfo>({
     queryKey: ["public_group", slug],
@@ -90,14 +91,16 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col h-screen bg-neutral-50 font-sans">
-      <PublicChatNavbar groupName={group?.name} />
+      <PublicChatNavbar groupName={group?.name} onToggleDocs={() => setShowDocs(!showDocs)} />
 
-      <div className='grid grid-cols-12 w-full flex-1 overflow-hidden'>
+      <div className='grid grid-cols-1 lg:grid-cols-12 w-full flex-1 overflow-hidden relative'>
         <PublicDocumentsPanel
           documents={group?.documents}
           allowDownloads={group?.allow_downloads ?? false}
           isActive={isActive}
           slug={slug}
+          visible={showDocs}
+          onClose={() => setShowDocs(false)}
         />
         <PublicChatArea
           messages={messages}

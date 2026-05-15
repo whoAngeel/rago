@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/whoAngeel/rago/internal/core/ports"
@@ -27,7 +28,9 @@ func (r *Registry) Register(contentType string, parser ports.Parser) {
 func (r *Registry) Get(contentType string) (ports.Parser, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	p, ok := r.parsers[contentType]
+	key := strings.Split(contentType, ";")[0]
+	key = strings.TrimSpace(key)
+	p, ok := r.parsers[key]
 	if !ok {
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
 	}

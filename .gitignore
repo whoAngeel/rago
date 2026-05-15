@@ -46,6 +46,7 @@ node_modules/
 # === Frontend builds ===
 frontend/dist/
 frontend/dist-ssr/
+frontend/.vite/
 *.local
 
 # === Logs & temp ===

@@ -45,7 +45,7 @@ export function DropZone({ onUpload, disabled }: DropZoneProps) {
                 </h3>
                 
                 <p className="text-neutral-600 font-medium mb-4 text-sm">
-                    Formatos soportados: <span className="text-neutral-950 font-bold">.txt, .pdf, .csv, .json</span>
+                    Formatos soportados: <span className="text-neutral-950 font-bold">.txt, .pdf, .csv, .json, .docx, .xlsx, .md</span>
                 </p>
                 
                 <div className="flex items-center gap-2 px-3 py-1 bg-accent-amber border border-neutral-950 rounded-md text-xs font-bold shadow-hard-sm">
