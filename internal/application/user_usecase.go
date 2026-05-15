@@ -109,16 +109,28 @@ func (uc *UserUsecase) GetDashboardStats(ctx context.Context, userID int) (*Dash
 	var activeGroups int64
 	var totalAttempts int64
 	var unansweredTotal int64
+	var groups []GroupSummary
 	if uc.GroupRepo != nil {
-		groups, _, err := uc.GroupRepo.FindByUserID(ctx, userID, 1, 1000)
+		allGroups, _, err := uc.GroupRepo.FindByUserID(ctx, userID, 1, 1000)
 		if err == nil {
-			totalGroups = int64(len(groups))
-			for _, g := range groups {
+			totalGroups = int64(len(allGroups))
+			for _, g := range allGroups {
 				if g.IsActive {
 					activeGroups++
 				}
 				totalAttempts += int64(g.ChatAttempts)
 				unansweredTotal += int64(g.UnansweredCount)
+				groups = append(groups, GroupSummary{
+					ID:              g.ID,
+					Name:            g.Name,
+					Slug:            g.Slug,
+					IsActive:        g.IsActive,
+					DocumentCount:   len(g.DocumentIDs),
+					ChatAttempts:    g.ChatAttempts,
+					ChatQuotaUsed:   g.ChatQuotaUsed,
+					ChatQuota:       g.ChatQuota,
+					UnansweredCount: g.UnansweredCount,
+				})
 			}
 		}
 	}
@@ -135,5 +147,6 @@ func (uc *UserUsecase) GetDashboardStats(ctx context.Context, userID int) (*Dash
 		ActiveGroups:    activeGroups,
 		TotalAttempts:   totalAttempts,
 		UnansweredTotal: unansweredTotal,
+		Groups:          groups,
 	}, nil
 }
