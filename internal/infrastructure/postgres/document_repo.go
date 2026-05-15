@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -24,10 +25,24 @@ func (r *DocumentRepository) CreateDocument(ctx context.Context, doc *domain.Doc
 	return doc, err
 }
 
-func (r *DocumentRepository) FindDocumentByUserID(ctx context.Context, userID int) ([]*domain.Document, error) {
+func (r *DocumentRepository) FindDocumentByUserID(ctx context.Context, userID int, page, limit int) ([]*domain.Document, int64, error) {
 	var docs []*domain.Document
-	err := r.db.WithContext(ctx).Where("user_id=?", userID).Order("created_at desc").Find(&docs).Error
-	return docs, err
+	var total int64
+
+	offset := (page - 1) * limit
+
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).Where("user_id = ?", userID).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at desc").
+		Limit(limit).Offset(offset).
+		Find(&docs).Error
+
+	return docs, total, err
 }
 
 func (r *DocumentRepository) UpdateDocumentStatus(ctx context.Context, id int, status domain.DocumentStatus) error {
@@ -82,4 +97,38 @@ func (r *DocumentRepository) UpdateProcessingStep(ctx context.Context, id, durat
 		"error_message": errMsg,
 		"duration_ms":   duration,
 	}).Error
+}
+
+func (r *DocumentRepository) FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error) {
+	var steps []*domain.ProcessingStep
+	err := r.db.WithContext(ctx).Where("document_id = ?", docID).Order("created_at ASC").Find(&steps).Error
+	return steps, err
+}
+
+func (r *DocumentRepository) FindByChecksum(ctx context.Context, userID int, checksum string) (*domain.Document, error) {
+	var doc domain.Document
+	err := r.db.WithContext(ctx).Where("user_id = ? AND checksum = ?", userID, checksum).First(&doc).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &doc, err
+}
+
+func (r *DocumentRepository) CountDocumentsByUserID(ctx context.Context, userID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *DocumentRepository) FindDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error) {
+	var docs []*domain.Document
+	err := r.db.WithContext(ctx).Where("user_id = ? AND status != ?", userID, domain.StatusFailed).
+		Order("created_at desc").Find(&docs).Error
+	return docs, err
+}
+
+func (r *DocumentRepository) DeleteProcessingStepsByDocumentID(ctx context.Context, docID int) error {
+	return r.db.WithContext(ctx).Where("document_id = ?", docID).Delete(&domain.ProcessingStep{}).Error
 }

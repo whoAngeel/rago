@@ -13,11 +13,15 @@ jobs:
       - name: Build Go binary
         run: CGO_ENABLED=0 go build -o server ./cmd/server/
 
-      - name: Build Docker image
+      - name: Build backend Docker image
         run: docker build -t rago:latest .
 
-      - name: Sync compose and deploy
+      - name: Build frontend Docker image
+        run: docker build -t rago-frontend:latest ./frontend/
+
+      - name: Deploy
         run: |
+          mkdir -p /home/whoangel/rago
           cp docker-compose.yml /home/whoangel/rago/
           cd /home/whoangel/rago
           docker compose up -d --remove-orphans
@@ -25,20 +29,21 @@ jobs:
 
       - name: Smoke test
         run: |
-          echo "Waiting for container to be healthy..."
-          for i in $(seq 1 30); do
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' rago-app-1 2>/dev/null || echo "missing")
-            if [ "$STATUS" = "healthy" ]; then
-              echo "Container healthy!"
-              break
+          echo "Waiting for services..."
+          for i in $(seq 1 15); do
+            curl -f -m 5 http://localhost:8080/ >/dev/null 2>&1 && { echo "OK: frontend responds"; break; }
+            echo "  [$i/15] waiting..."
+            sleep 4
+            if [ "$i" = "15" ]; then
+              echo "FAIL: frontend not responding"
+              docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30
+              exit 1
             fi
-            echo "  [$i/30] status=$STATUS, waiting..."
-            sleep 2
           done
 
-          echo "Testing /health endpoint..."
-          curl -f -m 5 http://localhost:4000/health && echo "OK: /health responded" || {
-            echo "FAIL: /health not responding"
-            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30 app
+          echo "Testing API proxy through Caddy..."
+          curl -f -m 5 http://localhost:8080/health && echo "OK: API proxy responds" || {
+            echo "FAIL: API proxy not working"
+            docker compose -f /home/whoangel/rago/docker-compose.yml logs --tail=30
             exit 1
           }

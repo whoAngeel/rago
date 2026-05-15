@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Rago - Files Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;700;900&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "pink-pastel": "#fae9ff",
+                        "primary-container": "#a3e635",
+                        "on-primary-fixed-variant": "#334f00",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#5e376b",
+                        "surface-container": "#ecf0dd",
+                        "on-secondary-fixed": "#291133",
+                        "tertiary-fixed-dim": "#e7b6f3",
+                        "inverse-on-surface": "#eff3e0",
+                        "on-surface-variant": "#424936",
+                        "on-primary-container": "#416400",
+                        "on-surface": "#191d12",
+                        "inverse-primary": "#98da27",
+                        "primary-fixed-dim": "#98da27",
+                        "shadow-hard": "#0a0a0d",
+                        "border-dark": "#171717",
+                        "surface-bright": "#f7fbe8",
+                        "purple-pastel": "#edeafe",
+                        "primary-fixed": "#b2f746",
+                        "secondary-fixed-dim": "#debbe7",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#f3c1ff",
+                        "black": "#000000",
+                        "surface-tint": "#446900",
+                        "outline": "#727a64",
+                        "inverse-primary": "#98da27",
+                        "outline-variant": "#c2cab0",
+                        "surface-container-high": "#e6ead8",
+                        "neutral-100": "#f5f5f5",
+                        "surface-dim": "#d8dcca",
+                        "on-secondary-container": "#73577d",
+                        "secondary-container": "#f5d1fe",
+                        "surface-variant": "#e0e4d2",
+                        "neutral-50": "#fafafa",
+                        "on-tertiary": "#ffffff",
+                        "yellow-pastel": "#fef3c8",
+                        "surface": "#f7fbe8",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f2f6e3",
+                        "on-primary-fixed": "#121f00",
+                        "secondary": "#71547a",
+                        "on-background": "#191d12",
+                        "surface-container-highest": "#e0e4d2",
+                        "secondary-fixed": "#f8d8ff",
+                        "on-tertiary-fixed": "#2f093d",
+                        "neutral-600": "#525252",
+                        "background": "#f7fbe8",
+                        "orange-pastel": "#ffedd6",
+                        "tertiary": "#784f85",
+                        "tertiary-fixed": "#fad7ff",
+                        "neutral-500": "#737373",
+                        "blue-pastel": "#dceafe",
+                        "on-secondary-fixed-variant": "#583d61",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#734b80",
+                        "gradient-footer": "linear-gradient(180deg, #b4edd8 0%, #6adbb1 100%)",
+                        "white": "#ffffff",
+                        "primary": "#446900",
+                        "error": "#ba1a1a",
+                        "red-accent": "#f4405e",
+                        "gradient-cta": "linear-gradient(90deg, #ecfccc 0%, #d2fae5 32%, #edeafe 72%, #fae9ff 100%)",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "element-gap": "22px",
+                        "section-gap": "64px",
+                        "inline-gap": "8px",
+                        "container-max": "1376px",
+                        "padding-pill": "6px 14px",
+                        "padding-input": "12px",
+                        "padding-btn": "8px 16px",
+                        "padding-card": "40px"
+                    },
+                    "fontFamily": {
+                        "h3-card": ["Work Sans"],
+                        "display-number": ["Work Sans"],
+                        "body-lg": ["Work Sans"],
+                        "ui-label": ["Work Sans"],
+                        "h2-section": ["Work Sans"],
+                        "body-md": ["Work Sans"],
+                        "h1-hero": ["Work Sans"],
+                        "badge-label": ["Work Sans"]
+                    },
+                    "fontSize": {
+                        "h3-card": ["32px", { "lineHeight": "44px", "letterSpacing": "-0.64px", "fontWeight": "500" }],
+                        "display-number": ["24px", { "lineHeight": "auto", "fontWeight": "700" }],
+                        "body-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "ui-label": ["16px", { "lineHeight": "auto", "fontWeight": "500" }],
+                        "h2-section": ["48px", { "lineHeight": "64px", "letterSpacing": "-0.96px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "22px", "fontWeight": "500" }],
+                        "h1-hero": ["64px", { "lineHeight": "74px", "letterSpacing": "-1.28px", "fontWeight": "500" }],
+                        "badge-label": ["14px", { "lineHeight": "auto", "fontWeight": "500" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+
+        .neo-shadow-sm {
+            shadow-[1px_1px_0px_0px_rgba(10, 10, 13, 1)]
+        }
+
+        .neo-shadow-md {
+            shadow-[2px_2px_0px_0px_rgba(10, 10, 13, 1)]
+        }
+
+        .neo-shadow-lg {
+            shadow-[4px_4px_0px_0px_rgba(10, 10, 13, 1)]
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background text-on-surface font-ui-label selection:bg-primary-container selection:text-on-primary-container">
+    <div class="flex min-h-screen">
+        <!-- SideNavBar -->
+        <aside
+            class="w-64 h-screen border-r-2 border-black bg-surface flex flex-col py-6 gap-element-gap sticky top-0 shadow-[4px_0px_0px_0px_rgba(10,10,13,1)] z-40">
+            <div class="px-6 mb-4">
+                <div class="flex items-center gap-2">
+                    <div
+                        class="w-10 h-10 bg-primary-container border-2 border-black flex items-center justify-center rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <span class="material-symbols-outlined text-black font-bold">bubble_chart</span>
+                    </div>
+                    <div>
+                        <h1 class="font-h3-card text-[24px] font-black text-on-surface tracking-tighter">Rago</h1>
+                        <p class="text-[12px] font-bold text-on-surface-variant uppercase tracking-widest">RAG Platform
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 flex flex-col gap-2">
+                <a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface mx-2 rounded-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                    href="#">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container border border-black shadow-[2px_2px_0px_0px_rgba(10,10,13,1)] mx-2 rounded-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                    href="#">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    <span class="font-bold">Files</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface mx-2 rounded-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                    href="#">
+                    <span class="material-symbols-outlined">database</span>
+                    <span>Knowledge Base</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface mx-2 rounded-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                    href="#">
+                    <span class="material-symbols-outlined">key</span>
+                    <span>API Keys</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface mx-2 rounded-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                    href="#">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            <div class="px-4 mt-auto">
+                <button
+                    class="w-full bg-primary-container border border-black py-3 rounded-lg shadow-[2px_2px_0px_0px_rgba(10,10,13,1)] flex items-center justify-center gap-2 font-bold hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[2px] active:translate-y-[2px]">
+                    <span class="material-symbols-outlined">upload</span>
+                    Upload New
+                </button>
+            </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <!-- Top Bar -->
+            <header
+                class="h-20 w-full border-b-2 border-black bg-surface flex items-center justify-between px-8 sticky top-0 z-30 shadow-[0px_4px_0px_0px_rgba(10,10,13,1)]">
+                <div class="flex items-center gap-4 flex-1">
+                    <div class="relative w-96">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                        <input
+                            class="w-full bg-white border border-neutral-500 rounded-md py-2 pl-10 pr-4 focus:ring-2 focus:ring-primary focus:border-black outline-none transition-all"
+                            placeholder="Search your files..." type="text" />
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <button class="relative hover:text-primary transition-colors">
+                        <span class="material-symbols-outlined">notifications</span>
+                        <span
+                            class="absolute -top-1 -right-1 w-2 h-2 bg-red-accent rounded-full border border-black"></span>
+                    </button>
+                    <button class="hover:text-primary transition-colors">
+                        <span class="material-symbols-outlined">help_outline</span>
+                    </button>
+                    <div class="flex items-center gap-3 border-l-2 border-black pl-6">
+                        <div class="text-right">
+                            <p class="font-bold text-sm leading-none">Alex Rivera</p>
+                            <p class="text-[11px] text-on-surface-variant font-medium">Pro Plan</p>
+                        </div>
+                        <img alt="User avatar"
+                            class="w-10 h-10 rounded-lg border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                            data-alt="A professional headshot of a young tech professional with a friendly expression, set against a vibrant and colorful geometric background that matches a light-mode UI aesthetic. The lighting is soft and studio-quality, emphasizing a modern and clean look. The style is crisp, high-definition, and perfectly integrated into a high-end digital dashboard interface."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuChqd5DAcnUcHRnQ9odtvxqeGzi_5XM7XnxicV5EaezTLOe0_FRwlmVLNKWSnBnj3KveBSeMlxZA6t5t8NQXtqtcte6MMjDEfBUetXzGkd8cSNrZT38NYWa6PmNGVZE_c57ncqlUZW_2xX-Fo17rqYCIfzZ5BOGRlBJ62_IUwu9HmE2wnuFr0sTdsxo04XARx-OeAC99IRvdd3LQBOjfu5dmrltK2yE-rhfQ8rGOBn_AQJlNSPNC_AL0QvX8d9ugPrA_1Wipd0H_5Bl" />
+                    </div>
+                </div>
+            </header>
+            <div class="max-w-container-max mx-auto p-12 space-y-section-gap">
+                <!-- Content Header -->
+                <div class="flex items-end justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <h2 class="font-h2-section text-h2-section">Documents</h2>
+                            <span
+                                class="px-3 py-1 bg-white border border-black rounded-full font-bold text-sm shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">(12)</span>
+                        </div>
+                        <p class="text-on-surface-variant max-w-lg">Manage your dataset corpus. Upload documents to
+                            train your RAG models or refine existing knowledge bases.</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button
+                            class="px-6 py-3 bg-white border-2 border-black rounded-lg font-bold shadow-[4px_4px_0px_0px_rgba(10,10,13,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined">filter_list</span> Filter
+                        </button>
+                        <button
+                            class="px-6 py-3 bg-primary-container border-2 border-black rounded-lg font-bold shadow-[4px_4px_0px_0px_rgba(10,10,13,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined">sync</span> Process All
+                        </button>
+                    </div>
+                </div>
+                <!-- Upload Zone -->
+                <section>
+                    <div
+                        class="bg-white border-2 border-black rounded-[20px] p-12 shadow-[4px_4px_0px_0px_rgba(10,10,13,1)] relative overflow-hidden">
+                        <div class="absolute -top-12 -right-12 w-48 h-48 bg-primary-container/20 rounded-full blur-3xl">
+                        </div>
+                        <div class="absolute -bottom-8 -left-8 w-32 h-32 bg-purple-pastel/40 rounded-full blur-2xl">
+                        </div>
+                        <div
+                            class="relative border-2 border-dashed border-black rounded-xl p-12 flex flex-col items-center justify-center text-center bg-surface-container-low/30 hover:bg-surface-container-low transition-colors cursor-pointer group">
+                            <div
+                                class="w-16 h-16 bg-primary-container border-2 border-black rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:scale-110 transition-transform">
+                                <span
+                                    class="material-symbols-outlined text-black text-3xl font-bold">cloud_upload</span>
+                            </div>
+                            <h3 class="font-h3-card text-h3-card mb-2">Drag &amp; drop or click to browse</h3>
+                            <p class="text-on-surface-variant font-medium mb-8">Supported formats: <span
+                                    class="text-black font-bold">.txt, .pdf, .csv, .json, .docx, .xlsx</span></p>
+                            <div
+                                class="flex items-center gap-2 px-4 py-2 bg-yellow-pastel border border-black rounded-md text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                <span class="material-symbols-outlined text-sm">info</span>
+                                Max file size: 50MB per document
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- Document Table -->
+                <section>
+                    <div
+                        class="bg-white border-2 border-black rounded-[20px] shadow-[4px_4px_0px_0px_rgba(10,10,13,1)] overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-surface-variant/50 border-b-2 border-black">
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant">
+                                        Document Name</th>
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant">
+                                        Type</th>
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant">
+                                        Size</th>
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant">
+                                        Status</th>
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant">
+                                        Progress</th>
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant">
+                                        Date Added</th>
+                                    <th
+                                        class="px-6 py-4 font-bold uppercase text-[12px] tracking-widest text-on-surface-variant text-center">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y border-black">
+                                <!-- Row 1: Completed -->
+                                <tr class="hover:bg-surface-container-lowest transition-colors">
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 bg-red-accent border border-black rounded flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                <span
+                                                    class="material-symbols-outlined text-white text-xl">picture_as_pdf</span>
+                                            </div>
+                                            <span class="font-bold text-on-surface">report_v2.pdf</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 font-medium">PDF Document</td>
+                                    <td class="px-6 py-5 font-medium">2.4 MB</td>
+                                    <td class="px-6 py-5">
+                                        <span
+                                            class="px-3 py-1 bg-primary-container/30 border border-black rounded-md text-[12px] font-bold uppercase flex items-center gap-1 w-fit shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                                            <span class="w-2 h-2 bg-primary rounded-full"></span> Completed
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-1 text-primary">
+                                            <span class="material-symbols-outlined text-sm"
+                                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                            <span class="material-symbols-outlined text-sm"
+                                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                            <span class="material-symbols-outlined text-sm"
+                                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                            <span class="material-symbols-outlined text-sm"
+                                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                            <span class="material-symbols-outlined text-sm"
+                                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 text-on-surface-variant font-medium">2 min ago</td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex justify-center gap-3">
+                                            <button
+                                                class="p-2 hover:bg-error-container hover:text-error border border-transparent hover:border-black rounded transition-all">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Row 2: Processing -->
+                                <tr class="hover:bg-surface-container-lowest transition-colors">
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 bg-blue-pastel border border-black rounded flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                <span
+                                                    class="material-symbols-outlined text-black text-xl">table_chart</span>
+                                            </div>
+                                            <span class="font-bold text-on-surface">data_lake.csv</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 font-medium">CSV Dataset</td>
+                                    <td class="px-6 py-5 font-medium">18.2 MB</td>
+                                    <td class="px-6 py-5">
+                                        <span
+                                            class="px-3 py-1 bg-blue-pastel border border-black rounded-md text-[12px] font-bold uppercase flex items-center gap-2 w-fit shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] animate-pulse">
+                                            <span class="w-2 h-2 bg-blue-600 rounded-full"></span> Processing
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex flex-col gap-1">
+                                            <div class="flex items-center gap-1 text-on-surface-variant">
+                                                <span class="material-symbols-outlined text-sm text-primary"
+                                                    style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                                <span class="material-symbols-outlined text-sm text-primary"
+                                                    style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                                <span
+                                                    class="w-3 h-3 border-2 border-black rounded-full bg-primary-container"></span>
+                                                <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                                <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                            </div>
+                                            <span class="text-[10px] font-bold text-blue-600 uppercase">Step 3:
+                                                Chunking</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 text-on-surface-variant font-medium">15 min ago</td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex justify-center gap-3">
+                                            <button
+                                                class="p-2 hover:bg-error-container hover:text-error border border-transparent hover:border-black rounded transition-all">
+                                                <span class="material-symbols-outlined">close</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Row 3: Pending -->
+                                <tr class="hover:bg-surface-container-lowest transition-colors">
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 bg-yellow-pastel border border-black rounded flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                <span class="material-symbols-outlined text-black text-xl">code</span>
+                                            </div>
+                                            <span class="font-bold text-on-surface">schema.json</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 font-medium">JSON File</td>
+                                    <td class="px-6 py-5 font-medium">0.8 MB</td>
+                                    <td class="px-6 py-5">
+                                        <span
+                                            class="px-3 py-1 bg-neutral-100 border border-black rounded-md text-[12px] font-bold uppercase flex items-center gap-2 w-fit shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                                            <span class="w-2 h-2 bg-neutral-500 rounded-full"></span> Pending
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-1">
+                                            <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                            <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                            <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                            <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                            <span class="w-3 h-3 border border-neutral-300 rounded-full"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 text-on-surface-variant font-medium">1 hour ago</td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex justify-center gap-3">
+                                            <button
+                                                class="p-2 hover:bg-error-container hover:text-error border border-transparent hover:border-black rounded transition-all">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Row 4: Failed -->
+                                <tr class="hover:bg-surface-container-lowest transition-colors">
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 bg-orange-pastel border border-black rounded flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                <span
+                                                    class="material-symbols-outlined text-black text-xl">folder_zip</span>
+                                            </div>
+                                            <span class="font-bold text-on-surface">old_docs.zip</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-5 font-medium">Archive</td>
+                                    <td class="px-6 py-5 font-medium">45.0 MB</td>
+                                    <td class="px-6 py-5">
+                                        <span
+                                            class="px-3 py-1 bg-error-container border border-black rounded-md text-[12px] font-bold uppercase flex items-center gap-2 w-fit shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-error">
+                                            <span class="material-symbols-outlined text-sm font-bold">error</span>
+                                            Failed
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <span class="text-[11px] font-bold text-error uppercase">Extraction Error</span>
+                                    </td>
+                                    <td class="px-6 py-5 text-on-surface-variant font-medium">2 hours ago</td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex justify-center gap-2">
+                                            <button
+                                                class="p-2 bg-primary-container border border-black rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">
+                                                <span class="material-symbols-outlined text-[18px]">replay</span>
+                                            </button>
+                                            <button
+                                                class="p-2 hover:bg-error-container hover:text-error border border-transparent hover:border-black rounded transition-all">
+                                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div
+                            class="bg-surface-variant/20 px-8 py-4 flex items-center justify-between border-t-2 border-black">
+                            <p class="text-sm font-medium text-on-surface-variant">Showing <span
+                                    class="font-bold text-on-surface">1-4</span> of 12 documents</p>
+                            <div class="flex gap-2">
+                                <button
+                                    class="px-3 py-1 border border-black rounded-md bg-white opacity-50 cursor-not-allowed">Previous</button>
+                                <button
+                                    class="px-3 py-1 border border-black rounded-md bg-white font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">1</button>
+                                <button
+                                    class="px-3 py-1 border border-black rounded-md bg-white font-medium hover:bg-surface-variant transition-colors">2</button>
+                                <button
+                                    class="px-3 py-1 border border-black rounded-md bg-white font-medium hover:bg-surface-variant transition-colors">3</button>
+                                <button
+                                    class="px-3 py-1 border border-black rounded-md bg-white font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

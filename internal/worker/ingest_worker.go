@@ -111,17 +111,16 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	now := time.Now()
 	doc.Status = domain.StatusProcessing
 	doc.ProcessingStartedAt = &now
-	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to update document status", "error", err)
 		return
 	}
 	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 
-	stepID, start := w.startStep(ctx, doc.ID, "download")
+	finishDownload := w.trackStep(ctx, doc.ID, doc.UserID, "download")
 	reader, err := w.BlobStorage.Download(ctx, doc.FilePath)
 	if err != nil {
-		w.finishStep(ctx, stepID, start, err)
+		finishDownload(err)
 		w.handleDocumentError(ctx, doc, fmt.Errorf("download: %w", err))
 		return
 	}
@@ -129,21 +128,21 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 
 	rawBytes, err := io.ReadAll(reader)
 	if err != nil {
-		w.finishStep(ctx, stepID, start, err)
+		finishDownload(err)
 		w.handleDocumentError(ctx, doc, fmt.Errorf("reading file: %w", err))
 		return
 	}
-	w.finishStep(ctx, stepID, start, nil)
+	finishDownload(nil)
 
-	stepID, start = w.startStep(ctx, doc.ID, "parse")
+	finishParse := w.trackStep(ctx, doc.ID, doc.UserID, "parse")
 	parser, err := w.ParserRegistry.Resolve(doc.ContentType)
 	if err != nil {
-		w.finishStep(ctx, stepID, start, err)
+		finishParse(err)
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parser resolve: %w", err))
 		return
 	}
 	parsedDocs, err := parser.Parse(ctx, bytes.NewReader(rawBytes), doc.ContentType)
-	w.finishStep(ctx, stepID, start, err)
+	finishParse(err)
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parsing: %w", err))
 		return
@@ -154,9 +153,9 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		if parsedDoc.Metadata["chunk_type"] == "structured" {
 			chunks = append(chunks, parsedDoc.PageContent)
 		} else {
-			stepID, start = w.startStep(ctx, doc.ID, "chunk")
+			finishChunk := w.trackStep(ctx, doc.ID, doc.UserID, "chunk")
 			docChunks, err := w.Chunker.Chunk(parsedDoc.PageContent)
-			w.finishStep(ctx, stepID, start, err)
+			finishChunk(err)
 			if err != nil {
 				w.handleDocumentError(ctx, doc, fmt.Errorf("chunking: %w", err))
 				return
@@ -170,9 +169,8 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		return
 	}
 
-	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string, start time.Time, err error) {
-		stepID, _ := w.startStep(ctx, doc.ID, stepName)
-		w.finishStep(ctx, stepID, start, err)
+	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string) func(error) {
+		return w.trackStep(ctx, doc.ID, doc.UserID, stepName)
 	})
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("ingest: %w", err))
@@ -181,7 +179,6 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 
 	doc.Status = domain.StatusCompleted
 	doc.ErrorMessage = ""
-	w.notifyDocumentStatus(doc, string(domain.StatusCompleted))
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to mark document completed", "error", err)
 		return
@@ -191,32 +188,53 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	log.Info("document processed successfully")
 }
 
-func (w *IngestWorker) startStep(ctx context.Context, docID int, stepName string) (int, time.Time) {
+// trackStep records a processing step start, sends SSE, and returns a finish func.
+// The returned func must be called with the step result error (nil on success).
+func (w *IngestWorker) trackStep(ctx context.Context, docID, userID int, stepName string) func(error) {
 	start := time.Now()
 	step := &domain.ProcessingStep{
 		DocumentID: docID,
 		StepName:   stepName,
 		Status:     "started",
 	}
+	stepID := 0
 	if err := w.DocRepo.CreateProcessingStep(ctx, step); err != nil {
 		w.logger.Warn("failed to create processing step", "step", stepName, "doc_id", docID, "error", err)
-		return 0, start
+	} else {
+		stepID = step.ID
 	}
-	return step.ID, start
+	w.sendStepEvent(userID, docID, stepID, stepName, "started", "")
+
+	return func(err error) {
+		if stepID == 0 {
+			return
+		}
+		duration := int(time.Since(start).Milliseconds())
+		status := "completed"
+		errMsg := ""
+		if err != nil {
+			status = "failed"
+			errMsg = err.Error()
+		}
+		w.DocRepo.UpdateProcessingStep(ctx, stepID, duration, status, errMsg)
+		w.sendStepEvent(userID, docID, stepID, stepName, status, errMsg)
+	}
 }
 
-func (w *IngestWorker) finishStep(ctx context.Context, stepID int, start time.Time, err error) {
-	if stepID == 0 {
+func (w *IngestWorker) sendStepEvent(userID, docID, stepID int, stepName, status, errMsg string) {
+	if w.SSEManager == nil {
 		return
 	}
-	duration := int(time.Since(start).Milliseconds())
-	status := "completed"
-	errMsg := ""
-	if err != nil {
-		status = "failed"
-		errMsg = err.Error()
-	}
-	w.DocRepo.UpdateProcessingStep(ctx, stepID, duration, status, errMsg)
+	w.SSEManager.SendToUser(userID, ports.SSEEvent{
+		Type: "document_step",
+		Data: map[string]any{
+			"doc_id":    docID,
+			"step_id":   stepID,
+			"step_name": stepName,
+			"status":    status,
+			"error":     errMsg,
+		},
+	})
 }
 
 func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Document, err error) {
@@ -226,11 +244,9 @@ func (w *IngestWorker) handleDocumentError(ctx context.Context, doc *domain.Docu
 
 	if doc.RetryCount >= w.MaxRetries {
 		doc.Status = domain.StatusFailed
-		w.notifyDocumentStatus(doc, string(domain.StatusFailed))
 		log.Error("document permanently failed", "error", err, "retry_count", doc.RetryCount)
 	} else {
 		doc.Status = domain.StatusPending
-		w.notifyDocumentStatus(doc, string(domain.StatusPending))
 		log.Warn("document failed, will retry", "error", err, "retry_count", doc.RetryCount)
 	}
 

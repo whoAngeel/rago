@@ -48,15 +48,12 @@ func (qa *QdrantAdapter) CreateCollection(ctx context.Context, name string, size
 			},
 		},
 	})
-
 	if err != nil {
 		return fmt.Errorf("error creating collection: %w", err)
 	}
 
 	pointsClient := qa.client.GetPointsClient()
-
-	indexFields := []string{"user_id", "document_id"}
-	for _, field := range indexFields {
+	for _, field := range []string{"user_id", "document_id"} {
 		_, err = pointsClient.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
 			CollectionName: name,
 			FieldName:      field,
@@ -104,29 +101,60 @@ func (qa *QdrantAdapter) UpsertDocuments(
 		return fmt.Errorf("error haciendo upsert: %w", err)
 	}
 	return nil
-
 }
 
-func (qa *QdrantAdapter) Search(ctx context.Context, collection string, queryVector []float32, userID int, limit int) ([]ports.SearchResult, error) {
+func (qa *QdrantAdapter) Search(
+	ctx context.Context,
+	collection string,
+	queryVector []float32,
+	userID int,
+	documentIDs []int,
+	limit int,
+) ([]ports.SearchResult, error) {
+	var conditions []*qdrant.Condition
+
+	if userID > 0 {
+		conditions = append(conditions, &qdrant.Condition{
+			ConditionOneOf: &qdrant.Condition_Field{
+				Field: &qdrant.FieldCondition{
+					Key: "user_id",
+					Match: &qdrant.Match{
+						MatchValue: &qdrant.Match_Keyword{
+							Keyword: fmt.Sprintf("%d", userID),
+						},
+					},
+				},
+			},
+		})
+	}
+
+	if len(documentIDs) > 0 {
+		keywords := make([]string, len(documentIDs))
+		for i, id := range documentIDs {
+			keywords[i] = fmt.Sprintf("%d", id)
+		}
+		conditions = append(conditions, &qdrant.Condition{
+			ConditionOneOf: &qdrant.Condition_Field{
+				Field: &qdrant.FieldCondition{
+					Key: "document_id",
+					Match: &qdrant.Match{
+						MatchValue: &qdrant.Match_Keywords{
+							Keywords: &qdrant.RepeatedStrings{
+								Strings: keywords,
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+
 	pointsClient := qa.client.GetPointsClient()
 	searchResult, err := pointsClient.Search(ctx, &qdrant.SearchPoints{
 		CollectionName: collection,
 		Vector:         queryVector,
 		Limit:          uint64(limit),
-		Filter: &qdrant.Filter{
-			Must: []*qdrant.Condition{{
-				ConditionOneOf: &qdrant.Condition_Field{
-					Field: &qdrant.FieldCondition{
-						Key: "user_id",
-						Match: &qdrant.Match{
-							MatchValue: &qdrant.Match_Keyword{
-								Keyword: fmt.Sprintf("%d", userID),
-							},
-						},
-					},
-				},
-			}},
-		},
+		Filter:         &qdrant.Filter{Must: conditions},
 		WithPayload: &qdrant.WithPayloadSelector{
 			SelectorOptions: &qdrant.WithPayloadSelector_Enable{
 				Enable: true,
@@ -165,22 +193,17 @@ func (qa *QdrantAdapter) GetPointsCount(ctx context.Context, collection string) 
 }
 
 func (qa *QdrantAdapter) DeleteCollection(ctx context.Context, collection string) error {
-	// TODO: implement delete collection
 	return nil
 }
 
 func formatPayload(doc schema.Document) map[string]*qdrant.Value {
 	payload := make(map[string]*qdrant.Value)
 	payload["page_content"] = &qdrant.Value{
-		Kind: &qdrant.Value_StringValue{
-			StringValue: doc.PageContent,
-		},
+		Kind: &qdrant.Value_StringValue{StringValue: doc.PageContent},
 	}
 	for k, v := range doc.Metadata {
 		payload[k] = &qdrant.Value{
-			Kind: &qdrant.Value_StringValue{
-				StringValue: fmt.Sprintf("%v", v),
-			},
+			Kind: &qdrant.Value_StringValue{StringValue: fmt.Sprintf("%v", v)},
 		}
 	}
 	return payload

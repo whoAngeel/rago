@@ -1,0 +1,44 @@
+# Configuración para asistentes AI (opencode, claude, kiro, copilot)
+# Define el contexto del proyecto y reglas de trabajo
+
+[project]
+name = "RAGO"
+description = "Plataforma RAG (Retrieval Augmented Generation) — Backend en Go con API REST, base de datos vectorial Qdrant, PostgreSQL, autenticación JWT y frontend React con design system neo-brutalista Brainfish"
+stack = ["Go", "React", "TypeScript", "PostgreSQL", "Qdrant", "Tailwind CSS"]
+
+[frontend]
+framework = "React"
+bundler = "Vite"
+runtime = "Bun"
+styles = "Tailwind CSS v4"
+state_management = ["Zustand", "TanStack Query"]
+forms = "React Hook Form + Zod"
+router = "TanStack Router"
+icons = "lucide-react"
+design_system = "docs/DESIGN-SYSTEM.md"
+
+[backend]
+language = "Go"
+framework = "Gin"
+database = "PostgreSQL"
+vector_store = "Qdrant"
+architecture = "Hexagonal (puertos y adaptadores)"
+
+[conventions]
+# No escribir documentación *.md extra sin pedirlo
+# No usar emojis sin pedirlo
+# Usar los mismos patrones que el código existente
+# Probar después de cambios con: go test ./...
+# Backend corre en puerto 4000
+# Frontend corre en puerto 5173 (Vite)
+
+[ignore]
+# Archivos y directorios que los asistentes AI deben ignorar
+patterns = [
+    "node_modules/**",
+    "*.exe",
+    "frontend/dist/**",
+    ".env*",
+    "bun.lock",
+    "bun.lockb",
+]

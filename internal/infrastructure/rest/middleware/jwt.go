@@ -13,20 +13,30 @@ var jwtSecret string
 func InitJWTSecret(secret string) {
 	jwtSecret = secret
 }
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization haeder"})
+		tokenString := ""
+
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+
+		// Fallback: token desde query param (para SSE/EventSource)
+		if tokenString == "" {
+			tokenString = c.Query("token")
+		}
+
+		if tokenString == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
 			return
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization string"})
-		}
-
-		claims, err := auth.ValidateAccessToken(parts[1], jwtSecret)
+		claims, err := auth.ValidateAccessToken(tokenString, jwtSecret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			return
@@ -35,10 +45,5 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserId)
 		c.Set("role", claims.Role)
 		c.Next()
-		// extract header bearer token
-		// valid token with validateAccess token
-		// if not valid > abortwithstatus json 401
-		// if valid > user clamies role claims
-		// c.next
 	}
 }

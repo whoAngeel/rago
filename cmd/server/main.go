@@ -67,6 +67,9 @@ func main() {
 		&domain.SystemConfig{},
 		&domain.ChatMessage{},
 		&domain.ChatSession{},
+		&domain.DocumentGroup{},
+		&domain.DocumentGroupItem{},
+		&domain.LLMUsage{},
 	}
 	for _, model := range models {
 		if err := gormDB.AutoMigrate(model); err != nil {
@@ -124,8 +127,10 @@ func main() {
 	userRepo := postgres.NewUserRepository(gormDB)
 	sessionRepo := postgres.NewSessionRepository(gormDB)
 	docRepo := postgres.NewDocumentRepository(gormDB)
+	groupRepo := postgres.NewDocumentGroupRepository(gormDB)
 	chatRepo := postgres.NewChatRepository(gormDB)
 	systemRepo := postgres.NewSystemConfigRepository(gormDB)
+	usageRepo := postgres.NewLLMUsageRepository(gormDB)
 
 	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
 
@@ -141,10 +146,13 @@ func main() {
 		log,
 		cfg.ChatHistoryLimit,
 		cfg.QdrantCollection,
-		cfg.ContextWindowLimit)
+		cfg.ContextWindowLimit,
+		usageRepo,
+	)
 
 	parserRegistry := parserpkg.NewRegistry()
 	parserRegistry.Register("text/plain", parserpkg.NewPlainTextAdapter())
+	parserRegistry.Register("text/markdown", parserpkg.NewPlainTextAdapter())
 	parserRegistry.Register("text/csv", parserpkg.NewCSVParser())
 	parserRegistry.Register("application/json", parserpkg.NewJSONParser())
 	parserRegistry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
@@ -157,7 +165,7 @@ func main() {
 
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(
-			application.NewAskUsecase(vStore, llm, log, embedder, cfg),
+			application.NewAskUsecase(vStore, llm, log, embedder, cfg, usageRepo),
 			log,
 		),
 		AuthHandler: handlers.NewAuthHandler(
@@ -171,14 +179,25 @@ func main() {
 			),
 			log,
 		),
+		ConfigHandler: handlers.NewConfigHandler(systemRepo, log),
+		UserHandler: handlers.NewUserHandler(
+			application.NewUserUsecase(userRepo, docRepo),
+		),
 		DocumentHandler: handlers.NewDocumentHandler(
 			application.NewIngestDocumentUsecase(
 				docRepo,
+				userRepo,
 				minio,
 				ingestUC,
 			),
 			log,
 			*cfg,
+		),
+		DocumentGroupHandler: handlers.NewDocumentGroupHandler(
+			application.NewDocumentGroupUsecase(groupRepo, docRepo, usageRepo),
+		),
+		PublicGroupHandler: handlers.NewPublicGroupHandler(
+			application.NewPublicChatUsecase(groupRepo, userRepo, docRepo, vStore, embedder, llm, minio, systemRepo, usageRepo, sseManager, log, *cfg),
 		),
 		ChatHandler: handlers.NewChatHandler(
 			chatUC,

@@ -1,13 +1,22 @@
 services:
+  frontend:
+    image: rago-frontend:latest
+    ports:
+      - target: 80
+        published: 8080
+    networks:
+      - backend
+
   app:
     image: rago:latest
-    restart: unless-stopped
-    ports:
-      - "4000:4000"
     env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
+    environment:
+      PORT: "4000"
+      ENV: "production"
+      HOST: "0.0.0.0"
+    ports:
+      - target: 4000
+        published: 4000
     networks:
       - backend
     healthcheck:
@@ -16,20 +25,12 @@ services:
       timeout: 10s
       start_period: 15s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
 
   postgres:
     image: postgres:17-alpine
-    restart: unless-stopped
     ports:
-      - "5433:5432"
+      - target: 5432
+        published: 5433
     environment:
       POSTGRES_USER: rago
       POSTGRES_PASSWORD: rago
@@ -44,11 +45,6 @@ services:
       timeout: 5s
       retries: 20
       start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
 
 volumes:
   pg_data:

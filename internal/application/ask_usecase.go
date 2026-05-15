@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
@@ -16,6 +17,7 @@ type AskUsecase struct {
 	LLMProvider ports.LLMProvider
 	Embedder    ports.Embedder
 	Logger      ports.Logger
+	UsageRepo   ports.LLMUsageRepository
 	Config      *config.Config
 }
 
@@ -25,12 +27,14 @@ func NewAskUsecase(
 	log ports.Logger,
 	embedder ports.Embedder,
 	cfg *config.Config,
+	usageRepo ports.LLMUsageRepository,
 ) *AskUsecase {
 	return &AskUsecase{
 		VectorStore: vStore,
 		LLMProvider: llm,
 		Embedder:    embedder,
 		Logger:      log,
+		UsageRepo:   usageRepo,
 		Config:      cfg,
 	}
 }
@@ -48,7 +52,7 @@ func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) 
 		au.Logger.Warn("Collection may already exist", "error", err)
 	}
 
-	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, defaultLimit)
+	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, nil, defaultLimit)
 	if err != nil {
 		return "", fmt.Errorf("error searching: %w", err)
 	}
@@ -69,11 +73,18 @@ func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) 
 	prompt := fmt.Sprintf("Usa SOLO el siguiente contexto para responder. Si no encuentras la respuesta, di 'No encontré información sobre eso en los documentos'.\n\nCONTEXTO:\n%s\n\nPREGUNTA: %s\n\nRESPUESTA:", context, question)
 	au.Logger.Info("Generating answer", "sources_found", len(results), "prompt_len", len(prompt))
 
-	answer, err := au.LLMProvider.GenerateAnswer(ctx, prompt)
+	llmResult, err := au.LLMProvider.GenerateAnswer(ctx, prompt)
 	if err != nil {
 		au.Logger.Error("Error generating answer", "error", err)
 		return "", fmt.Errorf("error generating answer: %w", err)
 	}
-
-	return answer, nil
+	if au.UsageRepo != nil {
+		_ = au.UsageRepo.Create(ctx, &domain.LLMUsage{
+			UserID:       userID,
+			Model:        llmResult.Model,
+			InputTokens:  llmResult.InputTokens,
+			OutputTokens: llmResult.OutputTokens,
+		})
+	}
+	return llmResult.Answer, nil
 }

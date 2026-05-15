@@ -1,0 +1,22 @@
+:80 {
+    root * /srv
+
+    @api {
+        path /api/*
+    }
+    handle @api {
+        reverse_proxy app:4000
+    }
+
+    @health {
+        path /health
+    }
+    handle @health {
+        reverse_proxy app:4000
+    }
+
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+}

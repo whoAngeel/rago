@@ -26,6 +26,7 @@ type ChatUsecase struct {
 	LLM            ports.LLMProvider
 	SSEManager     ports.SSEManager
 	Logger         ports.Logger
+	UsageRepo      ports.LLMUsageRepository
 	HistoryLimit   int
 	CollectionName string
 	ContextLimit   int
@@ -42,6 +43,7 @@ func NewChatUsecase(
 	historyLimit int,
 	collectionName string,
 	contextLimit int,
+	usageRepo ports.LLMUsageRepository,
 ) *ChatUsecase {
 	return &ChatUsecase{
 		ChatRepo:       chatRepo,
@@ -51,6 +53,7 @@ func NewChatUsecase(
 		LLM:            llm,
 		SSEManager:     sseManager,
 		Logger:         logger,
+		UsageRepo:      usageRepo,
 		HistoryLimit:   historyLimit,
 		CollectionName: collectionName,
 		ContextLimit:   contextLimit,
@@ -112,7 +115,7 @@ func (uc *ChatUsecase) SendMessage(
 		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
 	}
 
-	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, uc.ContextLimit)
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.ContextLimit)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
@@ -147,9 +150,18 @@ func (uc *ChatUsecase) SendMessage(
 	prompt += "PREGUNTA: " + question + "\n\nRESPUESTA:"
 
 	uc.Logger.Info("Generating answer", "prompt_len", len(prompt))
-	answer, err = uc.LLM.GenerateAnswer(ctx, prompt)
+	llmResult, err := uc.LLM.GenerateAnswer(ctx, prompt)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("generating answer: %w", err)
+	}
+	answer = llmResult.Answer
+	if uc.UsageRepo != nil {
+		_ = uc.UsageRepo.Create(ctx, &domain.LLMUsage{
+			UserID:       userID,
+			Model:        llmResult.Model,
+			InputTokens:  llmResult.InputTokens,
+			OutputTokens: llmResult.OutputTokens,
+		})
 	}
 	uc.Logger.Info("Answer generated", "answer_len", len(answer))
 
@@ -245,7 +257,7 @@ func (uc *ChatUsecase) SendStream(
 		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
 	}
 
-	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, uc.ContextLimit)
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.ContextLimit)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
@@ -275,9 +287,18 @@ func (uc *ChatUsecase) SendStream(
 	}
 	prompt += "PREGUNTA: " + question + "\n\nRESPUESTA:"
 
-	answer, err = uc.LLM.Stream(ctx, prompt, onToken)
+	llmStreamResult, err := uc.LLM.Stream(ctx, prompt, onToken)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("streaming answer: %w", err)
+	}
+	answer = llmStreamResult.Answer
+	if uc.UsageRepo != nil {
+		_ = uc.UsageRepo.Create(ctx, &domain.LLMUsage{
+			UserID:       userID,
+			Model:        llmStreamResult.Model,
+			InputTokens:  llmStreamResult.InputTokens,
+			OutputTokens: llmStreamResult.OutputTokens,
+		})
 	}
 
 	sourcesJSON, err := json.Marshal(sources)
