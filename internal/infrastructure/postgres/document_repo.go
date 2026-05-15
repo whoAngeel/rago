@@ -127,5 +127,8 @@ func (r *DocumentRepository) FindDocumentsForSelect(ctx context.Context, userID 
 	err := r.db.WithContext(ctx).Where("user_id = ? AND status != ?", userID, domain.StatusFailed).
 		Order("created_at desc").Find(&docs).Error
 	return docs, err
+}
 
+func (r *DocumentRepository) DeleteProcessingStepsByDocumentID(ctx context.Context, docID int) error {
+	return r.db.WithContext(ctx).Where("document_id = ?", docID).Delete(&domain.ProcessingStep{}).Error
 }

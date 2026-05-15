@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -99,7 +100,7 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		rest.RespondError(c, 413, "File too large", "")
 		return
 	}
-	allowedExts := map[string]bool{".txt": true, ".pdf": true, ".csv": true, ".json": true, ".docx": true, ".xlsx": true}
+	allowedExts := map[string]bool{".txt": true, ".pdf": true, ".csv": true, ".json": true, ".docx": true, ".xlsx": true, ".md": true}
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if !allowedExts[ext] {
 		rest.RespondError(c, 400, "File type not allowed", "")
@@ -112,7 +113,11 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		return
 	}
 	defer src.Close()
-	doc, err := h.usecase.Upload(ctx, userId, file.Filename, src, file.Size, file.Header.Get("Content-Type"))
+	contentType := file.Header.Get("Content-Type")
+	if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
+		contentType = mediaType
+	}
+	doc, err := h.usecase.Upload(ctx, userId, file.Filename, src, file.Size, contentType)
 	if err != nil {
 		switch {
 		case errors.Is(err, application.ErrDuplicateDocument):
@@ -208,4 +213,27 @@ func (h *DocumentHandler) ListSelect(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, items)
+}
+
+func (h *DocumentHandler) Reprocess(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid document ID", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+	if err := h.usecase.ReprocessDocument(ctx, id, userID); err != nil {
+		if errors.Is(err, application.ErrNotFound) {
+			rest.RespondError(c, http.StatusNotFound, "Document not found", "")
+		} else {
+			rest.RespondError(c, http.StatusBadRequest, "Reprocess failed", err.Error())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

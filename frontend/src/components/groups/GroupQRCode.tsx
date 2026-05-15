@@ -10,7 +10,7 @@ interface GroupQRCodeProps {
 export function GroupQRCode({ slug }: GroupQRCodeProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
-    const shareableLink = slug ? `${window.location.origin}/chat/${slug}` : ""
+    const shareableLink = slug ? `${window.location.origin}/c/${slug}` : ""
 
     useEffect(() => {
         if (!slug || !canvasRef.current) return

@@ -13,7 +13,9 @@ interface DocumentsProps {
     documents: Document[]
     onDelete: (id: number) => void
     onDownload: (id: number) => void
+    onReprocess?: (id: number) => void
     deletingIds?: number[]
+    reprocessingIds?: number[]
     page?: number
     totalPages?: number
     onPageChange?: (page: number) => void
@@ -237,7 +239,7 @@ function ProgressDots({ doc }: { doc: Document }) {
     )
 }
 
-export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [], page, totalPages, onPageChange, totalItems }: DocumentsProps) => {
+export const DocumentTable = ({ documents, onDelete, onDownload, onReprocess, deletingIds = [], reprocessingIds = [], page, totalPages, onPageChange, totalItems }: DocumentsProps) => {
     return (
         <div>
             <table className="w-full text-sm border-collapse">
@@ -269,8 +271,10 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                     )}
                     {documents.map(document => {
                         const isDeleting = deletingIds.includes(document.id)
+                        const isReprocessing = reprocessingIds.includes(document.id)
+                        const canReprocess = onReprocess && document.status === 'failed'
                         return (
-                            <tr key={document.id} className={`hover:bg-neutral-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <tr key={document.id} className={`hover:bg-neutral-50 transition-colors ${(isDeleting || isReprocessing) ? 'opacity-50 pointer-events-none' : ''}`}>
                                 <td className="px-6 py-5">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 ${getFileIconBg(document.content_type)} border-2 border-neutral-950 rounded flex items-center justify-center shadow-hard-sm shrink-0`}>
@@ -296,6 +300,16 @@ export const DocumentTable = ({ documents, onDelete, onDownload, deletingIds = [
                                 </td>
                                 <td className="px-6 py-5">
                                     <div className="flex items-center gap-2 justify-center">
+                                        {canReprocess && (
+                                            <button className="p-2 text-neutral-600 hover:text-amber-600
+                                            border-2 border-transparent hover:border-neutral-950 hover:bg-amber-50
+                                            hover:shadow-hard-sm rounded transition-all cursor-pointer"
+                                                title="Reprocesar"
+                                                onClick={() => onReprocess(document.id)}
+                                            >
+                                                <RefreshCw size={16} />
+                                            </button>
+                                        )}
                                         <button className="p-2 text-neutral-600 hover:text-neutral-950 border-2
                                         border-transparent hover:border-neutral-950 hover:bg-white
                                         hover:shadow-hard-sm rounded transition-all cursor-pointer"
