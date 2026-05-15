@@ -2,6 +2,10 @@ import { Send, Loader2 } from 'lucide-react'
 import type { SyntheticEvent } from 'react'
 import { useEffect, useRef } from 'react'
 import ReactMarkdown from "react-markdown"
+import gsap from "gsap"
+import { useGSAP } from "@gsap/react"
+
+gsap.registerPlugin(useGSAP)
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -17,6 +21,49 @@ interface PublicChatAreaProps {
   isQuotaExceeded: boolean
   isDisabled?: boolean
   onSubmit: (e: SyntheticEvent<HTMLFormElement>) => void
+}
+
+function MessageBubble({ msg }: { msg: ChatMessage }) {
+  const bubbleRef = useRef<HTMLDivElement>(null)
+  
+  useGSAP(() => {
+    gsap.from(bubbleRef.current, {
+      y: 20,
+      opacity: 0,
+      scale: 0.95,
+      duration: 0.4,
+      ease: "back.out(1.5)"
+    })
+  }, { scope: bubbleRef })
+
+  return (
+    <div
+      ref={bubbleRef}
+      className={`max-w-[85%] lg:max-w-[70%] p-4 border-2 border-neutral-950 shadow-hard-sm relative ${
+        msg.role === 'user'
+          ? 'self-end bg-primary-200 rounded-t-lg rounded-bl-lg rounded-br-none'
+          : 'self-start bg-neutral-50 rounded-t-lg rounded-br-lg rounded-bl-none'
+      }`}
+    >
+      {/* Bubble Tail */}
+      {msg.role === 'user' ? (
+        <div className="absolute -bottom-2 right-4 w-4 h-4 bg-primary-200 border-b-2 border-r-2 border-neutral-950 transform rotate-45"></div>
+      ) : (
+        <div className="absolute -bottom-2 left-4 w-4 h-4 bg-neutral-50 border-b-2 border-r-2 border-neutral-950 transform rotate-45"></div>
+      )}
+      <p className="text-xs font-bold text-neutral-500 mb-1">
+        {msg.role === 'user' ? 'Tú' : 'Asistente'}
+        {msg.timestamp && <> · {new Date(msg.timestamp).toLocaleTimeString()}</>}
+      </p>
+      {msg.role === 'assistant' ? (
+        <div className="text-sm font-medium text-neutral-800 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_strong]:font-bold [&_em]:italic">
+          <ReactMarkdown>{msg.content}</ReactMarkdown>
+        </div>
+      ) : (
+        <p className='text-sm font-medium text-neutral-950 whitespace-pre-wrap'>{msg.content}</p>
+      )}
+    </div>
+  )
 }
 
 export function PublicChatArea({ messages, input, setInput, isSending, isQuotaExceeded, isDisabled, onSubmit }: PublicChatAreaProps) {
@@ -71,32 +118,7 @@ export function PublicChatArea({ messages, input, setInput, isSending, isQuotaEx
           </div>
         ) : (
           messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`max-w-[85%] lg:max-w-[70%] p-4 border-2 border-neutral-950 shadow-hard-sm relative ${
-                msg.role === 'user'
-                  ? 'self-end bg-primary-200 rounded-t-lg rounded-bl-lg rounded-br-none'
-                  : 'self-start bg-neutral-50 rounded-t-lg rounded-br-lg rounded-bl-none'
-              }`}
-            >
-              {/* Bubble Tail */}
-              {msg.role === 'user' ? (
-                <div className="absolute -bottom-2 right-4 w-4 h-4 bg-primary-200 border-b-2 border-r-2 border-neutral-950 transform rotate-45"></div>
-              ) : (
-                <div className="absolute -bottom-2 left-4 w-4 h-4 bg-neutral-50 border-b-2 border-r-2 border-neutral-950 transform rotate-45"></div>
-              )}
-              <p className="text-xs font-bold text-neutral-500 mb-1">
-                {msg.role === 'user' ? 'Tú' : 'Asistente'}
-                {msg.timestamp && <> · {new Date(msg.timestamp).toLocaleTimeString()}</>}
-              </p>
-              {msg.role === 'assistant' ? (
-                <div className="text-sm font-medium text-neutral-800 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_strong]:font-bold [&_em]:italic">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              ) : (
-                <p className='text-sm font-medium text-neutral-950 whitespace-pre-wrap'>{msg.content}</p>
-              )}
-            </div>
+            <MessageBubble key={index} msg={msg} />
           ))
         )}
         </div>

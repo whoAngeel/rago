@@ -90,7 +90,7 @@ function RouteComponent() {
   const isActive = group?.is_active ?? false
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-50 font-sans">
+    <div className="flex flex-col h-[100dvh] bg-neutral-50 font-sans overflow-hidden">
       <PublicChatNavbar groupName={group?.name} onToggleDocs={() => setShowDocs(!showDocs)} />
 
       <div className='grid grid-cols-1 lg:grid-cols-12 w-full flex-1 overflow-hidden relative'>
