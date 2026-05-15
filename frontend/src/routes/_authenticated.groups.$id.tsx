@@ -96,8 +96,8 @@ function RouteComponent() {
   if (error) return <div className="flex items-center justify-center w-full h-full text-neutral-600 font-bold">Error al cargar el grupo</div>
 
   return (
-    <div className="w-full h-full p-6 gap-6 grid grid-cols-12 font-sans">
-      <div className="col-span-9 flex flex-col gap-6">
+    <div className="w-full h-full p-4 sm:p-6 gap-6 flex flex-col xl:grid xl:grid-cols-12 font-sans overflow-auto">
+      <div className="xl:col-span-9 flex flex-col gap-6">
         <GroupHeader
           name={group?.name ?? ''}
           createdAt={group?.created_at}
@@ -136,7 +136,7 @@ function RouteComponent() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Card 1 — Cuota del grupo */}
             <div className="p-4 bg-neutral-50 border-2 border-neutral-950 rounded shadow-hard-sm flex flex-col gap-2">
               <p className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Cuota del Grupo</p>
@@ -184,7 +184,7 @@ function RouteComponent() {
         </div>
       </div>
 
-      <div className="col-span-3">
+      <div className="xl:col-span-3">
         <GroupSidebar
           slug={group?.slug}
           allowDownloads={group?.allow_downloads ?? false}
