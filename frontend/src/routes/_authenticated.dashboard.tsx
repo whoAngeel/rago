@@ -38,6 +38,34 @@ function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse bg-neutral-200 rounded-lg border-2 border-neutral-950 ${className}`} />
 }
 
+/* ──────────── IconBox (colorize + overdrive) ──────────── */
+
+function IconBox({
+  children,
+  size = 'md',
+}: {
+  children: React.ReactNode
+  size?: 'sm' | 'md'
+}) {
+  const sizeClass = size === 'sm'
+    ? 'w-7 h-7'
+    : 'w-10 h-10'
+
+  return (
+    <span
+      className={`
+        ${sizeClass} grid place-items-center shrink-0
+        bg-lime border border-ink rounded-lg
+        shadow-brutal-sm
+        transition-shadow duration-200
+        group-hover:shadow-[1px_1px_0_0_#0a0a0d,0_0_16px_4px_rgba(163,230,53,0.30)]
+      `}
+    >
+      {children}
+    </span>
+  )
+}
+
 /* ──────────── StatCard ──────────── */
 
 interface StatCardProps {
@@ -50,10 +78,10 @@ interface StatCardProps {
 
 function StatCard({ icon: Icon, label, value, to, bgClass = 'bg-white' }: StatCardProps) {
   const card = (
-    <div className={`shadow-hover border-2 border-neutral-950 rounded-xl p-4 flex items-center gap-4 ${bgClass} shadow-hard-md`}>
-      <div className="w-10 h-10 border-2 border-neutral-950 rounded-lg flex items-center justify-center bg-neutral-950 shrink-0">
-        <Icon size={18} className="text-white" strokeWidth={2.25} />
-      </div>
+    <div className={`group shadow-hover border-2 border-neutral-950 rounded-xl p-4 flex items-center gap-4 ${bgClass} shadow-hard-md`}>
+      <IconBox>
+        <Icon size={18} className="text-black" strokeWidth={2.25} />
+      </IconBox>
       <div className="min-w-0">
         <p className="text-2xl font-black text-neutral-950 tracking-tighter leading-none mb-1">{value}</p>
         <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider leading-tight">{label}</p>
@@ -109,7 +137,6 @@ function DonutChart({
           viewBox={`0 0 ${size} ${size}`}
           className="transform -rotate-90 w-full h-full"
         >
-          {/* background ring */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -141,7 +168,9 @@ function DonutChart({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-black text-neutral-950 tracking-tighter leading-none">
+          <span className="text-3xl font-black tabular-nums tracking-tighter leading-none"
+            style={{ color: '#65a30e' }}
+          >
             {centerValue}
           </span>
           <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">
@@ -186,9 +215,9 @@ function QuotaRow({ icon: Icon, label, used, max, isUnlimited }: QuotaRowProps) 
     <div>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 border-2 border-neutral-950 rounded-lg flex items-center justify-center bg-neutral-950 shrink-0">
-            <Icon size={13} className="text-white" strokeWidth={2.25} />
-          </div>
+          <IconBox size="sm">
+            <Icon size={13} className="text-black" strokeWidth={2.25} />
+          </IconBox>
           <span className="text-sm font-bold text-neutral-700">{label}</span>
         </div>
         <span className="text-sm font-black text-neutral-950 tabular-nums">
@@ -257,7 +286,6 @@ function DashboardPage() {
   const unanswered = stats?.unanswered_total ?? 0
   const attempts = stats?.total_attempts ?? 0
   const activeGroups = stats?.active_groups ?? 0
-  const totalGroups = stats?.total_groups ?? 0
 
   const successRate = total > 0 ? Math.round((completed / total) * 100) : 0
 
@@ -299,10 +327,10 @@ function DashboardPage() {
           <AlertTriangle size={18} className="text-neutral-950 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-black text-neutral-950 tracking-tighter">
-              No se pudieron cargar los datos
+              Error al cargar el dashboard
             </p>
             <p className="text-xs font-bold text-neutral-700 mt-0.5">
-              Verifica tu conexión e intenta de nuevo.
+              Revisa tu conexión y vuelve a intentarlo.
             </p>
           </div>
         </div>
@@ -328,11 +356,11 @@ function DashboardPage() {
       {/* ── Content ── */}
       {!isLoading && !hasError && (
         <>
-          {/* Stats row — 5 cards */}
+          {/* Stats row */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatCard
               icon={FileText}
-              label="Docs listos"
+              label="Documentos listos"
               value={completed}
               to="/documents"
               bgClass="bg-primary-100"
@@ -381,19 +409,19 @@ function DashboardPage() {
                   segments={donutSegments}
                   total={total}
                   centerValue={`${successRate}%`}
-                  centerLabel="completado"
+                  centerLabel="tasa de éxito"
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <FileText size={28} className="text-neutral-300 mb-3" />
                   <p className="text-sm font-bold text-neutral-500">
-                    Sin documentos todavía
+                    Aún no hay documentos
                   </p>
                   <Link
                     to="/documents"
                     className="mt-3 press-brutal inline-flex items-center gap-1.5 bg-lime border-2 border-neutral-950 rounded-sm shadow-brutal px-4 py-2 text-sm font-bold"
                   >
-                    Subir el primero <ArrowRight size={14} />
+                    Subir documentos <ArrowRight size={14} />
                   </Link>
                 </div>
               )}
@@ -444,21 +472,6 @@ function DashboardPage() {
                   max={user?.max_documents ?? 0}
                   isUnlimited={user?.max_documents === 0}
                 />
-
-                {totalGroups > 0 && (
-                  <div className="pt-3 border-t-2 border-dashed border-neutral-200 space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-bold text-neutral-500">Total grupos</span>
-                      <span className="font-black tabular-nums">{totalGroups}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-bold text-neutral-400">Inactivos</span>
-                      <span className="font-bold text-neutral-400 tabular-nums">
-                        {Math.max(0, totalGroups - activeGroups)}
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
