@@ -4,8 +4,8 @@ import api from '../lib/api'
 import type { User } from '../types'
 import {
   FileText, Layers, HardDrive, MessageSquare,
-  AlertTriangle, CheckCircle2, XCircle, Clock, Zap,
-  ArrowRight, RefreshCw,
+  AlertTriangle, Zap,
+  ArrowRight, RefreshCw, Loader,
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -70,6 +70,103 @@ function StatCard({ icon: Icon, label, value, to }: StatCardProps) {
   return card
 }
 
+/* ──────────── DonutChart ──────────── */
+
+interface DonutSegment {
+  value: number
+  color: string
+  label: string
+}
+
+interface DonutChartProps {
+  segments: DonutSegment[]
+  total: number
+  centerValue: string
+  centerLabel: string
+  size?: number
+  strokeWidth?: number
+}
+
+function DonutChart({
+  segments,
+  total,
+  centerValue,
+  centerLabel,
+  size = 160,
+  strokeWidth = 18,
+}: DonutChartProps) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const visible = segments.filter((s) => s.value > 0)
+
+  let cumulative = 0
+
+  return (
+    <div className="flex items-center gap-6 sm:gap-8">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg
+          viewBox={`0 0 ${size} ${size}`}
+          className="transform -rotate-90 w-full h-full"
+        >
+          {/* background ring */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="#f5f5f5"
+            strokeWidth={strokeWidth}
+          />
+          {visible.map((seg) => {
+            const pct = seg.value / total
+            const dashLength = pct * circumference
+            const offset = cumulative * circumference
+            cumulative += pct
+            return (
+              <circle
+                key={seg.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${dashLength} ${circumference - dashLength}`}
+                strokeDashoffset={-offset}
+                strokeLinecap={pct > 0.05 ? 'round' : 'butt'}
+                className="transition-all duration-700"
+              />
+            )
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl sm:text-3xl font-bold text-neutral-900 leading-none">
+            {centerValue}
+          </span>
+          <span className="text-[11px] font-medium text-neutral-500 mt-1">
+            {centerLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-2 min-w-0">
+        {visible.map((seg) => (
+          <div key={seg.label} className="flex items-center gap-2.5">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: seg.color }}
+            />
+            <span className="text-sm text-neutral-600 truncate">{seg.label}</span>
+            <span className="text-sm font-semibold text-neutral-900 tabular-nums ml-auto">
+              {seg.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ──────────── QuotaRow ──────────── */
 
 interface QuotaRowProps {
@@ -90,7 +187,7 @@ function QuotaRow({ icon: Icon, label, used, max, isUnlimited }: QuotaRowProps) 
         <Icon size={15} className="text-neutral-500" strokeWidth={1.5} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between mb-1">
+        <div className="flex items-baseline justify-between mb-1.5">
           <span className="text-sm font-medium text-neutral-700">{label}</span>
           <span className="text-sm font-semibold text-neutral-900 tabular-nums">
             {used}
@@ -99,7 +196,7 @@ function QuotaRow({ icon: Icon, label, used, max, isUnlimited }: QuotaRowProps) 
             )}
           </span>
         </div>
-        <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+        <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
               isHigh ? 'bg-accent-orange-deep' : 'bg-primary-400'
@@ -107,50 +204,6 @@ function QuotaRow({ icon: Icon, label, used, max, isUnlimited }: QuotaRowProps) 
             style={{ width: `${pct}%` }}
           />
         </div>
-      </div>
-    </div>
-  )
-}
-
-/* ──────────── ProcessBar ──────────── */
-
-interface ProcessBarProps {
-  completed: number
-  processing: number
-  pending: number
-  failed: number
-  total: number
-}
-
-function ProcessBar({ completed, processing, pending, failed, total }: ProcessBarProps) {
-  if (total === 0) return null
-
-  const segments = [
-    { value: completed, color: 'bg-primary-400', label: 'Completados' },
-    { value: processing, color: 'bg-accent-amber-deep', label: 'Procesando' },
-    { value: pending, color: 'bg-neutral-300', label: 'En cola' },
-    { value: failed, color: 'bg-accent-red-deep', label: 'Fallidos' },
-  ].filter(s => s.value > 0)
-
-  return (
-    <div className="space-y-3">
-      <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-neutral-100">
-        {segments.map((s) => (
-          <div
-            key={s.color}
-            className={`${s.color} transition-all duration-500 first:rounded-l-full last:rounded-r-full`}
-            style={{ width: `${(s.value / total) * 100}%` }}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-1">
-        {segments.map((s) => (
-          <div key={s.color} className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${s.color} shrink-0`} />
-            <span className="text-xs font-medium text-neutral-600">{s.label}</span>
-            <span className="text-xs font-semibold text-neutral-900 tabular-nums">{s.value}</span>
-          </div>
-        ))}
       </div>
     </div>
   )
@@ -195,6 +248,17 @@ function DashboardPage() {
   const storage = stats?.storage_used ?? 0
   const unanswered = stats?.unanswered_total ?? 0
   const attempts = stats?.total_attempts ?? 0
+  const activeGroups = stats?.active_groups ?? 0
+  const totalGroups = stats?.total_groups ?? 0
+
+  const successRate = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  const donutSegments: DonutSegment[] = [
+    { value: completed, color: '#a3e635', label: 'Completados' },
+    { value: processing, color: '#fbbf25', label: 'Procesando' },
+    { value: pending, color: '#d4d4d4', label: 'En cola' },
+    { value: failed, color: '#f4405e', label: 'Fallidos' },
+  ]
 
   return (
     <div className="max-w-5xl mx-auto w-full space-y-5">
@@ -236,15 +300,16 @@ function DashboardPage() {
       {/* ── Loading ── */}
       {isLoading && !hasError && (
         <div className="space-y-5">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
           </div>
           <div className="grid lg:grid-cols-5 gap-4">
-            <Skeleton className="lg:col-span-3 h-[120px]" />
-            <Skeleton className="lg:col-span-2 h-[120px]" />
+            <Skeleton className="lg:col-span-3 h-[200px]" />
+            <Skeleton className="lg:col-span-2 h-[200px]" />
           </div>
         </div>
       )}
@@ -252,21 +317,45 @@ function DashboardPage() {
       {/* ── Content ── */}
       {!isLoading && !hasError && (
         <>
-          {/* Stats row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard icon={FileText}     label="Docs listos"    value={completed}               to="/documents" />
-            <StatCard icon={Layers}       label="Grupos activos" value={stats?.active_groups ?? 0} to="/groups" />
-            <StatCard icon={MessageSquare} label="Consultas"     value={attempts} />
-            <StatCard icon={HardDrive}    label="Almacenamiento" value={formatBytes(storage)} />
+          {/* Stats row — 5 cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <StatCard
+              icon={FileText}
+              label="Docs listos"
+              value={completed}
+              to="/documents"
+            />
+            <StatCard
+              icon={Loader}
+              label="En proceso"
+              value={processing + pending}
+              to={processing + pending > 0 ? '/documents' : undefined}
+            />
+            <StatCard
+              icon={Layers}
+              label="Grupos activos"
+              value={`${activeGroups}`}
+              to="/groups"
+            />
+            <StatCard
+              icon={MessageSquare}
+              label="Consultas"
+              value={attempts}
+            />
+            <StatCard
+              icon={HardDrive}
+              label="Almacenamiento"
+              value={formatBytes(storage)}
+            />
           </div>
 
-          {/* Bottom row: process + quotas */}
+          {/* Bottom row: donut chart + quotas */}
           <div className="grid lg:grid-cols-5 gap-4">
-            {/* Process overview */}
-            <div className="lg:col-span-3 border border-neutral-200 rounded-xl p-5 bg-white space-y-4">
-              <div className="flex items-center justify-between">
+            {/* Donut chart — document status */}
+            <div className="lg:col-span-3 border border-neutral-200 rounded-xl p-5 sm:p-6 bg-white">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-neutral-700">
-                  Estado de procesamiento
+                  Estado de documentos
                 </h2>
                 <span className="text-xs font-medium text-neutral-400 tabular-nums">
                   {total} total
@@ -274,24 +363,23 @@ function DashboardPage() {
               </div>
 
               {total > 0 ? (
-                <ProcessBar
-                  completed={completed}
-                  processing={processing}
-                  pending={pending}
-                  failed={failed}
+                <DonutChart
+                  segments={donutSegments}
                   total={total}
+                  centerValue={`${successRate}%`}
+                  centerLabel="completado"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <FileText size={24} className="text-neutral-300 mb-2" />
-                  <p className="text-sm font-medium text-neutral-400">
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <FileText size={28} className="text-neutral-300 mb-3" />
+                  <p className="text-sm font-medium text-neutral-500">
                     Sin documentos todavía
                   </p>
                   <Link
                     to="/documents"
                     className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
                   >
-                    Subir documentos <ArrowRight size={14} />
+                    Subir el primero <ArrowRight size={14} />
                   </Link>
                 </div>
               )}
@@ -312,7 +400,7 @@ function DashboardPage() {
                         {unanswered} consulta{unanswered !== 1 ? 's' : ''} sin respuesta
                       </p>
                       <p className="text-xs text-neutral-600 mt-0.5">
-                        Sube más documentos con contexto para tus agentes.
+                        Agrega más documentos con contexto.
                       </p>
                     </div>
                     <ArrowRight size={14} className="text-neutral-400 shrink-0 mt-1" />
@@ -321,7 +409,7 @@ function DashboardPage() {
               )}
 
               {/* Quotas */}
-              <div className="border border-neutral-200 rounded-xl p-5 bg-white space-y-4">
+              <div className="border border-neutral-200 rounded-xl p-5 bg-white space-y-5">
                 <h2 className="text-sm font-semibold text-neutral-700">Uso del plan</h2>
                 <QuotaRow
                   icon={Zap}
@@ -337,6 +425,21 @@ function DashboardPage() {
                   max={user?.max_documents ?? 0}
                   isUnlimited={user?.max_documents === 0}
                 />
+
+                {totalGroups > 0 && (
+                  <div className="pt-3 border-t border-neutral-100">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-neutral-500">Total grupos</span>
+                      <span className="font-semibold tabular-nums">{totalGroups}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mt-1">
+                      <span className="text-neutral-500">Inactivos</span>
+                      <span className="font-medium text-neutral-400 tabular-nums">
+                        {Math.max(0, totalGroups - activeGroups)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
