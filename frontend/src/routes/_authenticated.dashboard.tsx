@@ -35,7 +35,7 @@ function formatBytes(bytes: number): string {
 }
 
 function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-neutral-100 rounded-lg ${className}`} />
+  return <div className={`animate-pulse bg-neutral-200 rounded-lg border-2 border-neutral-950 ${className}`} />
 }
 
 /* ──────────── StatCard ──────────── */
@@ -45,24 +45,25 @@ interface StatCardProps {
   label: string
   value: string | number
   to?: string
+  bgClass?: string
 }
 
-function StatCard({ icon: Icon, label, value, to }: StatCardProps) {
+function StatCard({ icon: Icon, label, value, to, bgClass = 'bg-white' }: StatCardProps) {
   const card = (
-    <div className="group border border-neutral-200 rounded-xl p-4 flex items-center gap-4 bg-white hover:border-neutral-400 hover:shadow-sm transition-all">
-      <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 group-hover:bg-primary-50 transition-colors">
-        <Icon size={18} className="text-neutral-500 group-hover:text-primary-600 transition-colors" strokeWidth={1.5} />
+    <div className={`shadow-hover border-2 border-neutral-950 rounded-xl p-4 flex items-center gap-4 ${bgClass} shadow-hard-md`}>
+      <div className="w-10 h-10 border-2 border-neutral-950 rounded-lg flex items-center justify-center bg-neutral-950 shrink-0">
+        <Icon size={18} className="text-white" strokeWidth={2.25} />
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-bold text-neutral-900 leading-none mb-1">{value}</p>
-        <p className="text-xs font-medium text-neutral-500 truncate">{label}</p>
+        <p className="text-2xl font-black text-neutral-950 tracking-tighter leading-none mb-1">{value}</p>
+        <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider leading-tight">{label}</p>
       </div>
     </div>
   )
 
   if (to) {
     return (
-      <Link to={to} className="block focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 rounded-xl">
+      <Link to={to} className="block">
         {card}
       </Link>
     )
@@ -93,7 +94,7 @@ function DonutChart({
   centerValue,
   centerLabel,
   size = 160,
-  strokeWidth = 18,
+  strokeWidth = 22,
 }: DonutChartProps) {
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
@@ -114,7 +115,7 @@ function DonutChart({
             cy={size / 2}
             r={radius}
             fill="none"
-            stroke="#f5f5f5"
+            stroke="#e5e5e5"
             strokeWidth={strokeWidth}
           />
           {visible.map((seg) => {
@@ -133,17 +134,17 @@ function DonutChart({
                 strokeWidth={strokeWidth}
                 strokeDasharray={`${dashLength} ${circumference - dashLength}`}
                 strokeDashoffset={-offset}
-                strokeLinecap={pct > 0.05 ? 'round' : 'butt'}
+                strokeLinecap={pct > 0.08 ? 'round' : 'butt'}
                 className="transition-all duration-700"
               />
             )
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl sm:text-3xl font-bold text-neutral-900 leading-none">
+          <span className="text-3xl font-black text-neutral-950 tracking-tighter leading-none">
             {centerValue}
           </span>
-          <span className="text-[11px] font-medium text-neutral-500 mt-1">
+          <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">
             {centerLabel}
           </span>
         </div>
@@ -151,13 +152,13 @@ function DonutChart({
 
       <div className="space-y-2 min-w-0">
         {visible.map((seg) => (
-          <div key={seg.label} className="flex items-center gap-2.5">
+          <div key={seg.label} className="flex items-center gap-2">
             <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
+              className="w-3 h-3 rounded-sm shrink-0 border border-neutral-950"
               style={{ backgroundColor: seg.color }}
             />
-            <span className="text-sm text-neutral-600 truncate">{seg.label}</span>
-            <span className="text-sm font-semibold text-neutral-900 tabular-nums ml-auto">
+            <span className="text-sm font-bold text-neutral-700 truncate">{seg.label}</span>
+            <span className="text-sm font-black text-neutral-950 tabular-nums ml-auto">
               {seg.value}
             </span>
           </div>
@@ -182,29 +183,36 @@ function QuotaRow({ icon: Icon, label, used, max, isUnlimited }: QuotaRowProps) 
   const isHigh = pct > 80
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
-        <Icon size={15} className="text-neutral-500" strokeWidth={1.5} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between mb-1.5">
-          <span className="text-sm font-medium text-neutral-700">{label}</span>
-          <span className="text-sm font-semibold text-neutral-900 tabular-nums">
-            {used}
-            {!isUnlimited && max > 0 && (
-              <span className="font-normal text-neutral-400"> / {max}</span>
-            )}
-          </span>
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 border-2 border-neutral-950 rounded-lg flex items-center justify-center bg-neutral-950 shrink-0">
+            <Icon size={13} className="text-white" strokeWidth={2.25} />
+          </div>
+          <span className="text-sm font-bold text-neutral-700">{label}</span>
         </div>
-        <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
+        <span className="text-sm font-black text-neutral-950 tabular-nums">
+          {used}
+          {!isUnlimited && max > 0 && (
+            <span className="font-bold text-neutral-400"> / {max}</span>
+          )}
+          {isUnlimited && (
+            <span className="ml-1.5 text-[9px] bg-white border border-neutral-950 px-1.5 py-0.5 rounded font-bold uppercase shadow-hard-sm">
+              Ilimitado
+            </span>
+          )}
+        </span>
+      </div>
+      {!isUnlimited && max > 0 && (
+        <div className="h-2.5 w-full bg-neutral-200 rounded-sm border border-neutral-300 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              isHigh ? 'bg-accent-orange-deep' : 'bg-primary-400'
+            className={`h-full transition-all duration-500 ${
+              isHigh ? 'bg-accent-orange-deep' : 'bg-neutral-950'
             }`}
             style={{ width: `${pct}%` }}
           />
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -254,7 +262,7 @@ function DashboardPage() {
   const successRate = total > 0 ? Math.round((completed / total) * 100) : 0
 
   const donutSegments: DonutSegment[] = [
-    { value: completed, color: '#a3e635', label: 'Completados' },
+    { value: completed, color: '#84cc17', label: 'Completados' },
     { value: processing, color: '#fbbf25', label: 'Procesando' },
     { value: pending, color: '#d4d4d4', label: 'En cola' },
     { value: failed, color: '#f4405e', label: 'Fallidos' },
@@ -264,33 +272,36 @@ function DashboardPage() {
     <div className="max-w-5xl mx-auto w-full space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">
-            {user ? `Hola, ${user.name}` : 'Dashboard'}
-          </h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
-            Resumen de tus documentos y grupos
-          </p>
+      <div className="flex items-center gap-4 bg-white border-2 border-neutral-950 rounded-xl px-5 py-4 shadow-hard-md">
+        <div className="w-1.5 self-stretch bg-primary-400 rounded-full shrink-0" />
+        <div className="flex-1 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black text-neutral-950 tracking-tighter leading-tight">
+              {user ? `Hola, ${user.name}` : 'Dashboard'}
+            </h1>
+            <p className="text-xs font-medium text-neutral-500">Resumen de tus documentos y grupos</p>
+          </div>
+          {hasError && (
+            <button
+              onClick={() => { refetchUser(); refetchStats() }}
+              className="press-brutal inline-flex items-center gap-1.5 bg-white border-2 border-neutral-950 rounded-sm shadow-brutal px-3 py-1.5 text-xs font-bold"
+            >
+              <RefreshCw size={13} />
+              Reintentar
+            </button>
+          )}
         </div>
-        {hasError && (
-          <button
-            onClick={() => { refetchUser(); refetchStats() }}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
-          >
-            <RefreshCw size={14} />
-            Reintentar
-          </button>
-        )}
       </div>
 
       {/* ── Error state ── */}
       {hasError && !isLoading && (
-        <div className="border border-accent-red-deep/20 bg-accent-red/20 rounded-xl px-5 py-4 flex items-start gap-3">
-          <AlertTriangle size={18} className="text-accent-red-deep shrink-0 mt-0.5" />
+        <div className="bg-accent-red border-2 border-neutral-950 rounded-xl px-5 py-4 flex items-start gap-3 shadow-hard-md">
+          <AlertTriangle size={18} className="text-neutral-950 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-neutral-900">No se pudieron cargar los datos</p>
-            <p className="text-sm text-neutral-600 mt-0.5">
+            <p className="text-sm font-black text-neutral-950 tracking-tighter">
+              No se pudieron cargar los datos
+            </p>
+            <p className="text-xs font-bold text-neutral-700 mt-0.5">
               Verifica tu conexión e intenta de nuevo.
             </p>
           </div>
@@ -299,7 +310,7 @@ function DashboardPage() {
 
       {/* ── Loading ── */}
       {isLoading && !hasError && (
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
@@ -324,6 +335,7 @@ function DashboardPage() {
               label="Docs listos"
               value={completed}
               to="/documents"
+              bgClass="bg-primary-100"
             />
             <StatCard
               icon={Loader}
@@ -334,8 +346,9 @@ function DashboardPage() {
             <StatCard
               icon={Layers}
               label="Grupos activos"
-              value={`${activeGroups}`}
+              value={activeGroups}
               to="/groups"
+              bgClass="bg-accent-blue"
             />
             <StatCard
               icon={MessageSquare}
@@ -346,19 +359,20 @@ function DashboardPage() {
               icon={HardDrive}
               label="Almacenamiento"
               value={formatBytes(storage)}
+              bgClass="bg-accent-purple"
             />
           </div>
 
-          {/* Bottom row: donut chart + quotas */}
+          {/* Bottom row: donut + quotas */}
           <div className="grid lg:grid-cols-5 gap-4">
-            {/* Donut chart — document status */}
-            <div className="lg:col-span-3 border border-neutral-200 rounded-xl p-5 sm:p-6 bg-white">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-neutral-700">
+            {/* Donut chart */}
+            <div className="lg:col-span-3 bg-white border-2 border-neutral-950 rounded-xl p-5 sm:p-6 shadow-hard-lg">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-neutral-100">
+                <h2 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
                   Estado de documentos
                 </h2>
-                <span className="text-xs font-medium text-neutral-400 tabular-nums">
-                  {total} total
+                <span className="text-[10px] font-black text-neutral-950 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full tabular-nums">
+                  {total}
                 </span>
               </div>
 
@@ -372,12 +386,12 @@ function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <FileText size={28} className="text-neutral-300 mb-3" />
-                  <p className="text-sm font-medium text-neutral-500">
+                  <p className="text-sm font-bold text-neutral-500">
                     Sin documentos todavía
                   </p>
                   <Link
                     to="/documents"
-                    className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                    className="mt-3 press-brutal inline-flex items-center gap-1.5 bg-lime border-2 border-neutral-950 rounded-sm shadow-brutal px-4 py-2 text-sm font-bold"
                   >
                     Subir el primero <ArrowRight size={14} />
                   </Link>
@@ -391,26 +405,31 @@ function DashboardPage() {
               {unanswered > 0 && (
                 <Link
                   to="/documents"
-                  className="block border border-accent-amber-deep/20 bg-accent-amber/40 rounded-xl px-4 py-3 hover:border-accent-amber-deep/40 transition-colors"
+                  className="block shadow-hover bg-accent-orange border-2 border-neutral-950 rounded-xl px-4 py-3 shadow-hard-md"
                 >
                   <div className="flex items-start gap-3">
-                    <AlertTriangle size={16} className="text-accent-amber-deep shrink-0 mt-0.5" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-900">
-                        {unanswered} consulta{unanswered !== 1 ? 's' : ''} sin respuesta
+                    <AlertTriangle size={16} className="text-neutral-950 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-neutral-950 tracking-tighter leading-tight">
+                        {unanswered} sin respuesta
                       </p>
-                      <p className="text-xs text-neutral-600 mt-0.5">
+                      <p className="text-[10px] font-bold text-neutral-700 mt-0.5">
                         Agrega más documentos con contexto.
                       </p>
                     </div>
-                    <ArrowRight size={14} className="text-neutral-400 shrink-0 mt-1" />
+                    <ArrowRight size={14} className="text-neutral-950 shrink-0 mt-1" />
                   </div>
                 </Link>
               )}
 
               {/* Quotas */}
-              <div className="border border-neutral-200 rounded-xl p-5 bg-white space-y-5">
-                <h2 className="text-sm font-semibold text-neutral-700">Uso del plan</h2>
+              <div className="bg-white border-2 border-neutral-950 rounded-xl p-5 shadow-hard-md space-y-5">
+                <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+                    Uso del plan
+                  </p>
+                </div>
+
                 <QuotaRow
                   icon={Zap}
                   label="Mensajes"
@@ -427,14 +446,14 @@ function DashboardPage() {
                 />
 
                 {totalGroups > 0 && (
-                  <div className="pt-3 border-t border-neutral-100">
+                  <div className="pt-3 border-t-2 border-dashed border-neutral-200 space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-neutral-500">Total grupos</span>
-                      <span className="font-semibold tabular-nums">{totalGroups}</span>
+                      <span className="font-bold text-neutral-500">Total grupos</span>
+                      <span className="font-black tabular-nums">{totalGroups}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm mt-1">
-                      <span className="text-neutral-500">Inactivos</span>
-                      <span className="font-medium text-neutral-400 tabular-nums">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-bold text-neutral-400">Inactivos</span>
+                      <span className="font-bold text-neutral-400 tabular-nums">
                         {Math.max(0, totalGroups - activeGroups)}
                       </span>
                     </div>
