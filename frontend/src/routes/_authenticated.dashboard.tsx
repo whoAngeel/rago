@@ -2,7 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import type { User } from '../types'
-import { FileText, Layers, HardDrive, MessageSquare, AlertTriangle, CheckCircle2, XCircle, Clock, Users } from 'lucide-react'
+import {
+  FileText, Layers, HardDrive, MessageSquare,
+  AlertTriangle, CheckCircle2, XCircle, Clock, Users, Zap,
+} from 'lucide-react'
 
 interface DashboardStats {
   total_documents: number
@@ -30,22 +33,86 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
-function StatCard({ icon: Icon, label, value, sub, variant }: {
+function StatCard({ icon: Icon, label, value, bgClass }: {
   icon: React.ComponentType<{ size?: number; className?: string }>
   label: string
-  value: string
-  sub?: string
-  variant?: 'default' | 'warning'
+  value: string | number
+  bgClass: string
 }) {
   return (
-    <div className={`bg-white border-2 rounded-xl p-4 sm:p-5 flex items-start gap-3 sm:gap-4 transition-colors ${variant === 'warning' ? 'border-orange-200' : 'border-neutral-200 hover:border-neutral-400'}`}>
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 border-2 border-neutral-950 rounded-lg flex items-center justify-center shrink-0 ${variant === 'warning' ? 'bg-orange-100' : 'bg-neutral-100'}`}>
-        <Icon size={20} className={variant === 'warning' ? 'text-orange-700' : 'text-neutral-700'} />
+    <div className={`border-2 border-neutral-950 rounded-xl p-4 flex flex-col gap-3 shadow-hard-md hover:translate-x-px hover:translate-y-px hover:shadow-hard-sm transition-all ${bgClass}`}>
+      <div className="w-8 h-8 border-2 border-neutral-950 rounded-lg flex items-center justify-center bg-neutral-950 shrink-0">
+        <Icon size={15} className="text-white" strokeWidth={2.5} />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{label}</p>
-        <p className="text-xl sm:text-2xl font-black text-neutral-950 mt-0.5">{value}</p>
-        {sub && <p className="text-xs text-neutral-500 mt-0.5">{sub}</p>}
+      <div>
+        <p className="text-3xl font-black text-neutral-950 tracking-tighter leading-none mb-1">{value}</p>
+        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider leading-tight">{label}</p>
+      </div>
+    </div>
+  )
+}
+
+function QuotaCard({ label, used, max, isUnlimited, icon: Icon, bgClass }: {
+  label: string
+  used: number
+  max: number
+  isUnlimited: boolean
+  icon: React.ComponentType<any>
+  bgClass: string
+}) {
+  const pct = isUnlimited ? 100 : (max > 0 ? Math.min((used / max) * 100, 100) : 0)
+  const isHigh = pct > 80
+
+  return (
+    <div className={`flex-1 border-2 border-neutral-950 rounded-xl p-4 shadow-hard-md hover:translate-x-px hover:translate-y-px hover:shadow-hard-sm transition-all ${bgClass}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 border-2 border-neutral-950 rounded-lg flex items-center justify-center bg-neutral-950 shrink-0">
+          <Icon size={13} className="text-white" />
+        </div>
+        <p className="text-[10px] font-bold text-neutral-600 uppercase tracking-wider truncate">{label}</p>
+        {isUnlimited && (
+          <span className="ml-auto text-[9px] bg-white border border-neutral-950 px-1.5 py-0.5 rounded font-bold uppercase shadow-hard-sm shrink-0">
+            Ilimitado
+          </span>
+        )}
+      </div>
+      <div className="flex items-baseline gap-1.5 mb-3">
+        <span className="text-4xl font-black text-neutral-950 tracking-tighter leading-none">{used}</span>
+        {!isUnlimited && max > 0 && (
+          <span className="text-sm font-bold text-neutral-400">/ {max}</span>
+        )}
+      </div>
+      {!isUnlimited && max > 0 && (
+        <div className="h-2.5 w-full bg-neutral-200 rounded-sm border border-neutral-300 overflow-hidden">
+          <div
+            className={`h-full transition-all duration-700 ${isHigh ? 'bg-accent-orange-deep' : 'bg-neutral-950'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ProcessRow({ icon: Icon, label, val, total, color }: {
+  icon: any
+  label: string
+  val: number
+  total: number
+  color: string
+}) {
+  const pct = total > 0 ? (val / total) * 100 : 0
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <Icon size={12} className="text-neutral-500" />
+          <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-wider">{label}</span>
+        </div>
+        <span className="text-xs font-black text-neutral-950">{val}</span>
+      </div>
+      <div className="h-2 w-full bg-neutral-100 rounded-sm border border-neutral-200 overflow-hidden">
+        <div className={`h-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
@@ -78,109 +145,100 @@ function DashboardPage() {
   const storage = stats?.storage_used ?? 0
   const unanswered = stats?.unanswered_total ?? 0
   const attempts = stats?.total_attempts ?? 0
-  const unansweredRate = attempts > 0 ? Math.round((unanswered / attempts) * 100) : 0
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto flex flex-col gap-4 sm:gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">
-          {user ? `Hola, ${user.name}` : 'Dashboard'}
-        </h1>
-        <p className="text-neutral-600 mt-1 text-sm sm:text-base">
-          Resumen de tu actividad
-        </p>
+    <div className="p-4 sm:p-6 lg:h-full lg:overflow-hidden flex flex-col gap-4 max-w-7xl mx-auto w-full font-sans">
+
+      {/* Header */}
+      <div className="flex items-center gap-4 bg-white border-2 border-neutral-950 rounded-xl px-5 py-4 shadow-hard-md shrink-0">
+        <div className="w-1.5 self-stretch bg-primary-400 rounded-full shrink-0" />
+        <div>
+          <h1 className="text-xl font-black text-neutral-950 tracking-tighter leading-tight">
+            {user ? `Hola, ${user.name}` : 'Dashboard'}
+          </h1>
+          <p className="text-xs font-medium text-neutral-500">Resumen de tus agentes y documentos</p>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white border-2 border-neutral-200 rounded-xl p-5 h-24 animate-pulse">
-              <div className="h-3 bg-neutral-100 rounded w-1/2 mb-3" />
-              <div className="h-6 bg-neutral-100 rounded w-1/3" />
-            </div>
-          ))}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin text-neutral-400"><Clock size={32} /></div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard
-            icon={FileText}
-            label="Documentos"
-            value={String(total)}
-            sub={`${completed} completados`}
-          />
-          <StatCard
-            icon={Layers}
-            label="Grupos"
-            value={String(stats?.active_groups ?? 0)}
-            sub={`de ${stats?.total_groups ?? 0} totales`}
-          />
-          <StatCard
-            icon={MessageSquare}
-            label="Consultas"
-            value={String(attempts)}
-            sub={`${unansweredRate > 0 ? `${unansweredRate}% sin respuesta` : 'todas respondidas'}`}
-          />
-          <StatCard
-            icon={HardDrive}
-            label="Almacenamiento"
-            value={formatBytes(storage)}
-            sub={user ? `${user.document_count} / ${user.max_documents > 0 ? user.max_documents : '∞'} archivos` : ''}
-          />
-        </div>
-      )}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0 overflow-y-auto lg:overflow-visible pb-4 lg:pb-0">
 
-      {stats && unanswered > 0 && (
-        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertTriangle size={20} className="text-orange-600 shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-orange-800">{unanswered} preguntas sin respuesta suficiente</p>
-            <p className="text-xs text-orange-600">
-              El agente no encontró suficiente contexto en los documentos del grupo. Revisa los documentos subidos.
-            </p>
+          {/* Column 1: stat cards 2×2 */}
+          <div className="lg:col-span-4 grid grid-cols-2 gap-3">
+            <StatCard icon={FileText}     label="Docs Listos"    value={completed}               bgClass="bg-primary-100" />
+            <StatCard icon={Layers}       label="Grupos Activos" value={stats?.active_groups ?? 0} bgClass="bg-white" />
+            <StatCard icon={MessageSquare} label="Consultas"     value={attempts}                bgClass="bg-white" />
+            <StatCard icon={HardDrive}    label="Espacio"        value={formatBytes(storage)}    bgClass="bg-accent-blue" />
           </div>
-        </div>
-      )}
 
-      {stats && total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-white border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
-            <CheckCircle2 size={18} className="text-green-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Completados</p>
-              <p className="text-lg font-black text-green-700">{completed}</p>
-            </div>
+          {/* Column 2: quotas */}
+          <div className="lg:col-span-4 flex flex-col gap-3">
+            <QuotaCard
+              label="Cuota de Mensajes"
+              used={user?.chat_quota_used ?? 0}
+              max={user?.chat_quota ?? 0}
+              isUnlimited={user?.chat_quota === 0}
+              bgClass="bg-white"
+              icon={Zap}
+            />
+            <QuotaCard
+              label="Límite de Documentos"
+              used={user?.document_count ?? 0}
+              max={user?.max_documents ?? 0}
+              isUnlimited={user?.max_documents === 0}
+              bgClass="bg-primary-100"
+              icon={FileText}
+            />
           </div>
-          <div className="bg-white border-2 border-orange-200 rounded-xl p-4 flex items-center gap-3">
-            <Clock size={18} className="text-orange-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Procesando</p>
-              <p className="text-lg font-black text-orange-700">{processing}</p>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-amber-200 rounded-xl p-4 flex items-center gap-3">
-            <Clock size={18} className="text-amber-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Pendientes</p>
-              <p className="text-lg font-black text-amber-700">{pending}</p>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-red-200 rounded-xl p-4 flex items-center gap-3">
-            <XCircle size={18} className="text-red-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Fallidos</p>
-              <p className="text-lg font-black text-red-700">{failed}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {stats && total === 0 && stats?.total_groups === 0 && (
-        <div className="bg-white border-2 border-neutral-200 rounded-xl p-12 text-center">
-          <Users size={40} className="text-neutral-300 mx-auto mb-4" />
-          <p className="font-bold text-neutral-600 text-lg">Sin actividad aún</p>
-          <p className="text-sm text-neutral-500 mt-1">
-            Crea tu primer grupo y sube documentos para empezar
-          </p>
+          {/* Column 3: processing status */}
+          <div className="lg:col-span-4 flex flex-col gap-3">
+
+            {unanswered > 0 && (
+              <div className="bg-accent-orange border-2 border-neutral-950 rounded-xl px-4 py-3 flex items-center gap-3 shadow-hard-md shrink-0">
+                <AlertTriangle size={16} className="text-neutral-950 shrink-0" />
+                <div>
+                  <p className="text-sm font-black text-neutral-950 tracking-tighter leading-tight">
+                    {unanswered} sin respuesta
+                  </p>
+                  <p className="text-[10px] font-bold text-neutral-700 mt-0.5">
+                    Sube más contexto a tu agente.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 bg-white border-2 border-neutral-950 rounded-xl p-4 shadow-hard-md flex flex-col">
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100">
+                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+                  Estado de Procesamiento
+                </p>
+                <span className="ml-auto text-[10px] font-black text-neutral-950 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full">
+                  {total}
+                </span>
+              </div>
+
+              {total > 0 ? (
+                <div className="flex-1 flex flex-col justify-around gap-3">
+                  <ProcessRow icon={CheckCircle2} label="Completados" val={completed}  total={total} color="bg-primary-400" />
+                  <ProcessRow icon={Clock}        label="Procesando"  val={processing} total={total} color="bg-accent-amber-deep" />
+                  <ProcessRow icon={HardDrive}    label="En Cola"     val={pending}    total={total} color="bg-neutral-300" />
+                  <ProcessRow icon={XCircle}      label="Fallidos"    val={failed}     total={total} color="bg-accent-red-deep" />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30">
+                  <Users size={28} className="mb-2" />
+                  <p className="text-xs font-bold">Sin actividad</p>
+                </div>
+              )}
+            </div>
+
+          </div>
+
         </div>
       )}
     </div>
