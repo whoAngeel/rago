@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/whoAngeel/rago/internal/core/domain"
 )
@@ -27,6 +28,7 @@ type DocumentRepository interface {
 	FindByID(ctx context.Context, id int) (*domain.Document, error)
 	DeleteDocument(ctx context.Context, id int) error
 	FindPendingDocuments(ctx context.Context, limit int) ([]*domain.Document, error)
+	MarkStuckDocuments(ctx context.Context, stuckAfter time.Duration) ([]*domain.Document, error)
 	CreateProcessingStep(ctx context.Context, step *domain.ProcessingStep) error
 	UpdateProcessingStep(ctx context.Context, id, duration int, status, errMsg string) error
 	FindStepsByDocumentID(ctx context.Context, docID int) ([]*domain.ProcessingStep, error)

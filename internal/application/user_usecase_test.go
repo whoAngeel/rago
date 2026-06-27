@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/whoAngeel/rago/internal/application"
 	"github.com/whoAngeel/rago/internal/core/domain"
@@ -76,6 +77,9 @@ func (m *stubDocRepo) CountByStatus(_ context.Context, _ int, _ domain.DocumentS
 }
 func (m *stubDocRepo) SumSizeByUserID(_ context.Context, _ int) (int64, error) {
 	return 0, nil
+}
+func (m *stubDocRepo) MarkStuckDocuments(_ context.Context, _ time.Duration) ([]*domain.Document, error) {
+	return nil, nil
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/application"
@@ -120,6 +121,9 @@ func (m *mockDocRepo) CountByStatus(_ context.Context, _ int, _ domain.DocumentS
 }
 func (m *mockDocRepo) SumSizeByUserID(_ context.Context, _ int) (int64, error) {
 	return 0, nil
+}
+func (m *mockDocRepo) MarkStuckDocuments(_ context.Context, _ time.Duration) ([]*domain.Document, error) {
+	return nil, nil
 }
 
 type mockVectorStore struct {
@@ -438,7 +442,7 @@ func TestPublicChat_EmptySearchResultsCallsLLM(t *testing.T) {
 	}
 }
 
-func TestPublicChat_SearchLimitIs5(t *testing.T) {
+func TestPublicChat_SearchLimitIs8(t *testing.T) {
 	group := &domain.DocumentGroup{
 		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
 		ChatQuota: 100, ChatQuotaUsed: 0,
@@ -449,8 +453,8 @@ func TestPublicChat_SearchLimitIs5(t *testing.T) {
 
 	_, _ = uc.Chat(context.Background(), "abc", "pregunta")
 
-	if vs.capturedArgs.limit != 5 {
-		t.Errorf("límite de búsqueda debería ser 5, got: %d", vs.capturedArgs.limit)
+	if vs.capturedArgs.limit != 8 {
+		t.Errorf("límite de búsqueda debería ser 8, got: %d", vs.capturedArgs.limit)
 	}
 }
 

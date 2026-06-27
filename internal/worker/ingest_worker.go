@@ -66,9 +66,14 @@ func NewIngestWorker(
 	}
 }
 
+const watchdogInterval = 2 * time.Minute
+const watchdogTimeout = 15 * time.Minute
+
 func (w *IngestWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(w.PollInterval)
-	defer ticker.Stop()
+	pollTicker := time.NewTicker(w.PollInterval)
+	watchdogTicker := time.NewTicker(watchdogInterval)
+	defer pollTicker.Stop()
+	defer watchdogTicker.Stop()
 
 	w.logger.Info("IngestWorker started", "poll_interval", w.PollInterval, "concurrency", w.Concurrency)
 
@@ -79,18 +84,17 @@ func (w *IngestWorker) Start(ctx context.Context) {
 			w.wg.Wait()
 			w.logger.Info("IngestWorker stopped", "total_processed", w.processed.Load())
 			return
-		case <-ticker.C:
+		case <-watchdogTicker.C:
+			w.runWatchdog(ctx)
+		case <-pollTicker.C:
 			docs, err := w.DocRepo.FindPendingDocuments(ctx, w.Concurrency)
-
 			if err != nil {
 				w.logger.Error("Polling error", "error", err)
 				continue
 			}
-
 			if len(docs) == 0 {
 				continue
 			}
-
 			for _, doc := range docs {
 				w.spotCh <- struct{}{}
 				w.wg.Add(1)
@@ -100,10 +104,29 @@ func (w *IngestWorker) Start(ctx context.Context) {
 					w.processDocument(ctx, d)
 				}(doc)
 			}
-
 		}
 	}
+}
 
+func (w *IngestWorker) runWatchdog(ctx context.Context) {
+	stuck, err := w.DocRepo.MarkStuckDocuments(ctx, watchdogTimeout)
+	if err != nil {
+		w.logger.Error("watchdog: failed to check stuck documents", "error", err)
+		return
+	}
+	if len(stuck) == 0 {
+		return
+	}
+	w.logger.Warn("watchdog: reset stuck documents to pending", "count", len(stuck))
+	for _, doc := range stuck {
+		w.notifyDocumentStatus(&domain.Document{
+			ID:           doc.ID,
+			UserID:       doc.UserID,
+			Filename:     doc.Filename,
+			Status:       domain.StatusPending,
+			ErrorMessage: "processing timed out — worker may have crashed",
+		}, string(domain.StatusPending))
+	}
 }
 
 func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document) {

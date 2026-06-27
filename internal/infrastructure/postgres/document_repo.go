@@ -78,12 +78,33 @@ func (r *DocumentRepository) DeleteDocument(ctx context.Context, id int) error {
 
 func (r *DocumentRepository) FindPendingDocuments(ctx context.Context, limit int) ([]*domain.Document, error) {
 	var docs []*domain.Document
-	err := r.db.WithContext(ctx).Where(
-		"status = ? OR (status = ? AND updated_at < ?)",
-		domain.StatusPending,
-		domain.StatusProcessing,
-		time.Now().Add(-5*time.Minute),
-	).Order("created_at ASC").Limit(limit).Find(&docs).Error
+	err := r.db.WithContext(ctx).
+		Where("status = ?", domain.StatusPending).
+		Order("created_at ASC").Limit(limit).Find(&docs).Error
+	return docs, err
+}
+
+func (r *DocumentRepository) MarkStuckDocuments(ctx context.Context, stuckAfter time.Duration) ([]*domain.Document, error) {
+	cutoff := time.Now().Add(-stuckAfter)
+	var docs []*domain.Document
+	if err := r.db.WithContext(ctx).
+		Where("status = ? AND updated_at < ?", domain.StatusProcessing, cutoff).
+		Find(&docs).Error; err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, nil
+	}
+	ids := make([]int, len(docs))
+	for i, d := range docs {
+		ids[i] = d.ID
+	}
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).
+		Where("id IN ?", ids).
+		Updates(map[string]any{
+			"status":        domain.StatusPending,
+			"error_message": "processing timed out — worker may have crashed",
+		}).Error
 	return docs, err
 }
 
