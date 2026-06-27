@@ -15,17 +15,19 @@ import {
   RefreshCw,
   Circle,
   RotateCcw,
+  ScanEye,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import api from "../../lib/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 
 interface DocumentsProps {
   documents: Document[];
   onDelete: (id: number) => void;
   onDownload: (id: number) => void;
-  onReprocess?: (id: number) => void;
+  onReprocess?: (id: number, forceOcr?: boolean) => void;
   deletingIds?: number[];
   reprocessingIds?: number[];
   page?: number;
@@ -342,16 +344,22 @@ function DocumentCard({
   document,
   onDelete,
   onDownload,
+  onRequestReprocess,
+  isReprocessing,
   isDeleting,
 }: {
   document: Document;
   onDelete: (id: number) => void;
   onDownload: (id: number) => void;
+  onRequestReprocess?: (id: number, filename: string, forceOcr: boolean) => void;
+  isReprocessing: boolean;
   isDeleting: boolean;
 }) {
+  const isFailed = document.status === 'failed';
+  const isCompleted = document.status === 'completed';
   return (
     <div
-      className={`bg-white border-2 border-neutral-950 rounded-[var(--radius-card)] p-4 flex flex-col gap-4 shadow-[var(--shadow-hard-md)] ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}
+      className={`bg-white border-2 border-neutral-950 rounded-[var(--radius-card)] p-4 flex flex-col gap-4 shadow-[var(--shadow-hard-md)] ${isDeleting || isReprocessing ? "opacity-50 pointer-events-none" : ""}`}
     >
       <div className="flex items-start gap-3">
         <div
@@ -394,6 +402,24 @@ function DocumentCard({
       <div className="flex items-center justify-between">
         <StatusBadge doc={document} />
         <div className="flex items-center gap-1">
+          {isFailed && onRequestReprocess && (
+            <button
+              className="p-2 text-neutral-600 hover:text-neutral-950 border-2 border-transparent hover:border-neutral-950 hover:bg-white hover:shadow-hard-sm rounded transition-all cursor-pointer"
+              title="Reprocesar"
+              onClick={() => onRequestReprocess(document.id, document.filename, false)}
+            >
+              <RefreshCw size={16} />
+            </button>
+          )}
+          {isCompleted && onRequestReprocess && (
+            <button
+              className="p-2 text-neutral-600 hover:text-accent-amber-deep border-2 border-transparent hover:border-neutral-950 hover:bg-accent-amber/20 hover:shadow-hard-sm rounded transition-all cursor-pointer"
+              title="Reprocesar con OCR"
+              onClick={() => onRequestReprocess(document.id, document.filename, true)}
+            >
+              <ScanEye size={16} />
+            </button>
+          )}
           <button
             className="p-2 text-neutral-600 hover:text-neutral-950 border-2 border-transparent hover:border-neutral-950 hover:bg-white hover:shadow-hard-sm rounded transition-all cursor-pointer"
             title="Descargar"
@@ -420,12 +446,31 @@ export const DocumentTable = ({
   documents,
   onDelete,
   onDownload,
+  onReprocess,
   deletingIds = [],
+  reprocessingIds = [],
   page,
   totalPages,
   onPageChange,
   totalItems,
 }: DocumentsProps) => {
+  const [confirmAction, setConfirmAction] = useState<{
+    id: number
+    forceOcr: boolean
+    filename: string
+  } | null>(null)
+
+  const requestReprocess = (id: number, filename: string, forceOcr: boolean) => {
+    setConfirmAction({ id, filename, forceOcr })
+  }
+
+  const handleReprocessConfirm = () => {
+    if (confirmAction) {
+      onReprocess?.(confirmAction.id, confirmAction.forceOcr)
+      setConfirmAction(null)
+    }
+  }
+
   return (
     <div>
       {/* Mobile cards */}
@@ -451,6 +496,8 @@ export const DocumentTable = ({
             document={document}
             onDelete={onDelete}
             onDownload={onDownload}
+            onRequestReprocess={onReprocess ? requestReprocess : undefined}
+            isReprocessing={reprocessingIds.includes(document.id)}
             isDeleting={deletingIds.includes(document.id)}
           />
         ))}
@@ -542,6 +589,26 @@ export const DocumentTable = ({
                   </td>
                   <td className="px-4 lg:px-6 py-4">
                     <div className="flex items-center gap-2 justify-center">
+                      {document.status === 'failed' && onReprocess && (
+                          <button
+                            className="p-2 text-neutral-600 hover:text-neutral-950 border-2 border-transparent hover:border-neutral-950 hover:bg-white hover:shadow-hard-sm rounded transition-all cursor-pointer"
+                            title="Reprocesar"
+                            onClick={() => requestReprocess(document.id, document.filename, false)}
+                            disabled={reprocessingIds.includes(document.id)}
+                          >
+                            <RefreshCw size={16} className={reprocessingIds.includes(document.id) ? 'animate-spin' : ''} />
+                          </button>
+                        )}
+                        {document.status === 'completed' && onReprocess && (
+                          <button
+                            className="p-2 text-neutral-600 hover:text-accent-amber-deep border-2 border-transparent hover:border-neutral-950 hover:bg-accent-amber/20 hover:shadow-hard-sm rounded transition-all cursor-pointer"
+                            title="Reprocesar con OCR"
+                            onClick={() => requestReprocess(document.id, document.filename, true)}
+                            disabled={reprocessingIds.includes(document.id)}
+                          >
+                            <ScanEye size={16} />
+                          </button>
+                        )}
                       <button
                         className="p-2 text-neutral-600 hover:text-neutral-950 border-2
                                             border-transparent hover:border-neutral-950 hover:bg-white
@@ -609,6 +676,21 @@ export const DocumentTable = ({
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmAction !== null}
+        title={confirmAction?.forceOcr ? 'Reprocesar con OCR' : 'Reprocesar documento'}
+        message={
+          confirmAction
+            ? confirmAction.forceOcr
+              ? `¿Querés reprocesar "${confirmAction.filename}" usando OCR? Se va a escanear cada página con reconocimiento de texto.`
+              : `¿Querés volver a procesar "${confirmAction.filename}"? Se reintentará el flujo de procesamiento original.`
+            : ''
+        }
+        confirmLabel="Reprocesar"
+        variant={confirmAction?.forceOcr ? 'warning' : 'default'}
+        onConfirm={handleReprocessConfirm}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   );
 };

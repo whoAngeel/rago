@@ -250,8 +250,15 @@ func (h *DocumentHandler) Reprocess(c *gin.Context) {
 		return
 	}
 
+	var req struct {
+		ForceOCR bool `json:"force_ocr"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.ForceOCR = false
+	}
+
 	userID := c.GetInt("user_id")
-	if err := h.usecase.ReprocessDocument(ctx, id, userID); err != nil {
+	if err := h.usecase.ReprocessDocument(ctx, id, userID, req.ForceOCR); err != nil {
 		if errors.Is(err, application.ErrNotFound) {
 			rest.RespondError(c, http.StatusNotFound, "Document not found", "")
 		} else {

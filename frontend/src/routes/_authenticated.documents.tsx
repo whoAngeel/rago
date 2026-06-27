@@ -105,18 +105,18 @@ function RouteComponent() {
   })
 
   const reprocessMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return api.post(`/documents/${id}/reprocess`)
+    mutationFn: async ({ id, forceOcr }: { id: number; forceOcr?: boolean }) => {
+      return api.post(`/documents/${id}/reprocess`, { force_ocr: forceOcr ?? false })
     },
-    onMutate: (id: number) => {
+    onMutate: ({ id }: { id: number }) => {
       setReprocessingIds(prev => [...prev, id])
     },
-    onSuccess: (_, id: number) => {
+    onSuccess: (_, { id }: { id: number }) => {
       setReprocessingIds(prev => prev.filter(itemId => itemId !== id))
       queryClient.invalidateQueries({ queryKey: ["documents"] })
       addToast("Éxito", "Documento puesto en cola para reprocesar", "success")
     },
-    onError: (err: any, id: number) => {
+    onError: (err: any, { id }: { id: number }) => {
       setReprocessingIds(prev => prev.filter(itemId => itemId !== id))
       addToast("Error", `No se pudo reprocesar el documento: ${err.message}`, "error")
     }
@@ -163,7 +163,7 @@ function RouteComponent() {
             <DocumentTable documents={documents}
               onDelete={(id) => deleteMutation.mutate(id)}
               onDownload={(id) => console.log(`download ${id}`)}
-              onReprocess={(id) => reprocessMutation.mutate(id)}
+              onReprocess={(id, forceOcr) => reprocessMutation.mutate({ id, forceOcr })}
               deletingIds={deletingIds}
               reprocessingIds={reprocessingIds} />
           </div>

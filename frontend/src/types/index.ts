@@ -22,6 +22,7 @@ interface Document {
     processing_started_at: string | null
     error_message: string | null
     retry_count: number
+    force_ocr?: boolean
 }
 
 interface Group {

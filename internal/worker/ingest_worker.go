@@ -14,6 +14,7 @@ import (
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
+	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 )
 
 type IngestWorker struct {
@@ -141,7 +142,11 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parser resolve: %w", err))
 		return
 	}
-	parsedDocs, err := parser.Parse(ctx, bytes.NewReader(rawBytes), doc.ContentType)
+	parseCtx := ctx
+	if doc.ForceOCR {
+		parseCtx = context.WithValue(ctx, parserpkg.ForceOCRKey, true)
+	}
+	parsedDocs, err := parser.Parse(parseCtx, bytes.NewReader(rawBytes), doc.ContentType)
 	finishParse(err)
 	if err != nil {
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parsing: %w", err))
@@ -179,6 +184,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 
 	doc.Status = domain.StatusCompleted
 	doc.ErrorMessage = ""
+	doc.ForceOCR = false
 	if _, err := w.DocRepo.UpdateDocument(ctx, doc); err != nil {
 		log.Error("failed to mark document completed", "error", err)
 		return

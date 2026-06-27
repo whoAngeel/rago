@@ -14,6 +14,10 @@ import (
 	"github.com/tmc/langchaingo/schema"
 )
 
+type contextKey string
+
+const ForceOCRKey contextKey = "force_ocr"
+
 type PDFParser struct {
 	imageParser *ImageParser
 }
@@ -47,6 +51,12 @@ func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType str
 	defer pdfFile.Close()
 
 	totalPages := pdfReader.NumPage()
+
+	forceOCR, _ := ctx.Value(ForceOCRKey).(bool)
+	if forceOCR {
+		return p.ocrFallback(ctx, inputPath, totalPages)
+	}
+
 	var pages []string
 
 	for i := 1; i <= totalPages; i++ {

@@ -15,5 +15,6 @@ type Document struct {
 	ProcessingStartedAt *time.Time     `json:"processing_started_at"`
 	ErrorMessage        string         `json:"error_message" gorm:"type:text"`
 	RetryCount          int            `json:"retry_count" gorm:"default:0"`
+	ForceOCR            bool           `json:"force_ocr" gorm:"default:false"`
 	Checksum            *string        `gorm:"uniqueIndex:idx_documents_user_checksum;size:64" json:"checksum,omitempty"`
 }
