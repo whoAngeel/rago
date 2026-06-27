@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -12,10 +13,12 @@ import (
 	"github.com/tmc/langchaingo/schema"
 )
 
-type PDFParser struct{}
+type PDFParser struct {
+	imageParser *ImageParser
+}
 
 func NewPDFParser() *PDFParser {
-	return &PDFParser{}
+	return &PDFParser{imageParser: NewImageParser()}
 }
 
 func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType string) ([]schema.Document, error) {
@@ -62,7 +65,7 @@ func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType str
 	}
 
 	if len(pages) == 0 {
-		return nil, fmt.Errorf("no readable text found in PDF")
+		return p.ocrFallback(ctx, inputPath, totalPages)
 	}
 
 	var docs []schema.Document
@@ -71,9 +74,55 @@ func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType str
 			PageContent: pageText,
 			Metadata: map[string]any{
 				"page_number": i + 1,
-				"page_count":  len(pages),
+				"page_count":  totalPages,
 			},
 		})
+	}
+	return docs, nil
+}
+
+func (p *PDFParser) ocrFallback(ctx context.Context, pdfPath string, totalPages int) ([]schema.Document, error) {
+	outDir, err := os.MkdirTemp("", "pdf-ocr-*")
+	if err != nil {
+		return nil, fmt.Errorf("create ocr temp dir: %w", err)
+	}
+	defer os.RemoveAll(outDir)
+
+	outPrefix := filepath.Join(outDir, "page")
+	cmd := exec.CommandContext(ctx, "pdftoppm", "-png", "-r", "200", pdfPath, outPrefix)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("pdftoppm: %w: %s", err, string(out))
+	}
+
+	entries, err := os.ReadDir(outDir)
+	if err != nil {
+		return nil, fmt.Errorf("read ocr dir: %w", err)
+	}
+
+	var docs []schema.Document
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		imgPath := filepath.Join(outDir, entry.Name())
+		f, err := os.Open(imgPath)
+		if err != nil {
+			continue
+		}
+		pageDocs, err := p.imageParser.Parse(ctx, f, "image/png")
+		f.Close()
+		if err != nil {
+			continue
+		}
+		for i := range pageDocs {
+			pageDocs[i].Metadata["total_pages"] = totalPages
+			pageDocs[i].Metadata["source"] = "ocr"
+		}
+		docs = append(docs, pageDocs...)
+	}
+
+	if len(docs) == 0 {
+		return nil, fmt.Errorf("no text extracted from scanned PDF")
 	}
 	return docs, nil
 }

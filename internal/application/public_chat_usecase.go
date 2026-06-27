@@ -15,8 +15,8 @@ import (
 var ErrQuotaExceeded = errors.New("quota exceeded")
 var ErrGroupInactive = errors.New("group not found or inactive")
 
-const publicSearchLimit = 5
-const publicScoreThreshold float32 = 0.40
+const publicSearchLimit = 8
+const publicScoreThreshold float32 = 0.35
 
 type PublicDocument struct {
 	ID       int    `json:"id"`
@@ -88,13 +88,7 @@ func (uc *PublicChatUsecase) GetGroupInfo(ctx context.Context, slug string) (*Gr
 
 	if !group.IsActive {
 		uc.Logger.Info("public: group inactive", "slug", slug)
-		return &GroupPublicInfo{
-			Name:           group.Name,
-			Slug:           group.Slug,
-			AllowDownloads: false,
-			IsActive:       false,
-			Documents:      []PublicDocument{},
-		}, nil
+		return nil, ErrGroupInactive
 	}
 
 	docs := make([]PublicDocument, 0, len(group.DocumentIDs))
@@ -313,6 +307,7 @@ var unansweredPatterns = []string{
 	"no tengo suficiente información",
 	"no se encontró información",
 	"no tengo información",
+	"no encontré información",
 	"sin información suficiente",
 	"i don't have enough information",
 	"insufficient information",

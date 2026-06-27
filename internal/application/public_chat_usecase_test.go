@@ -48,6 +48,7 @@ func (m *mockGroupRepo) RemoveDocument(_ context.Context, _, _ int) error       
 func (m *mockGroupRepo) SlugExists(_ context.Context, _ string) (bool, error) {
 	return m.slugExistsVal, nil
 }
+func (m *mockGroupRepo) IncrementUnansweredCount(_ context.Context, _ int) error { return nil }
 
 type mockUserRepoPublic struct {
 	user            *domain.User
@@ -215,7 +216,8 @@ func newTestUsecase(
 		llm,
 		nil,
 		&mockConfigRepo{val: "Eres un asistente."},
-		nil, // usageRepo: nil es válido, se guarda con guard
+		nil, // usageRepo
+		nil, // sseManager
 		&mockLogger{},
 		config.Config{QdrantCollection: "test"},
 	)
@@ -356,6 +358,7 @@ func TestPublicChat_RecordsTokenUsage(t *testing.T) {
 		nil,
 		&mockConfigRepo{val: "Eres un asistente."},
 		usageRepo,
+		nil, // sseManager
 		&mockLogger{},
 		config.Config{QdrantCollection: "test"},
 	)

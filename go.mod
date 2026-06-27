@@ -13,6 +13,7 @@ require (
 	github.com/qdrant/go-client v1.17.1
 	github.com/tealeg/xlsx/v3 v3.3.13
 	github.com/tmc/langchaingo v0.1.14
+	gorm.io/datatypes v1.2.7
 	gorm.io/gorm v1.31.1
 )
 
@@ -50,7 +51,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	gorm.io/datatypes v1.2.7 // indirect
 	gorm.io/driver/mysql v1.5.6 // indirect
 )
 

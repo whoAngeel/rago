@@ -458,25 +458,25 @@ export const DocumentTable = ({
 
       {/* Desktop table */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm border-collapse whitespace-nowrap">
+        <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-neutral-200 border-b-2 border-neutral-950">
-              <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">
+              <th className="px-4 lg:px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left min-w-[200px]">
                 Nombre
               </th>
-              <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">
+              <th className="px-4 lg:px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left whitespace-nowrap">
                 Tamaño
               </th>
-              <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">
+              <th className="px-4 lg:px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left whitespace-nowrap">
                 Estado
               </th>
-              <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">
+              <th className="px-4 lg:px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left whitespace-nowrap">
                 Progreso
               </th>
-              <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left">
+              <th className="hidden lg:table-cell px-4 lg:px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-left whitespace-nowrap">
                 Subido
               </th>
-              <th className="px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-center">
+              <th className="px-4 lg:px-6 py-4 font-bold uppercase text-xs tracking-widest text-neutral-950 text-center whitespace-nowrap">
                 Acciones
               </th>
             </tr>
@@ -508,15 +508,15 @@ export const DocumentTable = ({
                   key={document.id}
                   className={`hover:bg-neutral-50 transition-colors ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}
                 >
-                  <td className="px-6 py-5">
+                  <td className="px-4 lg:px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-10 h-10 ${getFileIconBg(document.content_type)} border-2 border-neutral-950 rounded flex items-center justify-center shadow-hard-sm shrink-0`}
                       >
                         {getFileIcon(document.content_type)}
                       </div>
-                      <div>
-                        <p className="font-bold text-neutral-950 break-all">
+                      <div className="min-w-0">
+                        <p className="font-bold text-neutral-950 truncate max-w-[180px] lg:max-w-[300px]">
                           {document.filename}
                         </p>
                         <p className="text-xs text-neutral-500 font-medium">
@@ -525,22 +525,22 @@ export const DocumentTable = ({
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5 font-medium text-neutral-950">
+                  <td className="px-4 lg:px-6 py-4 font-medium text-neutral-950 whitespace-nowrap">
                     {formatSize(document.size)}
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-4 lg:px-6 py-4">
                     <StatusBadge doc={document} />
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-4 lg:px-6 py-4">
                     <ProgressDots doc={document} />
                   </td>
-                  <td className="px-6 py-5 text-neutral-600 font-medium text-xs">
+                  <td className="hidden lg:table-cell px-4 lg:px-6 py-4 text-neutral-600 font-medium text-xs whitespace-nowrap">
                     {formatDistanceToNow(new Date(document.created_at), {
                       addSuffix: true,
                       locale: es,
                     })}
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-4 lg:px-6 py-4">
                     <div className="flex items-center gap-2 justify-center">
                       <button
                         className="p-2 text-neutral-600 hover:text-neutral-950 border-2

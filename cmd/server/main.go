@@ -158,6 +158,11 @@ func main() {
 	parserRegistry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
 	parserRegistry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parserpkg.NewXLSXParser())
 	parserRegistry.Register("application/pdf", parserpkg.NewPDFParser())
+	imageParser := parserpkg.NewImageParser()
+	parserRegistry.Register("image/png", imageParser)
+	parserRegistry.Register("image/jpeg", imageParser)
+	parserRegistry.Register("image/webp", imageParser)
+	parserRegistry.Register("image/tiff", imageParser)
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 
