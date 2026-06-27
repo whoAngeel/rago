@@ -116,7 +116,9 @@ func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID int) e
 			return err
 		}
 	}
-
+	if err := i.IngestUC.DeleteDocumentVectors(ctx, docID); err != nil {
+		i.IngestUC.Logger.Warn("could not delete vectors on document deletion", "doc_id", docID, "error", err)
+	}
 	return i.DocRepo.DeleteDocument(ctx, doc.ID)
 }
 

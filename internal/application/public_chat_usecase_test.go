@@ -151,6 +151,9 @@ func (m *mockVectorStore) GetPointsCountByFilter(_ context.Context, _ string, _ 
 	return 0, nil
 }
 func (m *mockVectorStore) DeleteCollection(_ context.Context, _ string) error { return nil }
+func (m *mockVectorStore) DeleteByDocumentID(_ context.Context, _ string, _ int) error {
+	return nil
+}
 
 type mockEmbedder struct{ vec []float32 }
 

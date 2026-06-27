@@ -68,6 +68,10 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 		iu.Logger.Warn("collection may already exist", "error", err)
 	}
 
+	if err := iu.VectorStore.DeleteByDocumentID(ctx, iu.config.QdrantCollection, doc.ID); err != nil {
+		iu.Logger.Warn("could not delete old vectors before upsert", "doc_id", doc.ID, "error", err)
+	}
+
 	doneUpsert := recordStep("upsert")
 	err := iu.VectorStore.UpsertDocuments(ctx, iu.config.QdrantCollection, allDocs, allVectors)
 	doneUpsert(err)
@@ -81,6 +85,10 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 
 func (iu *IngestUsecase) GetPointsCountByDocumentID(ctx context.Context, documentID int) (uint64, error) {
 	return iu.VectorStore.GetPointsCountByFilter(ctx, iu.config.QdrantCollection, documentID)
+}
+
+func (iu *IngestUsecase) DeleteDocumentVectors(ctx context.Context, documentID int) error {
+	return iu.VectorStore.DeleteByDocumentID(ctx, iu.config.QdrantCollection, documentID)
 }
 
 func buildMetadata(doc *domain.Document, metadata map[string]any) map[string]any {

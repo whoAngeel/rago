@@ -222,6 +222,32 @@ func (qa *QdrantAdapter) DeleteCollection(ctx context.Context, collection string
 	return nil
 }
 
+func (qa *QdrantAdapter) DeleteByDocumentID(ctx context.Context, collection string, documentID int) error {
+	pointsClient := qa.client.GetPointsClient()
+	_, err := pointsClient.Delete(ctx, &qdrant.DeletePoints{
+		CollectionName: collection,
+		Points: &qdrant.PointsSelector{
+			PointsSelectorOneOf: &qdrant.PointsSelector_Filter{
+				Filter: &qdrant.Filter{
+					Must: []*qdrant.Condition{{
+						ConditionOneOf: &qdrant.Condition_Field{
+							Field: &qdrant.FieldCondition{
+								Key: "document_id",
+								Match: &qdrant.Match{
+									MatchValue: &qdrant.Match_Keyword{
+										Keyword: fmt.Sprintf("%d", documentID),
+									},
+								},
+							},
+						},
+					}},
+				},
+			},
+		},
+	})
+	return err
+}
+
 func formatPayload(doc schema.Document) map[string]*qdrant.Value {
 	payload := make(map[string]*qdrant.Value)
 	payload["page_content"] = &qdrant.Value{

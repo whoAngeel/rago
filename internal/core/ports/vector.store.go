@@ -13,6 +13,7 @@ type VectorStore interface {
 	GetPointsCount(ctx context.Context, collection string) (uint64, error)
 	GetPointsCountByFilter(ctx context.Context, collection string, documentID int) (uint64, error)
 	DeleteCollection(ctx context.Context, collection string) error
+	DeleteByDocumentID(ctx context.Context, collection string, documentID int) error
 }
 
 type SearchResult struct {
