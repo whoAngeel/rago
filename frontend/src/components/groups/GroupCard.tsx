@@ -63,7 +63,7 @@ export function GroupCard({ group, onToggle, onDelete, onCopy, isLoading }: Grou
                                 {group.unanswered_count} sin respuesta
                             </span>
                         )}
-                        <p className="text-lg font-black text-neutral-950">{group.chat_attempts} intentos</p>
+                        <p className="text-lg font-black text-neutral-950">{group.chat_attempts} interacciones</p>
                     </div>
                 </div>
             </div>

@@ -5,7 +5,15 @@
       "Bash(Select-Object -First 20)",
       "Bash(go build *)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\whoan\\\\Documents\\\\DEV\\\\golang\\\\rago\" -Recurse -Directory | Select-Object -First 20 | ForEach-Object { $_.FullName })",
-      "Bash(go test *)"
+      "Bash(go test *)",
+      "Bash(tesseract *)",
+      "mcp__codebase-memory-mcp__trace_path",
+      "mcp__codebase-memory-mcp__search_graph",
+      "Bash(docker run *)",
+      "Bash(go mod *)",
+      "Bash(git *)",
+      "Bash(npx skills *)",
+      "Bash(node *)"
     ]
   },
   "skillOverrides": {
