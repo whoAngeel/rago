@@ -22,6 +22,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+let refreshPromise: Promise<void> | null = null
+
+function getRefreshPromise(): Promise<void> {
+  if (refreshPromise) return refreshPromise
+
+  refreshPromise = useAuthStore.getState().refresh()
+    .finally(() => { refreshPromise = null })
+  return refreshPromise
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -29,9 +39,9 @@ api.interceptors.response.use(
       error.config._retry = true
 
       try {
-        await useAuthStore.getState().refresh()
+        await getRefreshPromise()
       } catch {
-        // refresh falló — no seguir
+        // refresh failed — all queued 401s share this single failure
       }
 
       const newToken = useAuthStore.getState().accessToken

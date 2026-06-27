@@ -126,6 +126,9 @@
   /* ---- Legacy: Container widths ---- */
   --container-navbar: 1376px;
   --container-card: 1312px;
+
+  /* Animations */
+  --animate-loader-bar: loader-bar 1s ease-in-out infinite;
 }
 
 /* ============================================================
@@ -208,6 +211,13 @@
     border-color: #171717;
     outline: none;
   }
+}
+
+/* ---- Loader keyframe ---- */
+
+@keyframes loader-bar {
+  0%, 100% { height: 16px; }
+  50% { height: 52px; }
 }
 
 /* ============================================================

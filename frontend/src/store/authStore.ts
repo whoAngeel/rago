@@ -111,7 +111,6 @@ export const useAuthStore = create<AuthState>()(
                     } = res.data
                     set({ accessToken, refreshToken, user, isAuthenticated: true, isRefreshing: false })
                 } catch (error) {
-                    useToastStore.getState().add("Error de Autenticación", "Error al refrescar token", "error")
                     set({
                         user: null,
                         accessToken: null,

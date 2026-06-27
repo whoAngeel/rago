@@ -1,4 +1,4 @@
-import { Send, Loader2 } from 'lucide-react'
+import { Send } from 'lucide-react'
 import type { SyntheticEvent } from 'react'
 import { useEffect, useRef } from 'react'
 import ReactMarkdown from "react-markdown"
@@ -90,14 +90,6 @@ export function PublicChatArea({ messages, input, setInput, isSending, isQuotaEx
       {/* Messages Area */}
       <div ref={messagesContainerRef} className='flex-1 overflow-y-auto p-4 lg:p-6'>
         <div className='min-h-full flex flex-col justify-end gap-4'>
-        {isSending && (
-          <div className='self-start bg-neutral-50 p-4 border-2 border-neutral-950 rounded-t-lg rounded-br-lg rounded-bl-none shadow-hard-sm max-w-[85%] lg:max-w-[70%]'>
-            <div className='flex items-center gap-2'>
-              <Loader2 className='animate-spin text-neutral-600' size={16} />
-              <span className='text-sm font-bold text-neutral-600'>Generando respuesta...</span>
-            </div>
-          </div>
-        )}
         {isQuotaExceeded && (
           <div className='self-center bg-red-100 p-4 border-2 border-neutral-950 rounded shadow-hard-sm max-w-full lg:max-w-[90%]'>
             <p className='text-sm font-bold text-red-700'>
@@ -120,6 +112,15 @@ export function PublicChatArea({ messages, input, setInput, isSending, isQuotaEx
           messages.map((msg, index) => (
             <MessageBubble key={index} msg={msg} />
           ))
+        )}
+        {isSending && (
+          <div className='self-start bg-neutral-50 px-4 py-3 border-2 border-neutral-950 rounded-t-lg rounded-br-lg rounded-bl-none shadow-hard-sm'>
+            <div className='flex items-center gap-1'>
+              <span className='w-2 h-2 bg-neutral-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
+              <span className='w-2 h-2 bg-neutral-400 rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
+              <span className='w-2 h-2 bg-neutral-400 rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
         )}
         </div>
       </div>
