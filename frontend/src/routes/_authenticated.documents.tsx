@@ -47,12 +47,6 @@ function RouteComponent() {
       const { data } = await api.get(`/documents/?page=${page}&limit=${limit}`)
       return data
     },
-    refetchInterval: (query) => {
-      const docs = query.state.data?.items
-      if (!docs) return false
-      const hasActive = docs.some(d => d.status === 'uploading' || d.status === 'pending' || d.status === 'processing')
-      return hasActive ? 3000 : false
-    },
   })
 
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0
