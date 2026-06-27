@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
@@ -10,19 +13,33 @@ import (
 	"github.com/whoAngeel/rago/internal/infrastructure/rest/middleware"
 )
 
-type Handlers struct {
-	AskHandler          *AskHandler
-	AuthHandler         *AuthHandler
-	ChatHandler         *ChatHandler
-	ConfigHandler       *ConfigHandler
-	DocumentHandler     *DocumentHandler
-	DocumentGroupHandler *DocumentGroupHandler
-	PublicGroupHandler  *PublicGroupHandler
-	SSEHandler          *SSEHandler
-	UserHandler         *UserHandler
+type ServicePingFn func(ctx context.Context) error
+
+type HealthChecks struct {
+	Postgres ServicePingFn
+	Qdrant   ServicePingFn
+	Storage  ServicePingFn
 }
 
-func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
+type serviceResult struct {
+	Status    string  `json:"status"`
+	LatencyMs float64 `json:"latency_ms"`
+	Error     string  `json:"error,omitempty"`
+}
+
+type Handlers struct {
+	AskHandler           *AskHandler
+	AuthHandler          *AuthHandler
+	ChatHandler          *ChatHandler
+	ConfigHandler        *ConfigHandler
+	DocumentHandler      *DocumentHandler
+	DocumentGroupHandler *DocumentGroupHandler
+	PublicGroupHandler   *PublicGroupHandler
+	SSEHandler           *SSEHandler
+	UserHandler          *UserHandler
+}
+
+func NewRouter(logger ports.Logger, handlers *Handlers, checks HealthChecks) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
@@ -34,7 +51,54 @@ func NewRouter(logger ports.Logger, handlers *Handlers) http.Handler {
 	))
 
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer cancel()
+
+		type named struct {
+			name string
+			fn   ServicePingFn
+		}
+		services := []named{
+			{"postgres", checks.Postgres},
+			{"qdrant", checks.Qdrant},
+			{"storage", checks.Storage},
+		}
+
+		results := make(map[string]serviceResult, len(services))
+		var mu sync.Mutex
+		var wg sync.WaitGroup
+		allOK := true
+
+		for _, svc := range services {
+			svc := svc
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				start := time.Now()
+				err := svc.fn(ctx)
+				lat := float64(time.Since(start).Milliseconds())
+				r := serviceResult{Status: "ok", LatencyMs: lat}
+				if err != nil {
+					r.Status = "down"
+					r.Error = err.Error()
+					mu.Lock()
+					allOK = false
+					mu.Unlock()
+				}
+				mu.Lock()
+				results[svc.name] = r
+				mu.Unlock()
+			}()
+		}
+		wg.Wait()
+
+		status := "ok"
+		code := http.StatusOK
+		if !allOK {
+			status = "degraded"
+			code = http.StatusServiceUnavailable
+		}
+		c.JSON(code, gin.H{"status": status, "services": results})
 	})
 
 	setupRoutes(r, handlers)

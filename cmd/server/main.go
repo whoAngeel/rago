@@ -168,6 +168,22 @@ func main() {
 
 	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, sseManager, 10*time.Second, 3, 3, *cfg)
 
+	healthChecks := handlers.HealthChecks{
+		Postgres: func(ctx context.Context) error {
+			sqlDB, err := gormDB.DB()
+			if err != nil {
+				return err
+			}
+			return sqlDB.PingContext(ctx)
+		},
+		Qdrant: func(ctx context.Context) error {
+			return vStore.Ping(ctx)
+		},
+		Storage: func(ctx context.Context) error {
+			return minio.Ping(ctx)
+		},
+	}
+
 	router := handlers.NewRouter(log, &handlers.Handlers{
 		AskHandler: handlers.NewAskHandler(
 			application.NewAskUsecase(vStore, llm, log, embedder, cfg, usageRepo),
@@ -210,7 +226,7 @@ func main() {
 			*cfg,
 		),
 		SSEHandler: handlers.NewSSEHandler(sseManager, log),
-	})
+	}, healthChecks)
 	server := rest.NewServer(cfg.Host, cfg.Port, router, log)
 	middleware.InitJWTSecret(cfg.Secret)
 

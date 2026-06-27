@@ -56,6 +56,11 @@ func (m *MinioAdapter) Delete(ctx context.Context, objKey string) error {
 	return m.client.RemoveObject(ctx, m.bucket, objKey, minio.RemoveObjectOptions{})
 }
 
+func (m *MinioAdapter) Ping(ctx context.Context) error {
+	_, err := m.client.BucketExists(ctx, m.bucket)
+	return err
+}
+
 func (m *MinioAdapter) Exists(ctx context.Context, objKey string) (bool, error) {
 	_, err := m.client.StatObject(ctx, m.bucket, objKey, minio.GetObjectOptions{})
 	if err != nil {

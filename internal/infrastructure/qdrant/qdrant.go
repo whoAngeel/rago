@@ -222,6 +222,11 @@ func (qa *QdrantAdapter) DeleteCollection(ctx context.Context, collection string
 	return nil
 }
 
+func (qa *QdrantAdapter) Ping(ctx context.Context) error {
+	_, err := qa.client.GetCollectionsClient().List(ctx, &qdrant.ListCollectionsRequest{})
+	return err
+}
+
 func (qa *QdrantAdapter) DeleteByDocumentID(ctx context.Context, collection string, documentID int) error {
 	pointsClient := qa.client.GetPointsClient()
 	_, err := pointsClient.Delete(ctx, &qdrant.DeletePoints{
