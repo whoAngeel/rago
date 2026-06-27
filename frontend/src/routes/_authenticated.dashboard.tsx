@@ -48,8 +48,8 @@ function IconBox({
   size?: 'sm' | 'md'
 }) {
   const sizeClass = size === 'sm'
-    ? 'w-7 h-7'
-    : 'w-10 h-10'
+    ? 'w-9 h-9'
+    : 'w-14 h-14'
 
   return (
     <span
@@ -78,13 +78,13 @@ interface StatCardProps {
 
 function StatCard({ icon: Icon, label, value, to, bgClass = 'bg-white' }: StatCardProps) {
   const card = (
-    <div className={`group shadow-hover border-2 border-neutral-950 rounded-xl p-4 flex items-center gap-4 ${bgClass} shadow-hard-md`}>
+    <div className={`group shadow-hover border-2 border-neutral-950 rounded-xl p-6 flex items-center gap-5 ${bgClass} shadow-hard-md`}>
       <IconBox>
-        <Icon size={18} className="text-black" strokeWidth={2.25} />
+        <Icon size={24} className="text-black" strokeWidth={2.25} />
       </IconBox>
       <div className="min-w-0">
-        <p className="text-2xl font-black text-neutral-950 tracking-tighter leading-none mb-1">{value}</p>
-        <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider leading-tight">{label}</p>
+        <p className="text-4xl font-black text-neutral-950 tracking-tighter leading-none mb-1.5">{value}</p>
+        <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider leading-tight">{label}</p>
       </div>
     </div>
   )
@@ -121,8 +121,8 @@ function DonutChart({
   total,
   centerValue,
   centerLabel,
-  size = 160,
-  strokeWidth = 22,
+  size = 220,
+  strokeWidth = 28,
 }: DonutChartProps) {
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
@@ -131,7 +131,7 @@ function DonutChart({
   let cumulative = 0
 
   return (
-    <div className="flex items-center gap-6 sm:gap-8">
+    <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg
           viewBox={`0 0 ${size} ${size}`}
@@ -168,26 +168,26 @@ function DonutChart({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-black tabular-nums tracking-tighter leading-none"
+          <span className="text-4xl font-black tabular-nums tracking-tighter leading-none"
             style={{ color: '#65a30e' }}
           >
             {centerValue}
           </span>
-          <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mt-1">
+          <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider mt-1">
             {centerLabel}
           </span>
         </div>
       </div>
 
-      <div className="space-y-2 min-w-0">
+      <div className="space-y-3 min-w-0">
         {visible.map((seg) => (
-          <div key={seg.label} className="flex items-center gap-2">
+          <div key={seg.label} className="flex items-center gap-3">
             <span
-              className="w-3 h-3 rounded-sm shrink-0 border border-neutral-950"
+              className="w-4 h-4 rounded-sm shrink-0 border border-neutral-950"
               style={{ backgroundColor: seg.color }}
             />
-            <span className="text-sm font-bold text-neutral-700 truncate">{seg.label}</span>
-            <span className="text-sm font-black text-neutral-950 tabular-nums ml-auto">
+            <span className="text-base font-bold text-neutral-700 truncate">{seg.label}</span>
+            <span className="text-base font-black text-neutral-950 tabular-nums ml-auto">
               {seg.value}
             </span>
           </div>
@@ -213,27 +213,27 @@ function QuotaRow({ icon: Icon, label, used, max, isUnlimited }: QuotaRowProps) 
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
           <IconBox size="sm">
-            <Icon size={13} className="text-black" strokeWidth={2.25} />
+            <Icon size={16} className="text-black" strokeWidth={2.25} />
           </IconBox>
-          <span className="text-sm font-bold text-neutral-700">{label}</span>
+          <span className="text-base font-bold text-neutral-700">{label}</span>
         </div>
-        <span className="text-sm font-black text-neutral-950 tabular-nums">
+        <span className="text-base font-black text-neutral-950 tabular-nums">
           {used}
           {!isUnlimited && max > 0 && (
             <span className="font-bold text-neutral-400"> / {max}</span>
           )}
           {isUnlimited && (
-            <span className="ml-1.5 text-[9px] bg-white border border-neutral-950 px-1.5 py-0.5 rounded font-bold uppercase shadow-hard-sm">
+            <span className="ml-1.5 text-[10px] bg-white border border-neutral-950 px-1.5 py-0.5 rounded font-bold uppercase shadow-hard-sm">
               Ilimitado
             </span>
           )}
         </span>
       </div>
       {!isUnlimited && max > 0 && (
-        <div className="h-2.5 w-full bg-neutral-200 rounded-sm border border-neutral-300 overflow-hidden">
+        <div className="h-3 w-full bg-neutral-200 rounded-sm border border-neutral-300 overflow-hidden">
           <div
             className={`h-full transition-all duration-500 ${
               isHigh ? 'bg-accent-orange-deep' : 'bg-neutral-950'
@@ -297,17 +297,17 @@ function DashboardPage() {
   ]
 
   return (
-    <div className="max-w-5xl mx-auto w-full space-y-5">
+    <div className="max-w-7xl mx-auto w-full space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-4 bg-white border-2 border-neutral-950 rounded-xl px-5 py-4 shadow-hard-md">
+      <div className="flex items-center gap-4 bg-white border-2 border-neutral-950 rounded-xl px-6 py-5 shadow-hard-md">
         <div className="w-1.5 self-stretch bg-primary-400 rounded-full shrink-0" />
         <div className="flex-1 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black text-neutral-950 tracking-tighter leading-tight">
+            <h1 className="text-3xl font-black text-neutral-950 tracking-[-0.04em] leading-tight [text-wrap:balance]">
               {user ? `Hola, ${user.name}` : 'Dashboard'}
             </h1>
-            <p className="text-xs font-medium text-neutral-500">Resumen de tus documentos y grupos</p>
+            <p className="text-sm font-medium text-neutral-500 mt-0.5">Tu actividad en un vistazo</p>
           </div>
           {hasError && (
             <button
@@ -326,8 +326,8 @@ function DashboardPage() {
         <div className="bg-accent-red border-2 border-neutral-950 rounded-xl px-5 py-4 flex items-start gap-3 shadow-hard-md">
           <AlertTriangle size={18} className="text-neutral-950 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-black text-neutral-950 tracking-tighter">
-              Error al cargar el dashboard
+            <p className="text-sm font-black text-neutral-950 tracking-tight">
+              No pudimos cargar el dashboard
             </p>
             <p className="text-xs font-bold text-neutral-700 mt-0.5">
               Revisa tu conexión y vuelve a intentarlo.
@@ -357,7 +357,7 @@ function DashboardPage() {
       {!isLoading && !hasError && (
         <>
           {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatCard
               icon={FileText}
               label="Documentos listos"
@@ -380,7 +380,7 @@ function DashboardPage() {
             />
             <StatCard
               icon={MessageSquare}
-              label="Consultas"
+              label="Consultas totales"
               value={attempts}
             />
             <StatCard
@@ -392,14 +392,14 @@ function DashboardPage() {
           </div>
 
           {/* Bottom row: donut + quotas */}
-          <div className="grid lg:grid-cols-5 gap-4">
+          <div className="grid lg:grid-cols-5 gap-6">
             {/* Donut chart */}
-            <div className="lg:col-span-3 bg-white border-2 border-neutral-950 rounded-xl p-5 sm:p-6 shadow-hard-lg">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-neutral-100">
-                <h2 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+            <div className="lg:col-span-3 bg-white border-2 border-neutral-950 rounded-xl p-7 shadow-hard-lg">
+              <div className="flex items-center justify-between mb-6 pb-3 border-b border-neutral-100">
+                <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                   Estado de documentos
                 </h2>
-                <span className="text-[10px] font-black text-neutral-950 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full tabular-nums">
+                <span className="text-xs font-black text-neutral-950 bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-full tabular-nums">
                   {total}
                 </span>
               </div>
@@ -428,32 +428,32 @@ function DashboardPage() {
             </div>
 
             {/* Quotas + alerts */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-5">
               {/* Unanswered alert */}
               {unanswered > 0 && (
                 <Link
                   to="/documents"
-                  className="block shadow-hover bg-accent-orange border-2 border-neutral-950 rounded-xl px-4 py-3 shadow-hard-md"
+                  className="block shadow-hover bg-accent-orange border-2 border-neutral-950 rounded-xl px-5 py-4 shadow-hard-md"
                 >
                   <div className="flex items-start gap-3">
-                    <AlertTriangle size={16} className="text-neutral-950 shrink-0 mt-0.5" />
+                    <AlertTriangle size={20} className="text-neutral-950 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-neutral-950 tracking-tighter leading-tight">
-                        {unanswered} sin respuesta
+                      <p className="text-base font-black text-neutral-950 tracking-tight leading-tight">
+                        {unanswered} preguntas sin responder
                       </p>
-                      <p className="text-[10px] font-bold text-neutral-700 mt-0.5">
-                        Agrega más documentos con contexto.
+                      <p className="text-xs font-bold text-neutral-700 mt-1">
+                        Sube documentos con información más relevante.
                       </p>
                     </div>
-                    <ArrowRight size={14} className="text-neutral-950 shrink-0 mt-1" />
+                    <ArrowRight size={16} className="text-neutral-950 shrink-0 mt-1" />
                   </div>
                 </Link>
               )}
 
               {/* Quotas */}
-              <div className="bg-white border-2 border-neutral-950 rounded-xl p-5 shadow-hard-md space-y-5">
-                <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
-                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+              <div className="bg-white border-2 border-neutral-950 rounded-xl p-7 shadow-hard-md space-y-6">
+                <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                     Uso del plan
                   </p>
                 </div>
