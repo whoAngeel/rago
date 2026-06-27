@@ -179,7 +179,7 @@ function DonutChart({
         </div>
       </div>
 
-      <div className="space-y-3 min-w-0">
+      <div className="flex-1 space-y-3 min-w-0">
         {visible.map((seg) => (
           <div key={seg.label} className="flex items-center gap-3">
             <span
@@ -339,7 +339,7 @@ function DashboardPage() {
       {/* ── Loading ── */}
       {isLoading && !hasError && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
             <Skeleton className="h-[88px]" />
@@ -357,7 +357,7 @@ function DashboardPage() {
       {!isLoading && !hasError && (
         <>
           {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <StatCard
               icon={FileText}
               label="Documentos listos"
@@ -428,7 +428,7 @@ function DashboardPage() {
             </div>
 
             {/* Quotas + alerts */}
-            <div className="lg:col-span-2 space-y-5">
+            <div className="lg:col-span-2 flex flex-col gap-5">
               {/* Unanswered alert */}
               {unanswered > 0 && (
                 <Link
@@ -451,7 +451,7 @@ function DashboardPage() {
               )}
 
               {/* Quotas */}
-              <div className="bg-white border-2 border-neutral-950 rounded-xl p-7 shadow-hard-md space-y-6">
+              <div className="flex-1 bg-white border-2 border-neutral-950 rounded-xl p-7 shadow-hard-md space-y-6">
                 <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                     Uso del plan
