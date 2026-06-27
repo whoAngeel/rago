@@ -165,9 +165,10 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		w.handleDocumentError(ctx, doc, fmt.Errorf("parser resolve: %w", err))
 		return
 	}
-	parseCtx := ctx
+	parseCtx, parseCancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer parseCancel()
 	if doc.ForceOCR {
-		parseCtx = context.WithValue(ctx, parserpkg.ForceOCRKey, true)
+		parseCtx = context.WithValue(parseCtx, parserpkg.ForceOCRKey, true)
 	}
 	parsedDocs, err := parser.Parse(parseCtx, bytes.NewReader(rawBytes), doc.ContentType)
 	finishParse(err)
