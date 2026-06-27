@@ -141,8 +141,11 @@ func (m *mockVectorStore) CreateCollection(_ context.Context, _ string, _ int) e
 func (m *mockVectorStore) UpsertDocuments(_ context.Context, _ string, _ []schema.Document, _ [][]float32) error {
 	return nil
 }
-func (m *mockVectorStore) GetPointsCount(_ context.Context, _ string) (uint64, error) { return 0, nil }
-func (m *mockVectorStore) DeleteCollection(_ context.Context, _ string) error          { return nil }
+func (m *mockVectorStore) GetPointsCount(_ context.Context, _ string) (uint64, error)  { return 0, nil }
+func (m *mockVectorStore) GetPointsCountByFilter(_ context.Context, _ string, _ int) (uint64, error) {
+	return 0, nil
+}
+func (m *mockVectorStore) DeleteCollection(_ context.Context, _ string) error { return nil }
 
 type mockEmbedder struct{ vec []float32 }
 

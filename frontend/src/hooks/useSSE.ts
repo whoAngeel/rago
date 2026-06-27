@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
 import { API_BASE_URL, API_VERSION } from "../lib/constants";
-import type { ProcessingStep } from "../types";
+import type { ProcessingStep, DocumentHealth } from "../types";
 
 export function useSSE() {
     const queryClient = useQueryClient()
@@ -16,9 +16,10 @@ export function useSSE() {
 
         eventSource.addEventListener("document_status", (event) => {
             const data = JSON.parse(event.data) as { id: number; status: string; error: string }
-            // Clear stale step cache whenever a new processing attempt starts
+            // Clear stale step/health cache whenever a new processing attempt starts
             if (data.status === 'processing') {
                 queryClient.removeQueries({ queryKey: ["steps", data.id] })
+                queryClient.removeQueries({ queryKey: ["health", data.id] })
             }
             queryClient.invalidateQueries({ queryKey: ["documents"] })
         })
@@ -31,26 +32,31 @@ export function useSSE() {
                 status: string
                 error: string
             }
-            queryClient.setQueryData<ProcessingStep[]>(
-                ["steps", data.doc_id],
-                (old) => {
-                    const prev = old ?? []
-                    const updated: ProcessingStep = {
-                        id: data.step_id,
-                        document_id: data.doc_id,
-                        step_name: data.step_name,
-                        status: data.status as ProcessingStep["status"],
-                        duration_ms: null,
-                        error_message: data.error || null,
-                        created_at: new Date().toISOString(),
-                    }
-                    const idx = prev.findIndex(s => s.step_name === data.step_name)
-                    if (idx >= 0) {
-                        return prev.map((s, i) => i === idx ? updated : s)
-                    }
-                    return [...prev, updated]
+            const updated: ProcessingStep = {
+                id: data.step_id,
+                document_id: data.doc_id,
+                step_name: data.step_name,
+                status: data.status as ProcessingStep["status"],
+                duration_ms: null,
+                error_message: data.error || null,
+                created_at: new Date().toISOString(),
+            }
+
+            const updateSteps = (prev: ProcessingStep[]) => {
+                const list = prev ?? []
+                const idx = list.findIndex(s => s.step_name === data.step_name)
+                if (idx >= 0) {
+                    return list.map((s, i) => i === idx ? updated : s)
                 }
-            )
+                return [...list, updated]
+            }
+
+            queryClient.setQueryData<ProcessingStep[]>(["steps", data.doc_id], (old) => updateSteps(old ?? []))
+
+            queryClient.setQueryData<DocumentHealth>(["health", data.doc_id], (old) => {
+                if (!old) return old
+                return { ...old, steps: updateSteps(old.steps) }
+            })
         })
 
         eventSource.addEventListener("group_usage_updated", (event) => {

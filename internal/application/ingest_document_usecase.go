@@ -139,6 +139,38 @@ func (i *IngestDocumentUsecase) GetDocumentSteps(ctx context.Context, docID, use
 	return steps, nil
 }
 
+type DocumentHealth struct {
+	Document      *domain.Document        `json:"document"`
+	Steps         []*domain.ProcessingStep `json:"steps"`
+	ChunksIndexed uint64                   `json:"chunks_indexed"`
+}
+
+func (i *IngestDocumentUsecase) GetDocumentHealth(ctx context.Context, docID, userID int) (*DocumentHealth, error) {
+	doc, err := i.DocRepo.FindByID(ctx, docID)
+	if err != nil || doc.UserID != userID {
+		return nil, ErrNotFound
+	}
+
+	steps, err := i.DocRepo.FindStepsByDocumentID(ctx, docID)
+	if err != nil {
+		return nil, err
+	}
+	if steps == nil {
+		steps = []*domain.ProcessingStep{}
+	}
+
+	chunksIndexed, err := i.IngestUC.GetPointsCountByDocumentID(ctx, docID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DocumentHealth{
+		Document:      doc,
+		Steps:         steps,
+		ChunksIndexed: chunksIndexed,
+	}, nil
+}
+
 func (uc *IngestDocumentUsecase) GetDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error) {
 	return uc.DocRepo.FindDocumentsForSelect(ctx, userID)
 }

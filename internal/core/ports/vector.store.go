@@ -11,6 +11,7 @@ type VectorStore interface {
 	UpsertDocuments(ctx context.Context, collection string, docs []schema.Document, vectors [][]float32) error
 	Search(ctx context.Context, collection string, queryVector []float32, userID int, documentIDs []int, limit int) ([]SearchResult, error)
 	GetPointsCount(ctx context.Context, collection string) (uint64, error)
+	GetPointsCountByFilter(ctx context.Context, collection string, documentID int) (uint64, error)
 	DeleteCollection(ctx context.Context, collection string) error
 }
 

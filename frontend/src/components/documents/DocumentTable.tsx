@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatSize } from "../../lib/formatter";
-import type { Document, ProcessingStep } from "../../types";
+import type { Document, ProcessingStep, DocumentHealth } from "../../types";
 import {
   Download,
   FileText,
@@ -152,15 +152,18 @@ function ProgressDots({ doc }: { doc: Document }) {
 
   const canHaveSteps = doc.status !== "uploading" && doc.status !== "pending";
 
-  const { data: steps } = useQuery<ProcessingStep[]>({
-    queryKey: ["steps", doc.id],
+  const { data: health } = useQuery<DocumentHealth>({
+    queryKey: ["health", doc.id],
     queryFn: async () => {
-      const { data } = await api.get(`/documents/${doc.id}/steps`);
+      const { data } = await api.get(`/documents/${doc.id}/health`);
       return data;
     },
-    enabled: isHovered && canHaveSteps,
-    staleTime: Infinity,
+    enabled: canHaveSteps,
+    staleTime: 30000,
   });
+
+  const steps = health?.steps;
+  const chunksIndexed = health?.chunks_indexed;
 
   const handleMouseEnter = () => {
     if (ref.current && canHaveSteps) {
@@ -187,7 +190,7 @@ function ProgressDots({ doc }: { doc: Document }) {
       if (doc.status === "completed") return base + "bg-primary-500";
       return base + "bg-neutral-100";
     }
-    // Fallback when steps not loaded from SSE yet
+    // Fallback when steps not loaded yet
     if (doc.status === "completed") return base + "bg-primary-500";
     if (doc.status === "processing") {
       if (i < 2) return base + "bg-primary-500";
@@ -238,6 +241,19 @@ function ProgressDots({ doc }: { doc: Document }) {
             </span>
           </div>
         )}
+
+        {doc.status === "completed" && chunksIndexed !== undefined && chunksIndexed > 0 && (
+          <span className="text-[10px] font-bold text-primary-500">
+            {chunksIndexed} chunk{chunksIndexed !== 1 ? "s" : ""} indexado{chunksIndexed !== 1 ? "s" : ""}
+          </span>
+        )}
+
+        {doc.status === "completed" && chunksIndexed === 0 && (
+          <span className="text-[10px] font-bold text-accent-red-deep flex items-center gap-1">
+            <AlertCircle size={10} />
+            0 chunks &mdash; sin datos indexados
+          </span>
+        )}
       </div>
 
       {isHovered &&
@@ -259,44 +275,56 @@ function ProgressDots({ doc }: { doc: Document }) {
               )}
             </div>
             {steps !== undefined ? (
-              <div className="divide-y divide-neutral-200">
-                {STEP_NAMES.map((name) => {
-                  const step = stepMap.get(name);
-                  const isCompleted =
-                    step?.status === "completed" ||
-                    (doc.status === "completed" && !step);
-                  const isFailed = step?.status === "failed";
-                  const isActive = step?.status === "started";
-                  return (
-                    <div
-                      key={name}
-                      className="px-2 py-1 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`w-4 h-4 flex items-center justify-center ${isCompleted ? "text-primary-500" : isFailed ? "text-accent-red-deep" : isActive ? "text-blue-600" : "text-neutral-400"}`}
-                        >
-                          {isCompleted ? (
-                            <Check size={12} strokeWidth={3} />
-                          ) : isFailed ? (
-                            <X size={12} strokeWidth={3} />
-                          ) : isActive ? (
-                            <RefreshCw size={10} className="animate-spin" />
-                          ) : (
-                            <Circle size={4} fill="currentColor" />
-                          )}
-                        </span>
-                        <span className="text-xs font-bold capitalize text-neutral-800">
-                          {name}
+              <>
+                <div className="divide-y divide-neutral-200">
+                  {STEP_NAMES.map((name) => {
+                    const step = stepMap.get(name);
+                    const isCompleted =
+                      step?.status === "completed" ||
+                      (doc.status === "completed" && !step);
+                    const isFailed = step?.status === "failed";
+                    const isActive = step?.status === "started";
+                    return (
+                      <div
+                        key={name}
+                        className="px-2 py-1 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`w-4 h-4 flex items-center justify-center ${isCompleted ? "text-primary-500" : isFailed ? "text-accent-red-deep" : isActive ? "text-blue-600" : "text-neutral-400"}`}
+                          >
+                            {isCompleted ? (
+                              <Check size={12} strokeWidth={3} />
+                            ) : isFailed ? (
+                              <X size={12} strokeWidth={3} />
+                            ) : isActive ? (
+                              <RefreshCw size={10} className="animate-spin" />
+                            ) : (
+                              <Circle size={4} fill="currentColor" />
+                            )}
+                          </span>
+                          <span className="text-xs font-bold capitalize text-neutral-800">
+                            {name}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-neutral-500">
+                          {formatDuration(step?.duration_ms)}
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-neutral-500">
-                        {formatDuration(step?.duration_ms)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+                {chunksIndexed !== undefined && (
+                  <div className="px-2 py-1 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-neutral-500">
+                      Chunks en Qdrant
+                    </span>
+                    <span className={`text-[10px] font-mono font-bold ${chunksIndexed > 0 ? "text-primary-500" : "text-accent-red-deep"}`}>
+                      {chunksIndexed}
+                    </span>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="px-2 py-2 text-[10px] font-bold text-neutral-500 flex items-center gap-1">
                 <RefreshCw size={10} className="animate-spin" />

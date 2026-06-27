@@ -192,6 +192,32 @@ func (qa *QdrantAdapter) GetPointsCount(ctx context.Context, collection string) 
 	return info.GetResult().GetPointsCount(), nil
 }
 
+func (qa *QdrantAdapter) GetPointsCountByFilter(ctx context.Context, collection string, documentID int) (uint64, error) {
+	pointsClient := qa.client.GetPointsClient()
+	resp, err := pointsClient.Count(ctx, &qdrant.CountPoints{
+		CollectionName: collection,
+		Filter: &qdrant.Filter{
+			Must: []*qdrant.Condition{{
+				ConditionOneOf: &qdrant.Condition_Field{
+					Field: &qdrant.FieldCondition{
+						Key: "document_id",
+						Match: &qdrant.Match{
+							MatchValue: &qdrant.Match_Keyword{
+								Keyword: fmt.Sprintf("%d", documentID),
+							},
+						},
+					},
+				},
+			}},
+		},
+		Exact: ptrOf(true),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("error counting points: %w", err)
+	}
+	return resp.GetResult().GetCount(), nil
+}
+
 func (qa *QdrantAdapter) DeleteCollection(ctx context.Context, collection string) error {
 	return nil
 }

@@ -170,6 +170,31 @@ func (h *DocumentHandler) Steps(c *gin.Context) {
 	c.JSON(http.StatusOK, steps)
 }
 
+func (h *DocumentHandler) Health(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		rest.RespondError(c, http.StatusBadRequest, "Invalid document ID", err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+
+	health, err := h.usecase.GetDocumentHealth(ctx, id, userID)
+	if err != nil {
+		if errors.Is(err, application.ErrNotFound) {
+			rest.RespondError(c, http.StatusNotFound, "Document not found", "")
+		} else {
+			rest.RespondError(c, http.StatusInternalServerError, "Error getting document health", err.Error())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, health)
+}
+
 func (h *DocumentHandler) Delete(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()

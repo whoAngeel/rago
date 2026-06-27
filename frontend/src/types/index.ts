@@ -92,4 +92,10 @@ interface GroupPublicInfo {
     documents: PublicDocument[]
 }
 
-export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group, GroupUsage, PublicDocument, GroupPublicInfo }
+interface DocumentHealth {
+    document: Document
+    steps: ProcessingStep[]
+    chunks_indexed: number
+}
+
+export type { User, Document, ChatSession, Source, ChatMessage, ProcessingStep, Group, GroupUsage, PublicDocument, GroupPublicInfo, DocumentHealth }

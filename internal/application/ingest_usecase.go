@@ -79,6 +79,10 @@ func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, meta
 	return nil
 }
 
+func (iu *IngestUsecase) GetPointsCountByDocumentID(ctx context.Context, documentID int) (uint64, error) {
+	return iu.VectorStore.GetPointsCountByFilter(ctx, iu.config.QdrantCollection, documentID)
+}
+
 func buildMetadata(doc *domain.Document, metadata map[string]any) map[string]any {
 	merged := map[string]any{
 		"source":       doc.Filename,

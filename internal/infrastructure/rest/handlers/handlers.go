@@ -83,6 +83,7 @@ func setupRoutes(router *gin.Engine, h *Handlers) {
 			documents.POST("/", h.DocumentHandler.Upload)
 			documents.DELETE("/:id", h.DocumentHandler.Delete)
 			documents.GET("/:id/steps", h.DocumentHandler.Steps)
+			documents.GET("/:id/health", h.DocumentHandler.Health)
 			documents.POST("/:id/reprocess", h.DocumentHandler.Reprocess)
 		}
 
