@@ -171,7 +171,7 @@ sequenceDiagram
     W->>PG: FindPendingDocuments(concurrency=3)
     W->>PG: status=processing
     W->>MI: descarga archivo
-    W->>P: Parse (timeout 10min; OCR si es imagen/PDF escaneado)
+    W->>P: Parse, timeout 10min, OCR si es imagen o PDF escaneado
     P-->>W: texto extraído
     W->>C: Chunk(texto) — 1000 chars, overlap 200
     W->>E: EmbedText(chunk) por cada chunk
@@ -442,12 +442,6 @@ CONTEXT_WINDOW_LIMIT=8192   # nota: es un límite de RESULTADOS de búsqueda, no
 - Health check profundo (Postgres + Qdrant + MinIO)
 - Frontend React (dashboard, documentos, grupos, chat, settings)
 
-### ❌ Pendiente
-
-- RBAC aplicado a rutas (middleware existe, no se usa)
-- Rate limiting
-- Historial de conversación con presupuesto real de tokens (hoy `CONTEXT_WINDOW_LIMIT` es un límite de resultados, no de tokens)
-- Ingesta automática desde MinIO por notificación de eventos (hoy es manual vía API)
 
 ---
 
