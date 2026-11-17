@@ -13,6 +13,7 @@ import (
 	"github.com/whoAngeel/rago/internal/application"
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
+	chunkerpkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
 	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
@@ -23,15 +24,17 @@ type IngestWorker struct {
 	BlobStorage    ports.BlobStorage
 	ParserRegistry ports.ParserRegistry
 	Chunker        ports.Chunker
-	Embedder       ports.Embedder
-	IngestUC       *application.IngestUsecase
-	SSEManager     ports.SSEManager
-	PollInterval   time.Duration
-	Concurrency    int
-	MaxRetries     int
-	spotCh         chan struct{}
-	processed      atomic.Int64
-	wg             sync.WaitGroup
+	// ChunkHeader prepends the "[title — p. N]" context header to every chunk.
+	ChunkHeader  bool
+	Embedder     ports.Embedder
+	IngestUC     *application.IngestUsecase
+	SSEManager   ports.SSEManager
+	PollInterval time.Duration
+	Concurrency  int
+	MaxRetries   int
+	spotCh       chan struct{}
+	processed    atomic.Int64
+	wg           sync.WaitGroup
 	// ParseCache and ParserSignature are optional; a nil cache disables parse caching.
 	ParseCache      ports.ParseCache
 	ParserSignature string
@@ -44,6 +47,7 @@ func NewIngestWorker(
 	blobStorage ports.BlobStorage,
 	parserRegistry ports.ParserRegistry,
 	chunker ports.Chunker,
+	chunkHeader bool,
 	embedder ports.Embedder,
 	ingestUC *application.IngestUsecase,
 	sseManager ports.SSEManager,
@@ -58,6 +62,7 @@ func NewIngestWorker(
 		BlobStorage:    blobStorage,
 		ParserRegistry: parserRegistry,
 		Chunker:        chunker,
+		ChunkHeader:    chunkHeader,
 		Embedder:       embedder,
 		IngestUC:       ingestUC,
 		SSEManager:     sseManager,
@@ -175,20 +180,13 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		}
 	}
 
-	var chunks []string
-	for _, parsedDoc := range parsedDocs {
-		if parsedDoc.Metadata["chunk_type"] == "structured" {
-			chunks = append(chunks, parsedDoc.PageContent)
-		} else {
-			finishChunk := w.trackStep(ctx, doc.ID, doc.UserID, "chunk")
-			docChunks, err := w.Chunker.Chunk(parsedDoc.PageContent)
-			finishChunk(err)
-			if err != nil {
-				w.handleDocumentError(ctx, doc, fmt.Errorf("chunking: %w", err))
-				return
-			}
-			chunks = append(chunks, docChunks...)
-		}
+	// One "chunk" step per document, covering all its pages.
+	finishChunk := w.trackStep(ctx, doc.ID, doc.UserID, "chunk")
+	chunks, err := chunkerpkg.ChunkPages(parsedDocs, doc.Filename, w.Chunker, w.ChunkHeader)
+	finishChunk(err)
+	if err != nil {
+		w.handleDocumentError(ctx, doc, fmt.Errorf("chunking: %w", err))
+		return
 	}
 
 	if len(chunks) == 0 {
@@ -196,7 +194,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		return
 	}
 
-	err := w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string) func(error) {
+	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string) func(error) {
 		return w.trackStep(ctx, doc.ID, doc.UserID, stepName)
 	})
 	if err != nil {

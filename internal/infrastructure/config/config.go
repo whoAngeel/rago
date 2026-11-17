@@ -59,6 +59,13 @@ type Config struct {
 	// PDFOCRMode is "always" (default: every PDF page goes through the LLM OCR,
 	// the text layer is the fallback) or "auto" (OCR only pages without a text layer).
 	PDFOCRMode string
+	// Chunker is "recursive" (default) or "fixed". Invalid chunking values fall back to the defaults at startup.
+	Chunker string
+	// ChunkSize and ChunkOverlap are in runes.
+	ChunkSize    int
+	ChunkOverlap int
+	// ChunkContextHeader prepends a "[title — p. N]" line to every chunk before embedding.
+	ChunkContextHeader bool
 }
 
 func Load() (*Config, error) {
@@ -106,6 +113,11 @@ func Load() (*Config, error) {
 		OCREngine:  getEnv("OCR_ENGINE", "llm"),
 		OCRModel:   getEnv("OCR_MODEL", "google/gemini-2.5-flash-lite"),
 		PDFOCRMode: getEnv("PDF_OCR_MODE", "always"),
+
+		Chunker:            getEnv("CHUNKER", "recursive"),
+		ChunkSize:          getEnvAsInt("CHUNK_SIZE", 1500),
+		ChunkOverlap:       getEnvAsInt("CHUNK_OVERLAP", 200),
+		ChunkContextHeader: getEnvAsBool("CHUNK_CONTEXT_HEADER", true),
 	}
 
 	if cfg.OpenRouterKey == "" {

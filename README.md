@@ -427,6 +427,12 @@ CHAT_HISTORY_LIMIT=10
 CONTEXT_WINDOW_LIMIT=8192   # nota: ya NO define el tamaño de la recuperación (se usa RETRIEVAL_TOP_K); se mantiene solo por compatibilidad
 RETRIEVAL_TOP_K=8           # máximo de chunks que se piden a Qdrant
 RETRIEVAL_SCORE_THRESHOLD=0.25   # descarta chunks con score (similitud coseno) menor; 0 o menos desactiva el corte
+
+# Chunking
+CHUNKER=recursive           # recursive | fixed
+CHUNK_SIZE=1500             # tamaño del chunk en caracteres (runas)
+CHUNK_OVERLAP=200           # solapamiento entre chunks consecutivos
+CHUNK_CONTEXT_HEADER=true   # antepone "[título — p. N]" a cada chunk antes de embeber
 ```
 
 > `GOTENBERG_URL` puede aparecer en algún `.env` viejo — no se usa en el código actual, ignorar.

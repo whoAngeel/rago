@@ -186,9 +186,10 @@ func main() {
 	log.Info("OCR engine", "engine", ocrEngine, "model", ocrModel, "pdf_ocr_mode", pdfOCRMode)
 	parserRegistry := parserpkg.NewDefaultRegistry(ocr.NewEngine(cfg), ocr.PDFOptions(cfg)...)
 
-	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
+	chunker, chunking := cnunkerPkg.FromConfig(*cfg, log)
+	log.Info("chunking", "chunker", chunking.Kind, "size", chunking.Size, "overlap", chunking.Overlap, "context_header", chunking.Header)
 
-	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, sseManager, 10*time.Second, 3, 3, *cfg)
+	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, chunking.Header, embedder, ingestUC, sseManager, 10*time.Second, 3, 3, *cfg)
 	worker.ParseCache = parseCache
 	worker.ParserSignature = parserpkg.Version + "|" + ocrEngine + "|" + ocrModel + "|" + pdfOCRMode
 

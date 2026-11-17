@@ -7,6 +7,7 @@ import (
 
 	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/core/ports"
+	chunkerpkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 )
 
 // RunQuestions embeds each question and searches the collection with no
@@ -62,46 +63,6 @@ func ParseDocs(ctx context.Context, reg ports.ParserRegistry, name string, conte
 	return docs, nil
 }
 
-// ChunkDocs chunks each parsed page on its own, as the ingest worker does;
-// structured documents skip the chunker. With header set, every chunk is
-// prefixed by a context header line carrying the document title and, for
-// page-based documents, the chunk's own page number.
-func ChunkDocs(docs []schema.Document, chunker ports.Chunker, name string, header bool) ([]string, error) {
-	title := ""
-	if header && len(docs) > 0 {
-		title = DocTitle(docs[0].PageContent, name)
-	}
-	var chunks []string
-	for _, d := range docs {
-		cs := []string{d.PageContent}
-		if d.Metadata["chunk_type"] != "structured" {
-			var err error
-			if cs, err = chunker.Chunk(d.PageContent); err != nil {
-				return nil, fmt.Errorf("chunking %s: %w", name, err)
-			}
-		}
-		for _, c := range cs {
-			if header {
-				c = ContextHeader(title, pageNumber(d.Metadata)) + "\n" + c
-			}
-			chunks = append(chunks, c)
-		}
-	}
-	return chunks, nil
-}
-
-// pageNumber reads the page_number metadata, which is an int when freshly
-// parsed and a float64 after a JSON round trip; 0 when absent.
-func pageNumber(md map[string]any) int {
-	switch v := md["page_number"].(type) {
-	case int:
-		return v
-	case float64:
-		return int(v)
-	}
-	return 0
-}
-
 // BuildChunks parses a document and chunks it the way the ingest worker does:
 // parser chosen by content type, structured documents skip the chunker.
 func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Chunker, name string, content []byte) ([]string, error) {
@@ -109,5 +70,5 @@ func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Ch
 	if err != nil {
 		return nil, err
 	}
-	return ChunkDocs(docs, chunker, name, false)
+	return chunkerpkg.ChunkPages(docs, name, chunker, false)
 }

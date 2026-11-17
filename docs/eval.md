@@ -11,7 +11,7 @@ set -a; . ./scripts/local-env.sh; set +a
 go run ./cmd/eval --out /tmp/eval.json
 ```
 
-En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (TXT, MD y PDF con respaldo de OCR), el mismo chunker (1000/200) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
+En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (TXT, MD y PDF con respaldo de OCR), el mismo chunker que el servidor (por defecto `recursive` 1500/200 con cabecera de contexto) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
 
 ## Documentos y preguntas por defecto
 
@@ -32,14 +32,14 @@ En cada ejecución se vuelven a ingestar los documentos en la colección `rago_e
 - `--force-ocr`: rasteriza y pasa por OCR todas las páginas de los PDF en lugar de usar su capa de texto; aplica a la ingesta y a `--dump-chunks`. Con `--dump-chunks` siempre usa Tesseract; en la ingesta usa el motor de `OCR_ENGINE`.
 - La evaluación sigue `OCR_ENGINE` y `PDF_OCR_MODE`: con los valores por defecto envía las imágenes de las páginas de los PDF a OpenRouter.
 - `--source nombre`: con `--dump-chunks`, limita la salida a un documento.
-- `--chunker fixed|recursive`: estrategia de chunking (por defecto `fixed`, la del servidor). `recursive` corta por párrafo, línea, fin de frase y espacio, en ese orden. Aplica a la ingesta y a `--dump-chunks`.
-- `--chunk-size N` y `--chunk-overlap N`: tamaño y solapamiento en caracteres (por defecto 1000 y 200). Con los valores por defecto los chunks son idénticos a los del servidor.
-- `--context-header`: antepone a cada chunk una línea `[título — p. N]` (`[título]` si el documento no tiene páginas) antes de calcular el embedding. El título es la primera línea no vacía de la primera página, o el nombre del archivo si está vacía.
+- `--chunker fixed|recursive`: estrategia de chunking (por defecto `CHUNKER` de la configuración). `recursive` corta por párrafo, línea, fin de frase y espacio, en ese orden. Aplica a la ingesta y a `--dump-chunks`.
+- `--chunk-size N` y `--chunk-overlap N`: tamaño y solapamiento en caracteres (por defecto `CHUNK_SIZE` y `CHUNK_OVERLAP` de la configuración). Con los valores por defecto los chunks son idénticos a los del servidor.
+- `--context-header`: (por defecto `CHUNK_CONTEXT_HEADER`; usa `--context-header=false` para quitarla) antepone a cada chunk una línea `[título — p. N]` (`[título]` si el documento no tiene páginas) antes de calcular el embedding. El título es la primera línea no vacía de la primera página, o el nombre del archivo si está vacía.
 - `--parse-cache-dir ruta`: carpeta con las páginas ya parseadas (por defecto `<directorio de caché del usuario>/rago-eval/parse`; una cadena vacía desactiva la caché). La clave combina el contenido del archivo, la versión del parser, el motor y modelo de OCR, el modo de OCR de PDF y `--force-ocr`. Al terminar la ingesta se imprime cuántos archivos se parsearon y cuántos vinieron de la caché. Parsear PDF con un LLM tiene costo, por eso conviene no repetirlo al probar chunking.
 
 ## Experimentos de chunking
 
-Cada ejecución imprime en stderr la configuración de chunking que usa. Compara variantes contra el valor base (`fixed` 1000/200) guardando un reporte por variante; la caché de parseo evita volver a llamar al OCR:
+Los valores por defecto de `--chunker`, `--chunk-size`, `--chunk-overlap` y `--context-header` salen de la configuración del servidor (`CHUNKER`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `CHUNK_CONTEXT_HEADER`), así que `go run ./cmd/eval` sin flags mide lo que hace el servidor; los flags explícitos los reemplazan. `--dump-chunks` no lee la configuración y usa los mismos valores integrados (recursive, 1500, 200, cabecera activa). Cada ejecución imprime en stderr la configuración de chunking que usa. Compara variantes contra el valor base (el default del servidor; el anterior era `fixed` 1000/200, que se reproduce con `--chunker fixed --chunk-size 1000 --context-header=false`) guardando un reporte por variante; la caché de parseo evita volver a llamar al OCR:
 
 ```sh
 go run ./cmd/eval --chunker recursive --chunk-size 800 --chunk-overlap 120 --out /tmp/recursive.json
