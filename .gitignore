@@ -54,3 +54,6 @@ frontend/.vite/
 logs/
 tmp/
 uploads/
+
+# Private evaluation documents (never commit)
+testdata/private/

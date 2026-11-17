@@ -9,18 +9,16 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/whoAngeel/rago/internal/application"
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/eval"
-	chunkerpkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
 	"github.com/whoAngeel/rago/internal/infrastructure/openrouter"
-	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 	"github.com/whoAngeel/rago/internal/infrastructure/qdrant"
 )
 
@@ -29,6 +27,14 @@ const (
 	evalUserID     = 987654321 // synthetic user, never a real one
 	purgeUpToDocID = 64        // stale document ids cleared before a fresh ingest
 )
+
+// stringList is a repeatable string flag.
+type stringList []string
+
+func (l *stringList) String() string     { return strings.Join(*l, ",") }
+func (l *stringList) Set(v string) error { *l = append(*l, v); return nil }
+
+const dataRoot = "testdata"
 
 func main() {
 	if err := run(); err != nil {
@@ -43,9 +49,36 @@ func run() error {
 	out := fs.String("out", "", "also write the report as JSON to this path")
 	skipIngest := fs.Bool("skip-ingest", false, "reuse the data already in the "+evalCollection+" collection")
 	allowRemote := fs.Bool("allow-remote", false, "allow a QDRANT_HOST that is not localhost/127.0.0.1/::1")
-	questionsPath := fs.String("questions", "testdata/eval/questions.json", "path to the questions dataset")
-	dataDir := fs.String("data-dir", "testdata", "directory with the sample documents")
+	var questionPaths, dataDirs stringList
+	fs.Var(&questionPaths, "questions", "question file (repeatable); default: testdata/eval/*.json plus testdata/private/questions.json if present")
+	fs.Var(&dataDirs, "data-dir", "directory with documents (repeatable, non-recursive); default: testdata, plus testdata/manuals and testdata/private if present")
+	dump := fs.Bool("dump-chunks", false, "print the chunks ingestion would produce and exit; needs no Qdrant, embedder or API key")
+	dumpSource := fs.String("source", "", "with --dump-chunks, only this document (base file name)")
 	fs.Parse(os.Args[1:])
+
+	if len(dataDirs) == 0 {
+		dataDirs = DefaultDirs()
+	}
+	sources, warnings, err := eval.CollectSources(dataDirs)
+	if err != nil {
+		return err
+	}
+	for _, w := range warnings {
+		fmt.Fprintln(os.Stderr, "warning:", w)
+	}
+	if *dump {
+		return dumpChunks(sources, *dumpSource)
+	}
+	if *dumpSource != "" {
+		return fmt.Errorf("--source only applies with --dump-chunks")
+	}
+	if len(questionPaths) == 0 {
+		paths, err := eval.DefaultQuestionPaths(dataRoot)
+		if err != nil {
+			return err
+		}
+		questionPaths = paths
+	}
 
 	// config.Load requires these even though the eval never uses them.
 	for k, v := range map[string]string{"DATABASE_URL": "unused", "MINIO_ENDPOINT": "unused"} {
@@ -64,15 +97,11 @@ func run() error {
 		*topK = cfg.RetrievalTopK
 	}
 
-	files, err := eval.ListSourceFiles(*dataDir)
+	questions, err := eval.LoadQuestionFiles(questionPaths)
 	if err != nil {
 		return err
 	}
-	questions, err := eval.LoadQuestions(*questionsPath)
-	if err != nil {
-		return err
-	}
-	if err := eval.ValidateQuestions(questions, files); err != nil {
+	if err := eval.ValidateQuestions(questions, eval.SourceNames(sources)); err != nil {
 		return err
 	}
 
@@ -90,7 +119,7 @@ func run() error {
 	}
 
 	if !*skipIngest {
-		if err := ingest(ctx, cfg, log, store, embedder, *dataDir, files); err != nil {
+		if err := ingest(ctx, cfg, log, store, embedder, sources); err != nil {
 			return err
 		}
 	}
@@ -119,18 +148,14 @@ func run() error {
 
 // ingest rebuilds the eval collection content with the same parsers, chunker
 // settings and IngestUsecase the server uses, against the dedicated collection.
-func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store ports.VectorStore, embedder ports.Embedder, dataDir string, files []string) error {
+func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store ports.VectorStore, embedder ports.Embedder, sources []eval.Source) error {
 	evalCfg := *cfg
 	evalCfg.QdrantCollection = evalCollection
 	uc := application.NewIngestUsecase(store, embedder, log, evalCfg)
 
-	// Same registrations as cmd/server/main.go, limited to text-based formats.
-	registry := parserpkg.NewRegistry()
-	registry.Register("text/plain", parserpkg.NewPlainTextAdapter())
-	registry.Register("text/markdown", parserpkg.NewPlainTextAdapter())
-	registry.Register("text/csv", parserpkg.NewCSVParser())
-	registry.Register("application/json", parserpkg.NewJSONParser())
-	chunker := chunkerpkg.NewFixedChunker(1000, 200) // same size/overlap as cmd/server/main.go
+	// Same parsers and chunker settings as cmd/server/main.go, PDF and OCR included.
+	registry := eval.NewParserRegistry()
+	chunker := eval.NewChunker()
 
 	if err := store.CreateCollection(ctx, evalCollection, cfg.EmbeddingDim); err != nil {
 		return fmt.Errorf("creating collection %s: %w", evalCollection, err)
@@ -142,13 +167,14 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 	}
 
 	noSteps := func(string) func(error) { return func(error) {} }
-	for i, name := range files {
+	for i, src := range sources {
+		name := src.Name
 		ct, err := eval.ContentTypeFor(name)
 		if err != nil {
 			log.Warn("skipping unsupported file", "file", name)
 			continue
 		}
-		content, err := os.ReadFile(filepath.Join(dataDir, name))
+		content, err := eval.ReadSource(src)
 		if err != nil {
 			return err
 		}
@@ -163,4 +189,34 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 		fmt.Fprintf(os.Stderr, "ingested %s (%d chunks)\n", name, len(chunks))
 	}
 	return nil
+}
+
+// DefaultDirs is the default document directory list.
+func DefaultDirs() []string { return eval.DefaultDataDirs(dataRoot) }
+
+// dumpChunks parses and chunks the sources as ingestion would and prints them.
+func dumpChunks(sources []eval.Source, only string) error {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	registry, chunker := eval.NewParserRegistry(), eval.NewChunker()
+	var docs []eval.DocChunks
+	for _, src := range sources {
+		if only != "" && src.Name != only {
+			continue
+		}
+		if _, err := eval.ContentTypeFor(src.Name); err != nil {
+			fmt.Fprintln(os.Stderr, "warning: skipping unsupported file", src.Name)
+			continue
+		}
+		content, err := eval.ReadSource(src)
+		if err != nil {
+			return err
+		}
+		chunks, err := eval.BuildChunks(ctx, registry, chunker, src.Name, content)
+		if err != nil {
+			return err
+		}
+		docs = append(docs, eval.DocChunks{Name: src.Name, Chunks: chunks})
+	}
+	return eval.WriteChunkDump(os.Stdout, docs, only)
 }

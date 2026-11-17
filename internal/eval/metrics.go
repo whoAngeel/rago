@@ -3,6 +3,7 @@ package eval
 // Hit is one retrieved chunk reduced to what the evaluation needs.
 type Hit struct {
 	Source string
+	Text   string
 	Score  float32
 }
 
@@ -17,6 +18,13 @@ type QuestionResult struct {
 	TopScore       float32 `json:"top_score"`
 	TopSource      string  `json:"top_source"`
 	Note           string  `json:"note,omitempty"`
+	File           string  `json:"file,omitempty"`
+	// HasChunkCheck is true when the question has expected_contains. ChunkRank
+	// and ChunkScore then describe the first chunk from the expected source
+	// that contains every string (rank 0 = miss).
+	HasChunkCheck bool    `json:"has_chunk_check"`
+	ChunkRank     int     `json:"chunk_rank"`
+	ChunkScore    float32 `json:"chunk_score"`
 }
 
 // FirstRank returns the rank and score of the first hit from expected, or
@@ -24,6 +32,17 @@ type QuestionResult struct {
 func FirstRank(hits []Hit, expected string) (int, float32) {
 	for i, h := range hits {
 		if h.Source == expected {
+			return i + 1, h.Score
+		}
+	}
+	return 0, 0
+}
+
+// FirstChunkRank returns the rank and score of the first hit that comes from
+// expected and whose text contains every string in contains (normalised).
+func FirstChunkRank(hits []Hit, expected string, contains []string) (int, float32) {
+	for i, h := range hits {
+		if h.Source == expected && ContainsAll(h.Text, contains) {
 			return i + 1, h.Score
 		}
 	}
@@ -38,19 +57,40 @@ type Summary struct {
 	Hit3         int     `json:"hit_at_3"`
 	HitK         int     `json:"hit_at_k"`
 	MRR          float64 `json:"mrr"`
+
+	// Chunk-level metrics cover only the answerable questions that have
+	// expected_contains (ChunkCovered of them).
+	ChunkCovered int     `json:"chunk_covered"`
+	ChunkHit1    int     `json:"chunk_hit_at_1"`
+	ChunkHit3    int     `json:"chunk_hit_at_3"`
+	ChunkHitK    int     `json:"chunk_hit_at_k"`
+	ChunkMRR     float64 `json:"chunk_mrr"`
 }
 
 // Summarize computes hit@1, hit@3, hit@k and MRR. Every result's rank was
 // obtained with the same top-k, so hit@k is any non-miss.
 func Summarize(results []QuestionResult) Summary {
 	var s Summary
-	var rr float64
+	var rr, crr float64
 	for _, r := range results {
 		if r.ExpectedSource == "" {
 			s.Unanswerable++
 			continue
 		}
 		s.Answerable++
+		if r.HasChunkCheck {
+			s.ChunkCovered++
+			if r.ChunkRank > 0 {
+				s.ChunkHitK++
+				if r.ChunkRank <= 1 {
+					s.ChunkHit1++
+				}
+				if r.ChunkRank <= 3 {
+					s.ChunkHit3++
+				}
+				crr += 1 / float64(r.ChunkRank)
+			}
+		}
 		if r.Rank == 0 {
 			continue
 		}
@@ -65,6 +105,9 @@ func Summarize(results []QuestionResult) Summary {
 	}
 	if s.Answerable > 0 {
 		s.MRR = rr / float64(s.Answerable)
+	}
+	if s.ChunkCovered > 0 {
+		s.ChunkMRR = crr / float64(s.ChunkCovered)
 	}
 	return s
 }
@@ -96,7 +139,11 @@ func SweepThresholds(results []QuestionResult, thresholds []float64) []Threshold
 				continue
 			}
 			row.AnswerableTotal++
-			if r.Rank > 0 && (th <= 0 || float64(r.Score) >= th) {
+			rank, score := r.Rank, r.Score
+			if r.HasChunkCheck {
+				rank, score = r.ChunkRank, r.ChunkScore
+			}
+			if rank > 0 && (th <= 0 || float64(score) >= th) {
 				row.AnswerableKept++
 			}
 		}

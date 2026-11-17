@@ -1,0 +1,43 @@
+Brevlin S20 - Guide de dépannage
+
+Version 1.1. Ce guide couvre les problèmes les plus fréquents de l'enceinte portable Brevlin S20. Essayez les solutions dans l'ordre indiqué avant de contacter le service client.
+
+1. L'enceinte ne s'allume pas
+
+Vérifiez que la batterie n'est pas vide. Branchez le câble micro-USB fourni sur le port arrière et sur un adaptateur secteur de 5 V. Laissez l'enceinte en charge pendant au moins 15 minutes, puis appuyez de nouveau sur le bouton Marche. Si l'enceinte ne réagit toujours pas, essayez un autre câble. Un câble qui ne transmet que la charge peut sembler défectueux alors qu'il ne transfère pas les données.
+
+Remarque : n'utilisez jamais un adaptateur dont la tension est supérieure à 5 V. Vous risqueriez d'endommager le circuit de charge.
+
+2. L'enceinte ne se connecte pas à mon téléphone
+
+Assurez-vous que l'enceinte est en mode appairage avant de chercher l'appareil sur votre téléphone. Si le voyant ne clignote pas, éteignez l'enceinte, puis rallumez-la et recommencez la procédure d'appairage décrite dans la notice d'installation. Supprimez l'ancienne connexion « Brevlin S20 » dans les réglages Bluetooth de votre téléphone, car une connexion périmée empêche le nouvel appairage.
+
+Si l'enceinte est déjà pleine, elle ne peut pas mémoriser un cinquième appareil. Retirez un appareil de la liste mémorisée, puis appairez de nouveau le téléphone.
+
+3. Le son est faible ou il grésille
+
+Augmentez le volume sur l'enceinte et sur le téléphone. Éloignez l'enceinte de toute source d'interférence, comme un four micro-ondes ou un routeur Wi-Fi situé à moins d'un mètre. Si le son grésille seulement à haut volume, réduisez le volume de l'appareil connecté, car la distorsion provient souvent de la source audio et non de l'enceinte.
+
+4. L'enceinte s'éteint toute seule
+
+L'enceinte passe en veille automatiquement après 15 minutes sans connexion ni signal audio. Ce comportement est normal et il n'indique pas un défaut. Pour éviter la mise en veille, lancez une lecture sur l'appareil connecté ou appuyez sur le bouton Marche.
+
+Si l'enceinte s'éteint pendant la lecture, vérifiez le niveau de charge. Une batterie faible coupe l'alimentation de l'amplificateur avant que le voyant rouge ne clignote. Chargez l'enceinte pendant au moins une heure.
+
+5. Réinitialisation des réglages d'usine
+
+Une réinitialisation efface la liste des appareils appairés et rétablit les réglages d'origine. Utilisez-la seulement si les solutions précédentes n'ont pas résolu le problème.
+
+Pour réinitialiser l'enceinte, maintenez enfoncés le bouton Marche et le bouton Volume + pendant 10 secondes. Le voyant clignote deux fois en blanc lorsque la réinitialisation est terminée. Relâchez alors les boutons, puis recommencez l'appairage avec votre téléphone.
+
+Attention : la réinitialisation n'efface pas les fichiers de votre téléphone et elle ne modifie pas la version du micrologiciel installée.
+
+6. Le bouton Bluetooth ne répond pas
+
+Si le bouton Bluetooth ne réagit pas, maintenez le bouton Marche enfoncé pendant 10 secondes pour forcer l'arrêt. Attendez 30 secondes, puis rallumez l'enceinte. Si le problème persiste, contactez le service client en indiquant le numéro de série inscrit sous la grille avant.
+
+7. Quand contacter le service client
+
+Contactez le service client si l'enceinte chauffe pendant la charge, si la batterie gonfle ou si l'enceinte ne se charge plus après plusieurs essais avec un câble et un adaptateur conformes. Ne démontez jamais l'appareil vous-même. Le démontage annule la garantie et peut présenter un risque pour votre sécurité.
+
+Avant de nous appeler, préparez le numéro de série, la version du micrologiciel affichée dans les réglages de votre téléphone et une description précise du problème. Ces informations permettent de traiter votre demande plus rapidement.

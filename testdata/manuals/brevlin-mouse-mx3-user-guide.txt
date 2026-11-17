@@ -1,0 +1,47 @@
+BREVLIN MX-3 WIRELESS MOUSE - USER GUIDE
+Version 1.4
+
+1. INTRODUCTION
+
+The Brevlin MX-3 is a wireless optical mouse for desktop and laptop use. It has six buttons, an adjustable sensor and a 2.4 GHz wireless connection through a small USB receiver. This guide explains how to connect the mouse, change its sensitivity, replace the battery and clean the sensor.
+
+2. WHAT IS IN THE BOX
+
+- One MX-3 mouse
+- One USB receiver, stored in the battery compartment
+- One AA alkaline battery
+- One quick start leaflet
+
+3. INSTALLING THE RECEIVER AND THE BATTERY
+
+Open the battery compartment on the underside of the mouse. Insert the AA alkaline battery with the polarity marks matching the compartment. Take the USB receiver from the compartment and plug it into a free USB port on your computer. The mouse connects automatically within five seconds. The receiver does not need a driver on Windows, macOS or most Linux distributions.
+
+4. SENSITIVITY (DPI)
+
+The sensor supports a DPI range from 400 to 4800 DPI in steps of 400. The default setting is 1600 DPI. Press the DPI button on the top of the mouse, behind the scroll wheel, to cycle through four preset levels. Each level is shown by a short flash of the indicator on the front of the mouse. To set a custom value, install the companion software and choose the value on the sensitivity slider.
+
+5. BUTTONS
+
+The MX-3 has six buttons: left click, right click, scroll wheel click, two side buttons and the DPI button. The side buttons are programmable in the companion software. By default, the forward side button opens the next page in the browser, and the back side button goes to the previous page.
+
+6. BATTERY
+
+The mouse runs on one AA alkaline battery. A fresh battery lasts up to 12 months with typical use. The indicator on the front blinks when the battery is low. Replace the battery as soon as the indicator starts to blink, because the mouse may disconnect during use.
+
+Remove the battery when you store the mouse for more than two months. Do not use rechargeable batteries in this mouse, because their voltage is lower and the battery indicator will not work correctly.
+
+7. WIRELESS CONNECTION
+
+The receiver works at 2.4 GHz and reaches up to 10 meters in an open room. Keep the receiver away from metal objects and from other wireless devices. If the cursor is slow or jumps, move the receiver to a USB port on the front of the computer or use a short USB extension cable. The receiver can be stored inside the battery compartment when you carry the mouse.
+
+To pair the mouse with a different receiver, press and hold the connect button under the mouse for five seconds until the indicator flashes quickly, then insert the receiver and wait until the flashing stops.
+
+8. CLEANING
+
+Turn the mouse off before cleaning. Wipe the outside with a soft cloth and a mild cleaning agent. Clean the optical sensor on the underside with a dry cotton swab. Do not immerse the mouse in water. Do not use abrasive cleaners, because they scratch the surface and damage the feet.
+
+9. TROUBLESHOOTING
+
+If the mouse does not move the cursor, check the battery, then unplug the receiver and plug it into another USB port. If the cursor moves on a glossy or transparent surface, use a mouse pad. If the side buttons do not work, reinstall the companion software and restart the computer.
+
+Warning: Do not open the mouse or the receiver. Dispose of used batteries at a collection point and never throw them in a household bin.

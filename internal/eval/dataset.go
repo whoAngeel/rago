@@ -19,6 +19,11 @@ type Question struct {
 	Question       string `json:"question"`
 	ExpectedSource string `json:"expected_source"`
 	Note           string `json:"note"`
+	// ExpectedContains makes the question chunk-level: a retrieved chunk only
+	// counts when it comes from ExpectedSource and contains every string.
+	ExpectedContains []string `json:"expected_contains,omitempty"`
+	// File is the question file the item was loaded from (base name).
+	File string `json:"-"`
 }
 
 // Answerable reports whether some document is expected to answer the question.
@@ -34,7 +39,46 @@ func LoadQuestions(path string) ([]Question, error) {
 	if err := json.Unmarshal(data, &qs); err != nil {
 		return nil, fmt.Errorf("decoding questions %s: %w", path, err)
 	}
+	for i := range qs {
+		qs[i].File = filepath.Base(path)
+	}
 	return qs, nil
+}
+
+// LoadQuestionFiles loads several datasets in order. Ids must be unique across
+// all of them.
+func LoadQuestionFiles(paths []string) ([]Question, error) {
+	var all []Question
+	origin := map[string]string{}
+	for _, p := range paths {
+		qs, err := LoadQuestions(p)
+		if err != nil {
+			return nil, err
+		}
+		for _, q := range qs {
+			if prev, ok := origin[q.ID]; ok && q.ID != "" {
+				return nil, fmt.Errorf("duplicate id %q in %s and %s", q.ID, prev, q.File)
+			}
+			origin[q.ID] = q.File
+			all = append(all, q)
+		}
+	}
+	return all, nil
+}
+
+// DefaultQuestionPaths returns every *.json in root/eval (sorted) plus
+// root/private/questions.json when it exists.
+func DefaultQuestionPaths(root string) ([]string, error) {
+	paths, err := filepath.Glob(filepath.Join(root, "eval", "*.json"))
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(paths)
+	priv := filepath.Join(root, privateDirName, "questions.json")
+	if fi, err := os.Stat(priv); err == nil && fi.Mode().IsRegular() {
+		paths = append(paths, priv)
+	}
+	return paths, nil
 }
 
 // ListSourceFiles returns the sorted names of regular files directly in dir.
@@ -78,6 +122,14 @@ func ValidateQuestions(qs []Question, files []string) error {
 		if q.ExpectedSource != "" && !known[q.ExpectedSource] {
 			return fmt.Errorf("question %q: expected_source %q not found in data directory", q.ID, q.ExpectedSource)
 		}
+		if len(q.ExpectedContains) > 0 && q.ExpectedSource == "" {
+			return fmt.Errorf("question %q: expected_contains needs an expected_source", q.ID)
+		}
+		for _, c := range q.ExpectedContains {
+			if strings.TrimSpace(c) == "" {
+				return fmt.Errorf("question %q: empty string in expected_contains", q.ID)
+			}
+		}
 	}
 	return nil
 }
@@ -94,6 +146,20 @@ func ContentTypeFor(name string) (string, error) {
 		return "text/csv", nil
 	case ".json":
 		return "application/json", nil
+	case ".pdf":
+		return "application/pdf", nil
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document", nil
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nil
+	case ".png":
+		return "image/png", nil
+	case ".jpg", ".jpeg":
+		return "image/jpeg", nil
+	case ".webp":
+		return "image/webp", nil
+	case ".tif", ".tiff":
+		return "image/tiff", nil
 	}
 	return "", fmt.Errorf("unsupported file extension for %q", name)
 }

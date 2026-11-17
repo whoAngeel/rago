@@ -1,6 +1,6 @@
 # Evaluación de recuperación
 
-`go run ./cmd/eval` mide solo la **recuperación**: dada una pregunta, si vuelve el documento correcto, en qué posición y con qué puntaje. No llama al LLM de chat, así que no evalúa la calidad de la respuesta redactada ni el prompt.
+`go run ./cmd/eval` mide solo la **recuperación**: dada una pregunta, si vuelve el documento correcto (y el fragmento correcto), en qué posición y con qué puntaje. No llama al LLM de chat, así que no evalúa la redacción de la respuesta ni el prompt.
 
 Solo necesita Qdrant y el proveedor de embeddings (no usa Postgres, MinIO ni el servidor). Genera peticiones de embeddings que se facturan a la API key configurada.
 
@@ -11,7 +11,14 @@ set -a; . ./scripts/local-env.sh; set +a
 go run ./cmd/eval --out /tmp/eval.json
 ```
 
-En cada ejecución se vuelven a ingestar los documentos de `testdata/` en la colección `rago_eval` con un usuario sintético, usando los mismos parsers, el mismo chunker (1000/200) y `IngestUsecase` que el worker. Nunca se toca `QDRANT_COLLECTION`.
+En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (texto, CSV, JSON, DOCX, XLSX, PDF con respaldo de OCR e imágenes), el mismo chunker (1000/200) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
+
+## Documentos y preguntas por defecto
+
+- Documentos: los archivos directamente dentro de `testdata/` y, si existen, `testdata/manuals/` y `testdata/private/` (sin recursión; los `*.json` de `private/` se ignoran).
+- Preguntas: todos los `*.json` de `testdata/eval/` y, si existe, `testdata/private/questions.json`.
+- `testdata/private/` está en `.gitignore`: guarda documentos reales y no se versiona. **Al ejecutar la evaluación, esos documentos se envían al proveedor de embeddings.**
+- Un documento se identifica por su nombre de archivo; el mismo nombre en dos directorios es un error. Si dos archivos tienen contenido idéntico, solo se ingesta uno y se imprime una advertencia con ambos nombres.
 
 ## Flags
 
@@ -19,25 +26,37 @@ En cada ejecución se vuelven a ingestar los documentos de `testdata/` en la col
 - `--out ruta`: escribe además el reporte en JSON.
 - `--skip-ingest`: reutiliza lo que ya hay en `rago_eval`.
 - `--allow-remote`: permite un `QDRANT_HOST` que no sea local.
-- `--questions ruta` y `--data-dir ruta`: dataset y documentos (por defecto `testdata/eval/questions.json` y `testdata`).
+- `--data-dir ruta` (repetible): reemplaza la lista de directorios por defecto.
+- `--questions ruta` (repetible): reemplaza la lista de archivos de preguntas por defecto. Los `id` deben ser únicos entre todos los archivos.
+- `--dump-chunks`: parsea y trocea los documentos como lo haría la ingesta e imprime cada chunk (documento, índice y longitud en caracteres). No usa Qdrant, embeddings ni API key.
+- `--source nombre`: con `--dump-chunks`, limita la salida a un documento.
+
+## Dos niveles de acierto
+
+- **Archivo**: hay un chunk de `expected_source` entre los resultados. Es lo que mide `rank`.
+- **Chunk**: el campo opcional `expected_contains` (lista de cadenas cortas). Un chunk acierta si viene de `expected_source` y contiene todas las cadenas, comparando tras normalizar ambos lados: Unicode NFKC (las ligaduras de PDF como `ﬁ` equivalen a `fi`), minúsculas y espacios colapsados. Las tildes se conservan.
+
+Las preguntas sin `expected_contains` solo cuentan a nivel de archivo; los denominadores a nivel de chunk indican cuántas preguntas cubren.
+
+Para escribir `expected_contains`, ejecuta `--dump-chunks` y elige cadenas distintivas (un código de modelo, un número con su unidad, el nombre de un botón) que existan en un solo chunk. Evita frases largas: pueden quedar partidas entre dos chunks. Si el parser pierde o deforma el texto, escribe la cadena tal como aparece en el PDF: la pregunta fallará y eso es lo que la evaluación debe mostrar.
 
 ## Cómo leer el reporte
 
-1. **Por pregunta**: posición del primer chunk del documento esperado (`miss` si no apareció), su puntaje y el puntaje más alto devuelto. Las preguntas sin respuesta muestran `(none)`.
-2. **Totales** sobre las preguntas con respuesta: hit@1, hit@3, hit@k y MRR (media del recíproco de la posición; una falla cuenta 0).
-3. **Umbral**: para el valor configurado en `RETRIEVAL_SCORE_THRESHOLD` y para 0.20 a 0.45, cuántas preguntas con respuesta conservan su chunk esperado (puntaje >= corte) y cuántas preguntas sin respuesta terminan correctamente sin resultados. Se busca un corte que mantenga alto el primer valor sin bajar el segundo.
+1. **Por pregunta**: archivo de origen, posición y puntaje del primer chunk del documento esperado, posición y puntaje del primer chunk que cumple `expected_contains` (`miss` si no apareció, `-` si no aplica) y el puntaje más alto devuelto. Las preguntas sin respuesta muestran `(none)`.
+2. **Totales** global y por archivo de preguntas, a ambos niveles: hit@1, hit@3, hit@k y MRR (una falla cuenta 0). Así se leen por separado los manuales privados y los conjuntos sintéticos.
+3. **Umbral**: para `RETRIEVAL_SCORE_THRESHOLD` y de 0.20 a 0.45, cuántas preguntas con respuesta conservan su acierto (a nivel de chunk si la pregunta tiene `expected_contains`, si no a nivel de archivo) y cuántas sin respuesta terminan sin resultados.
 
 Las búsquedas no aplican umbral, de modo que todos los puntajes son visibles.
 
 ## Agregar una pregunta
 
-Añade un objeto a `testdata/eval/questions.json` con `id` único, `question`, `expected_source` y `note`:
+Añade un objeto a un archivo de `testdata/eval/` (o a `testdata/private/questions.json`) con `id` único, `question`, `expected_source`, `note` y, si procede, `expected_contains`:
 
-- `expected_source` es el nombre exacto de un archivo de `testdata/`; déjalo vacío (`""`) si ningún documento responde la pregunta.
-- Redacta la pregunta en el idioma del documento y sin copiar una frase literal.
-- Marca en `note` las preguntas vagas o de seguimiento.
+- `expected_source` es el nombre exacto de un documento; déjalo vacío (`""`) si ningún documento responde.
+- Redacta la pregunta como la haría un usuario, en el idioma del documento, sin copiar una frase literal.
+- Marca en `note` las preguntas vagas, de seguimiento o entre idiomas.
 
-`go test ./internal/eval` valida el dataset contra `testdata/`: ids duplicados, preguntas vacías o archivos inexistentes rompen el build.
+`go test ./internal/eval` valida los archivos que existan: ids duplicados, preguntas vacías, documentos inexistentes y, fuera de `private/`, cadenas de `expected_contains` que no aparecen en ningún chunk.
 
 ## Protección contra producción
 

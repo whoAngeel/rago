@@ -1,0 +1,49 @@
+BREVLIN KF-100 FULL-SIZE WIRELESS KEYBOARD - USER GUIDE
+Version 2.0
+
+1. INTRODUCTION
+
+The Brevlin KF-100 is a full-size wireless keyboard with a numeric keypad, a rechargeable battery and a backlit keyboard. It connects to up to three devices at the same time over Bluetooth, and it switches between them with a key combination. This guide describes how to set up the keyboard, use its shortcuts, adjust the backlight and care for the battery.
+
+2. WHAT IS IN THE BOX
+
+- One KF-100 keyboard
+- One USB-C charging cable, 1.5 m long
+- One quick start leaflet
+- Two AAA batteries for the optional wireless receiver remote
+
+Remove the protective film from the key surface before use.
+
+3. CONNECTING THE KEYBOARD TO A DEVICE
+
+Turn the power switch on the back of the keyboard to ON. Press and hold the Fn key together with key 1 for three seconds until the indicator starts to blink. Open the Bluetooth settings on your computer, select "Brevlin KF-100" and confirm the pairing code shown on the screen. The indicator stops blinking when the connection is ready.
+
+4. SWITCHING BETWEEN DEVICES
+
+The keyboard can remember three devices. To switch to a stored device, press Fn + 1 for the first device, Fn + 2 for the second device or Fn + 3 for the third device. The indicator flashes once when the switch is complete. Switching takes about two seconds.
+
+5. BACKLIGHT
+
+Press Fn + the brightness key to cycle through three backlight levels: low, medium and high. The backlight turns off automatically after 10 seconds of inactivity, and any key press brings it back. To disable the automatic timeout, hold Fn and press the backlight key for three seconds. The indicator blinks twice to confirm the change.
+
+6. BATTERY
+
+The KF-100 has a built-in lithium-ion battery. With the backlight off and typical office use, one full charge lasts up to 4 months. With the backlight on at the medium level, one full charge lasts up to 5 weeks.
+
+When the battery level falls below 15 percent, the battery indicator on the top right corner blinks red. Connect the USB-C cable and charge the keyboard. A full charge from empty takes 3 hours. The keyboard can be used while it charges, but the charging time is longer when the backlight is on.
+
+Do not leave the keyboard connected to a charger for more than 24 hours at a time. Charge it at least once every three months during long storage.
+
+7. KEY LAYOUT AND SPECIAL KEYS
+
+The top row of the keyboard contains the media keys, the calculator key and the sleep key. Hold Fn to use the secondary function printed in blue on each key. The Fn key on the left side is also used for the device switch and the backlight shortcuts. The Caps Lock indicator is placed above the numeric keypad.
+
+8. CARE
+
+Clean the keyboard with a soft cloth slightly dampened with water. Do not spray liquid directly onto the keys. Use compressed air to remove dust from the spaces between the keys. Keep food and drinks away from the keyboard. If liquid enters the keyboard, switch it off immediately, turn it upside down and let it dry for at least 24 hours before you use it again.
+
+9. TROUBLESHOOTING
+
+If the keyboard does not respond after pairing, switch the power off and on again, then remove the device from the Bluetooth list and pair the keyboard once more. If one key does not respond, check that the key cap is pressed fully into place. If the keyboard disconnects frequently, move any USB 3.0 device away from the receiver and keep the keyboard within 8 meters of the computer.
+
+Warning: Do not disassemble the keyboard. The battery must be replaced only by an authorised service centre.

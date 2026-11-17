@@ -17,7 +17,33 @@ type Report struct {
 	ConfiguredThreshold float64          `json:"configured_threshold"`
 	Questions           []QuestionResult `json:"questions"`
 	Summary             Summary          `json:"summary"`
+	Files               []FileSummary    `json:"files,omitempty"`
 	Thresholds          []ThresholdRow   `json:"thresholds"`
+}
+
+// FileSummary holds the totals of the questions loaded from one question file.
+type FileSummary struct {
+	File    string  `json:"file"`
+	Summary Summary `json:"summary"`
+}
+
+func summarizeByFile(results []QuestionResult) []FileSummary {
+	var order []string
+	groups := map[string][]QuestionResult{}
+	for _, r := range results {
+		if r.File == "" {
+			continue
+		}
+		if _, ok := groups[r.File]; !ok {
+			order = append(order, r.File)
+		}
+		groups[r.File] = append(groups[r.File], r)
+	}
+	out := make([]FileSummary, 0, len(order))
+	for _, f := range order {
+		out = append(out, FileSummary{File: f, Summary: Summarize(groups[f])})
+	}
+	return out
 }
 
 // BuildReport computes the summary and the threshold view. The configured
@@ -37,6 +63,7 @@ func BuildReport(results []QuestionResult, topK int, configured float64, sweep [
 		ConfiguredThreshold: configured,
 		Questions:           results,
 		Summary:             Summarize(results),
+		Files:               summarizeByFile(results),
 		Thresholds:          rows,
 	}
 }
@@ -51,9 +78,10 @@ func (r Report) WriteJSON(w io.Writer) error {
 // WriteTable prints the report as plain tables.
 func (r Report) WriteTable(w io.Writer) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tEXPECTED SOURCE\tRANK\tSCORE\tTOP SCORE\tTOP SOURCE")
+	fmt.Fprintln(tw, "ID\tFILE\tEXPECTED SOURCE\tRANK\tSCORE\tCHUNK RANK\tCHUNK SCORE\tTOP SCORE\tTOP SOURCE")
 	for _, q := range r.Questions {
 		expected, rank, score := q.ExpectedSource, "miss", fmt.Sprintf("%.3f", q.Score)
+		chunkRank, chunkScore := "-", "-"
 		switch {
 		case expected == "":
 			expected, rank, score = "(none)", "-", "-"
@@ -62,15 +90,24 @@ func (r Report) WriteTable(w io.Writer) error {
 		default:
 			score = "-"
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%.3f\t%s\n", q.ID, expected, rank, score, q.TopScore, q.TopSource)
+		if q.HasChunkCheck {
+			chunkRank = "miss"
+			if q.ChunkRank > 0 {
+				chunkRank, chunkScore = fmt.Sprint(q.ChunkRank), fmt.Sprintf("%.3f", q.ChunkScore)
+			}
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%.3f\t%s\n", q.ID, q.File, expected, rank, score, chunkRank, chunkScore, q.TopScore, q.TopSource)
 	}
 	if err := tw.Flush(); err != nil {
 		return err
 	}
 
-	s := r.Summary
-	fmt.Fprintf(w, "\nAnswerable questions: %d (unanswerable: %d), top-k = %d\n", s.Answerable, s.Unanswerable, r.TopK)
-	fmt.Fprintf(w, "hit@1 %s  hit@3 %s  hit@%d %s  MRR %.3f\n\n", ratio(s.Hit1, s.Answerable), ratio(s.Hit3, s.Answerable), r.TopK, ratio(s.HitK, s.Answerable), s.MRR)
+	fmt.Fprintln(w)
+	r.writeTotals(w, "Overall", r.Summary)
+	for _, f := range r.Files {
+		r.writeTotals(w, f.File, f.Summary)
+	}
+	fmt.Fprintln(w)
 
 	tw = tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "THRESHOLD\tANSWERABLE KEPT\tUNANSWERABLE EMPTY")
@@ -82,6 +119,12 @@ func (r Report) WriteTable(w io.Writer) error {
 		fmt.Fprintf(tw, "%s\t%s\t%s\n", label, ratio(t.AnswerableKept, t.AnswerableTotal), ratio(t.UnanswerableClean, t.UnanswerableTotal))
 	}
 	return tw.Flush()
+}
+
+func (r Report) writeTotals(w io.Writer, label string, s Summary) {
+	fmt.Fprintf(w, "[%s] answerable %d (unanswerable %d), top-k = %d\n", label, s.Answerable, s.Unanswerable, r.TopK)
+	fmt.Fprintf(w, "  file  : hit@1 %s  hit@3 %s  hit@%d %s  MRR %.3f\n", ratio(s.Hit1, s.Answerable), ratio(s.Hit3, s.Answerable), r.TopK, ratio(s.HitK, s.Answerable), s.MRR)
+	fmt.Fprintf(w, "  chunk : hit@1 %s  hit@3 %s  hit@%d %s  MRR %.3f  (covers %d of %d answerable)\n", ratio(s.ChunkHit1, s.ChunkCovered), ratio(s.ChunkHit3, s.ChunkCovered), r.TopK, ratio(s.ChunkHitK, s.ChunkCovered), s.ChunkMRR, s.ChunkCovered, s.Answerable)
 }
 
 func ratio(n, d int) string {

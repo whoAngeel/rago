@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -37,31 +38,91 @@ func TestValidateQuestions(t *testing.T) {
 	}
 }
 
-// Guards the real dataset against the real sample files: renaming a file in
-// testdata/ must break the build instead of the live eval.
+// Guards the real datasets against the real sample files: renaming a file or
+// editing a question must break the build instead of the live eval. Optional
+// directories (manuals, private) are validated only when they exist.
 func TestRealDatasetMatchesTestdata(t *testing.T) {
-	qs, err := LoadQuestions("../../testdata/eval/questions.json")
+	const root = "../../testdata"
+	srcs, _, err := CollectSources(DefaultDataDirs(root))
 	if err != nil {
-		t.Fatalf("LoadQuestions: %v", err)
+		t.Fatalf("CollectSources: %v", err)
 	}
-	files, err := ListSourceFiles("../../testdata")
+	paths, err := DefaultQuestionPaths(root)
 	if err != nil {
-		t.Fatalf("ListSourceFiles: %v", err)
+		t.Fatal(err)
 	}
-	if err := ValidateQuestions(qs, files); err != nil {
+	qs, err := LoadQuestionFiles(paths)
+	if err != nil {
+		t.Fatalf("LoadQuestionFiles: %v", err)
+	}
+	if err := ValidateQuestions(qs, SourceNames(srcs)); err != nil {
 		t.Fatalf("ValidateQuestions: %v", err)
 	}
-	if len(qs) < 24 || len(qs) > 30 {
-		t.Errorf("dataset has %d questions, want 24..30", len(qs))
+
+	base, err := LoadQuestions(root + "/eval/questions.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(base) < 24 || len(base) > 30 {
+		t.Errorf("questions.json has %d questions, want 24..30", len(base))
 	}
 	unanswerable := 0
-	for _, q := range qs {
+	for _, q := range base {
 		if q.ExpectedSource == "" {
 			unanswerable++
 		}
 	}
 	if unanswerable == 0 {
-		t.Error("dataset has no unanswerable questions")
+		t.Error("questions.json has no unanswerable questions")
+	}
+}
+
+// Every expected_contains of the committed question sets must exist in the
+// chunks the real parsers produce. Private documents are excluded on purpose:
+// a question there that fails because the parser lost text is the eval's job.
+func TestExpectedContainsExistInChunks(t *testing.T) {
+	const root = "../../testdata"
+	srcs, _, err := CollectSources(DefaultDataDirs(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths, _ := DefaultQuestionPaths(root)
+	qs, err := LoadQuestionFiles(paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]Source{}
+	for _, s := range srcs {
+		byName[s.Name] = s
+	}
+	reg, chunker := NewParserRegistry(), NewChunker()
+	cache := map[string][]string{}
+	for _, q := range qs {
+		src, ok := byName[q.ExpectedSource]
+		if len(q.ExpectedContains) == 0 || !ok || src.Private() {
+			continue
+		}
+		chunks, done := cache[src.Name]
+		if !done {
+			content, err := ReadSource(src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if chunks, err = BuildChunks(context.Background(), reg, chunker, src.Name, content); err != nil {
+				t.Fatalf("BuildChunks(%s): %v", src.Name, err)
+			}
+			cache[src.Name] = chunks
+		}
+		found := false
+		for _, c := range chunks {
+			if ContainsAll(c, q.ExpectedContains) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("question %q (%s): no chunk of %s contains %q", q.ID, q.File, q.ExpectedSource, q.ExpectedContains)
+		}
 	}
 }
 
@@ -80,5 +141,25 @@ func TestContentTypeFor(t *testing.T) {
 	}
 	if _, err := ContentTypeFor("x.bin"); err == nil {
 		t.Error("expected error for unsupported extension")
+	}
+}
+
+func TestContentTypeForRealFormats(t *testing.T) {
+	tests := map[string]string{
+		"m.pdf":  "application/pdf",
+		"m.PDF":  "application/pdf",
+		"w.docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"s.xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"i.png":  "image/png",
+		"i.jpg":  "image/jpeg",
+		"i.jpeg": "image/jpeg",
+		"i.webp": "image/webp",
+		"i.tif":  "image/tiff",
+		"i.tiff": "image/tiff",
+	}
+	for name, want := range tests {
+		if got, err := ContentTypeFor(name); err != nil || got != want {
+			t.Errorf("ContentTypeFor(%q) = %q, %v; want %q", name, got, err, want)
+		}
 	}
 }

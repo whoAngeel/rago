@@ -3,151 +3,238 @@
     "id": "handbook-vacation-tenure",
     "question": "How many vacation days do I get if I've been here for 7 years?",
     "expected_source": "employee_handbook_leave_benefits.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "6 - 10 years",
+      "25 days"
+    ]
   },
   {
     "id": "handbook-parental-eligibility",
     "question": "I started three months ago, can I already take parental leave?",
     "expected_source": "employee_handbook_leave_benefits.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "at least six months",
+      "parental leave"
+    ]
   },
   {
     "id": "handbook-401k-match",
     "question": "How much does the company match on my 401(k)?",
     "expected_source": "employee_handbook_leave_benefits.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "matches 100%",
+      "4% of base salary"
+    ]
   },
   {
     "id": "handbook-remote",
     "question": "How many days a week am I allowed to work from home?",
     "expected_source": "employee_handbook_leave_benefits.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "up to 3 days per week"
+    ]
   },
   {
     "id": "handbook-vague-part-time",
     "question": "and what about part-time people?",
     "expected_source": "employee_handbook_leave_benefits.txt",
-    "note": "vague follow-up: assumes the previous topic was vacation accrual"
+    "note": "vague follow-up: assumes the previous topic was vacation accrual",
+    "expected_contains": [
+      "pro-rata"
+    ]
   },
   {
     "id": "api-token-expiry",
     "question": "How long is a login token valid before I need a new one?",
     "expected_source": "api_documentation_users.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "expire after 15 minutes"
+    ]
   },
   {
     "id": "api-delete-last-admin",
     "question": "What error do I get if I try to delete the only admin account?",
     "expected_source": "api_documentation_users.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "409 Conflict",
+      "at least one admin must exist"
+    ]
   },
   {
     "id": "api-vague-limit",
     "question": "what happens if I go over the limit?",
     "expected_source": "api_documentation_users.txt",
-    "note": "vague: the rate limit is never named in the question"
+    "note": "vague: the rate limit is never named in the question",
+    "expected_contains": [
+      "rate limit is exceeded"
+    ]
   },
   {
     "id": "ml-classification-regression",
     "question": "What is the difference between classification and regression?",
     "expected_source": "ml_introduction.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "discrete label",
+      "continuous value"
+    ]
   },
   {
     "id": "ml-random-forest",
     "question": "Why would I use a random forest instead of a single decision tree?",
     "expected_source": "ml_introduction.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "ensemble method",
+      "reduce overfitting"
+    ]
   },
   {
     "id": "ml-overfitting",
     "question": "My model does great on training data but badly on new data, what is going on and how do I fix it?",
     "expected_source": "ml_introduction.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "Regularization",
+      "cross-validation"
+    ]
   },
   {
     "id": "recipes-cookie-chill",
     "question": "How long should I leave the cookie dough in the fridge before baking?",
     "expected_source": "recipes_from_techcorp_kitchen.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "refrigerate dough for 30 minutes"
+    ]
   },
   {
     "id": "recipes-soup-heat",
     "question": "Which ingredients make the black bean soup spicy?",
     "expected_source": "recipes_from_techcorp_kitchen.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "jalapeño",
+      "cayenne"
+    ]
   },
   {
     "id": "recipes-egg-toast",
     "question": "How do I make avocado toast with an egg?",
     "expected_source": "recipes_from_techcorp_kitchen.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "fried or poached egg"
+    ]
   },
   {
     "id": "recipes-vague-blend",
     "question": "how long do I blend it for?",
     "expected_source": "recipes_from_techcorp_kitchen.txt",
-    "note": "vague follow-up: assumes the smoothie was the previous topic"
+    "note": "vague follow-up: assumes the smoothie was the previous topic",
+    "expected_contains": [
+      "45-60 seconds"
+    ]
   },
   {
     "id": "quarterly-revenue",
     "question": "How much revenue did the company make in the third quarter of 2026?",
     "expected_source": "quarterly_report_q3_2026.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "$847 million"
+    ]
   },
   {
     "id": "quarterly-dividend",
     "question": "What dividend will shareholders get per share and when is it paid?",
     "expected_source": "quarterly_report_q3_2026.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "$0.42 per share",
+      "December 15, 2026"
+    ]
   },
   {
     "id": "climate-sea-level-rate",
     "question": "How fast is the sea level rising per year?",
     "expected_source": "climate_coastal_ecosystems_review.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "3.6 millimeters per year"
+    ]
   },
   {
     "id": "climate-blue-carbon",
     "question": "What does blue carbon mean?",
     "expected_source": "climate_coastal_ecosystems_review.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "known as",
+      "blue carbon"
+    ]
   },
   {
     "id": "climate-coral-1-5",
     "question": "How much of the world's coral could we save if warming stays at 1.5 degrees?",
     "expected_source": "climate_coastal_ecosystems_review.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "70-90% of coral reefs"
+    ]
   },
   {
     "id": "quickstart-setup",
     "question": "What do I need to install before running the project locally?",
     "expected_source": "quickstart_guide.txt",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "Go 1.21",
+      "Docker and Docker Compose"
+    ]
   },
   {
     "id": "quickstart-vague-next",
     "question": "what do I do after cloning it?",
     "expected_source": "quickstart_guide.txt",
-    "note": "vague follow-up: assumes the project is already known"
+    "note": "vague follow-up: assumes the project is already known",
+    "expected_contains": [
+      "cp .env.example .env"
+    ]
   },
   {
     "id": "employees-engineering",
     "question": "Who works in the engineering department and how much do they earn?",
     "expected_source": "employees.csv",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "department: Engineering"
+    ]
   },
   {
     "id": "reports-security-audit",
     "question": "What did the security audit find and by when must it be fixed?",
     "expected_source": "reports.json",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "Security Audit Results",
+      "remediation_deadline: 2026-07-01"
+    ]
   },
   {
     "id": "reports-nps",
     "question": "What was the NPS score in the customer survey?",
     "expected_source": "reports.json",
-    "note": ""
+    "note": "",
+    "expected_contains": [
+      "nps_score: 72"
+    ]
   },
   {
     "id": "none-world-cup",

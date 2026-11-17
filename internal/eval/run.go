@@ -24,14 +24,18 @@ func RunQuestions(ctx context.Context, emb ports.Embedder, store ports.VectorSto
 		hits := make([]Hit, len(found))
 		for i, f := range found {
 			src, _ := f.Document.Metadata["source"].(string)
-			hits[i] = Hit{Source: src, Score: f.Score}
+			hits[i] = Hit{Source: src, Text: f.Document.PageContent, Score: f.Score}
 		}
-		r := QuestionResult{ID: q.ID, ExpectedSource: q.ExpectedSource, Note: q.Note}
+		r := QuestionResult{ID: q.ID, ExpectedSource: q.ExpectedSource, Note: q.Note, File: q.File}
 		if len(hits) > 0 {
 			r.TopScore, r.TopSource = hits[0].Score, hits[0].Source
 		}
 		if q.Answerable() {
 			r.Rank, r.Score = FirstRank(hits, q.ExpectedSource)
+			if len(q.ExpectedContains) > 0 {
+				r.HasChunkCheck = true
+				r.ChunkRank, r.ChunkScore = FirstChunkRank(hits, q.ExpectedSource, q.ExpectedContains)
+			}
 		}
 		out = append(out, r)
 	}
@@ -45,6 +49,8 @@ func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Ch
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(ctx, ParseTimeout)
+	defer cancel()
 	parser, err := reg.Resolve(ct)
 	if err != nil {
 		return nil, fmt.Errorf("resolving parser for %s: %w", name, err)
