@@ -3,14 +3,11 @@ package application
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 )
-
-const defaultLimit = 8
 
 type AskUsecase struct {
 	VectorStore ports.VectorStore
@@ -52,28 +49,20 @@ func (au *AskUsecase) Execute(ctx context.Context, userID int, question string) 
 		au.Logger.Warn("Collection may already exist", "error", err)
 	}
 
-	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, nil, defaultLimit)
+	results, err := au.VectorStore.Search(ctx, au.Config.QdrantCollection, queryVector, userID, nil, au.Config.RetrievalTopK)
 	if err != nil {
 		return "", fmt.Errorf("error searching: %w", err)
 	}
+	results = filterByScore(au.Logger, results, au.Config.RetrievalScoreThreshold)
 
 	if len(results) == 0 {
 		return "[NOT FOUND RELEVANT INFO]", nil
 	}
 
-	var parts []string
-	for i, r := range results {
-		source := "desconocido"
-		if s, ok := r.Document.Metadata["source"]; ok {
-			source = fmt.Sprintf("%v", s)
-		}
-		parts = append(parts, fmt.Sprintf("[Fuente %d: %s]\n%s", i+1, source, r.Document.PageContent))
-	}
-	context := strings.Join(parts, "\n\n---\n\n")
-	prompt := fmt.Sprintf("Usa SOLO el siguiente contexto para responder. Si no encuentras la respuesta, di 'No encontré información sobre eso en los documentos'.\n\nCONTEXTO:\n%s\n\nPREGUNTA: %s\n\nRESPUESTA:", context, question)
+	prompt := BuildUserMessage(results, "", question)
 	au.Logger.Info("Generating answer", "sources_found", len(results), "prompt_len", len(prompt))
 
-	llmResult, err := au.LLMProvider.GenerateAnswer(ctx, prompt)
+	llmResult, err := au.LLMProvider.GenerateAnswer(ctx, DefaultSystemPrompt, prompt)
 	if err != nil {
 		au.Logger.Error("Error generating answer", "error", err)
 		return "", fmt.Errorf("error generating answer: %w", err)

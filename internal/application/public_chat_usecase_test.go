@@ -3,6 +3,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +23,7 @@ type mockGroupRepo struct {
 	incrementErr         error
 	slugExistsVal        bool
 	incrementQuotaCalled bool
+	unansweredCalls      int
 }
 
 func (m *mockGroupRepo) FindBySlug(_ context.Context, _ string) (*domain.DocumentGroup, error) {
@@ -49,7 +51,10 @@ func (m *mockGroupRepo) RemoveDocument(_ context.Context, _, _ int) error       
 func (m *mockGroupRepo) SlugExists(_ context.Context, _ string) (bool, error) {
 	return m.slugExistsVal, nil
 }
-func (m *mockGroupRepo) IncrementUnansweredCount(_ context.Context, _ int) error { return nil }
+func (m *mockGroupRepo) IncrementUnansweredCount(_ context.Context, _ int) error {
+	m.unansweredCalls++
+	return nil
+}
 
 type mockUserRepoPublic struct {
 	user            *domain.User
@@ -129,6 +134,7 @@ func (m *mockDocRepo) MarkStuckDocuments(_ context.Context, _ time.Duration) ([]
 type mockVectorStore struct {
 	results      []ports.SearchResult
 	searchErr    error
+	searchCalled bool
 	capturedArgs struct {
 		userID      int
 		documentIDs []int
@@ -137,6 +143,7 @@ type mockVectorStore struct {
 }
 
 func (m *mockVectorStore) Search(_ context.Context, _ string, _ []float32, userID int, documentIDs []int, limit int) ([]ports.SearchResult, error) {
+	m.searchCalled = true
 	m.capturedArgs.userID = userID
 	m.capturedArgs.documentIDs = documentIDs
 	m.capturedArgs.limit = limit
@@ -155,21 +162,32 @@ func (m *mockVectorStore) DeleteByDocumentID(_ context.Context, _ string, _ int)
 	return nil
 }
 
-type mockEmbedder struct{ vec []float32 }
+type mockEmbedder struct {
+	vec    []float32
+	called bool
+}
 
 func (m *mockEmbedder) EmbedText(_ context.Context, _ string) ([]float32, error) {
+	m.called = true
 	return m.vec, nil
 }
 func (m *mockEmbedder) ComputeEmbeddings(_ context.Context, _ []string) ([][]float32, error) {
 	return [][]float32{m.vec}, nil
 }
 
-type mockLLM struct{ answer string }
+type mockLLM struct {
+	answer string
+	called bool
+	system string
+	prompt string
+}
 
-func (m *mockLLM) GenerateAnswer(_ context.Context, _ string) (ports.LLMResult, error) {
+func (m *mockLLM) GenerateAnswer(_ context.Context, sys, p string) (ports.LLMResult, error) {
+	m.called = true
+	m.system, m.prompt = sys, p
 	return ports.LLMResult{Answer: m.answer, Model: "test-model", InputTokens: 10, OutputTokens: 5}, nil
 }
-func (m *mockLLM) Stream(_ context.Context, _ string, _ func(string) error) (ports.LLMResult, error) {
+func (m *mockLLM) Stream(_ context.Context, _, _ string, _ func(string) error) (ports.LLMResult, error) {
 	return ports.LLMResult{Answer: m.answer, Model: "test-model", InputTokens: 10, OutputTokens: 5}, nil
 }
 
@@ -425,6 +443,58 @@ func TestPublicChat_PassesDocumentIDsToSearch(t *testing.T) {
 	}
 }
 
+func TestPublicChat_GroupWithoutDocumentsSkipsSearchAndQuota(t *testing.T) {
+	group := &domain.DocumentGroup{
+		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
+		ChatQuota: 100, ChatQuotaUsed: 0,
+		DocumentIDs: nil,
+	}
+	groupRepo := &mockGroupRepo{group: group}
+	userRepo := &mockUserRepoPublic{user: &domain.User{ID: 1, ChatQuota: 100}}
+	vs := &mockVectorStore{}
+	embedder := &mockEmbedder{vec: []float32{0.1}}
+	llm := &mockLLM{answer: "respuesta"}
+
+	uc := application.NewPublicChatUsecase(
+		groupRepo,
+		userRepo,
+		&mockDocRepo{},
+		vs,
+		embedder,
+		llm,
+		nil,
+		&mockConfigRepo{val: "Eres un asistente."},
+		nil, // usageRepo
+		nil, // sseManager
+		&mockLogger{},
+		config.Config{QdrantCollection: "test"},
+	)
+
+	answer, err := uc.Chat(context.Background(), "abc", "pregunta")
+
+	if err != nil {
+		t.Fatalf("no esperaba error, got: %v", err)
+	}
+	if answer != "Este grupo no tiene documentos disponibles." {
+		t.Errorf("esperaba mensaje de grupo sin documentos, got: %q", answer)
+	}
+	if embedder.called {
+		t.Error("no debería generar embedding para un grupo sin documentos")
+	}
+	if vs.searchCalled {
+		t.Error("no debería buscar en el vector store para un grupo sin documentos")
+	}
+	if llm.called {
+		t.Error("no debería llamar al LLM para un grupo sin documentos")
+	}
+	if groupRepo.incrementQuotaCalled {
+		t.Error("no debería consumir cuota del grupo para un grupo sin documentos")
+	}
+	if userRepo.incrementCalled {
+		t.Error("no debería consumir cuota del usuario para un grupo sin documentos")
+	}
+}
+
 func TestPublicChat_EmptySearchResultsCallsLLM(t *testing.T) {
 	group := &domain.DocumentGroup{
 		ID: 1, Slug: "abc", IsActive: true, UserID: 1,
@@ -494,5 +564,65 @@ func TestGetGroupInfo_ActiveGroup(t *testing.T) {
 	}
 	if info.Documents[0].Filename != "archivo.pdf" {
 		t.Errorf("esperaba 'archivo.pdf', got: %q", info.Documents[0].Filename)
+	}
+}
+
+func TestPublicChat_SystemPromptSeparateFromUserMessage(t *testing.T) {
+	group := &domain.DocumentGroup{ID: 1, Slug: "abc", IsActive: true, UserID: 1, DocumentIDs: []int{1}}
+	vs := &mockVectorStore{results: []ports.SearchResult{
+		{Document: schema.Document{PageContent: "contenido", Metadata: map[string]any{"source": "a.pdf"}}, Score: 0.9},
+	}}
+	llm := &mockLLM{answer: "ok"}
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, vs, llm)
+
+	if _, err := uc.Chat(context.Background(), "abc", "mi pregunta"); err != nil {
+		t.Fatal(err)
+	}
+	if llm.system != "Eres un asistente." {
+		t.Errorf("system = %q; want the stored system prompt", llm.system)
+	}
+	if strings.Contains(llm.prompt, "Eres un asistente.") {
+		t.Errorf("user message repeats the system prompt: %q", llm.prompt)
+	}
+	if !strings.Contains(llm.prompt, `<documento fuente="a.pdf">`) || !strings.Contains(llm.prompt, "Pregunta: mi pregunta") {
+		t.Errorf("user message wrong: %q", llm.prompt)
+	}
+}
+
+func TestPublicChat_LowConfidenceNoteAfterContext(t *testing.T) {
+	group := &domain.DocumentGroup{ID: 1, Slug: "abc", IsActive: true, UserID: 1, DocumentIDs: []int{1}}
+	vs := &mockVectorStore{results: []ports.SearchResult{
+		{Document: schema.Document{PageContent: "contenido"}, Score: 0.1},
+	}}
+	llm := &mockLLM{answer: "ok"}
+	uc := newTestUsecase(&mockGroupRepo{group: group}, unlimitedUser(), &mockDocRepo{}, vs, llm)
+
+	if _, err := uc.Chat(context.Background(), "abc", "hola"); err != nil {
+		t.Fatal(err)
+	}
+	ctxEnd := strings.Index(llm.prompt, "</contexto>")
+	note := strings.Index(llm.prompt, "NOTA:")
+	if ctxEnd < 0 || note < ctxEnd {
+		t.Errorf("low-confidence note must come after the context block: %q", llm.prompt)
+	}
+}
+
+func TestPublicChat_UnansweredDetection(t *testing.T) {
+	for _, answer := range []string{
+		"No encontré información sobre eso en tus documentos.",
+		"No tengo información suficiente en tus documentos para responder a esto.",
+	} {
+		group := &domain.DocumentGroup{ID: 1, Slug: "abc", IsActive: true, UserID: 1, DocumentIDs: []int{1}}
+		groupRepo := &mockGroupRepo{group: group}
+		vs := &mockVectorStore{results: []ports.SearchResult{
+			{Document: schema.Document{PageContent: "c"}, Score: 0.9},
+		}}
+		uc := newTestUsecase(groupRepo, unlimitedUser(), &mockDocRepo{}, vs, &mockLLM{answer: answer})
+		if _, err := uc.Chat(context.Background(), "abc", "q"); err != nil {
+			t.Fatal(err)
+		}
+		if groupRepo.unansweredCalls != 1 {
+			t.Errorf("answer %q: unansweredCalls = %d; want 1", answer, groupRepo.unansweredCalls)
+		}
 	}
 }

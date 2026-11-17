@@ -410,6 +410,8 @@ MINIO_USE_SSL=false
 OPEN_ROUTER_API="sk-or-..."
 OPEN_ROUTER_BASE_URL="https://openrouter.ai/api/v1"
 LLM_MODEL="google/gemini-2.5-flash"
+LLM_TEMPERATURE=0.2         # temperatura de muestreo del LLM
+LLM_MAX_TOKENS=0            # tope de tokens de la respuesta; 0 deja el límite al proveedor
 EMBEDDING_MODEL="text-embedding-3-small"
 
 # Auth
@@ -419,7 +421,9 @@ REFRESH_TOKEN_EXPIRATION=720h
 
 # Chat
 CHAT_HISTORY_LIMIT=10
-CONTEXT_WINDOW_LIMIT=8192   # nota: es un límite de RESULTADOS de búsqueda, no de tokens
+CONTEXT_WINDOW_LIMIT=8192   # nota: ya NO define el tamaño de la recuperación (se usa RETRIEVAL_TOP_K); se mantiene solo por compatibilidad
+RETRIEVAL_TOP_K=8           # máximo de chunks que se piden a Qdrant
+RETRIEVAL_SCORE_THRESHOLD=0.30   # descarta chunks con score (similitud coseno) menor; 0 o menos desactiva el corte
 ```
 
 > `GOTENBERG_URL` puede aparecer en algún `.env` viejo — no se usa en el código actual, ignorar.

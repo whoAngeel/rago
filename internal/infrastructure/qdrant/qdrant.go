@@ -2,6 +2,7 @@ package qdrant
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -147,6 +148,10 @@ func (qa *QdrantAdapter) Search(
 				},
 			},
 		})
+	}
+
+	if len(conditions) == 0 {
+		return nil, errors.New("qdrant: refusing unfiltered search")
 	}
 
 	pointsClient := qa.client.GetPointsClient()

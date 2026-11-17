@@ -42,7 +42,16 @@ type Config struct {
 	ConcurrencyWorkers int
 	MaxRetries         int
 	ChatHistoryLimit   int
+	// ContextWindowLimit is kept so existing .env files keep parsing; it no longer controls retrieval.
 	ContextWindowLimit int
+	// RetrievalTopK is the max number of chunks fetched from the vector store.
+	RetrievalTopK int
+	// RetrievalScoreThreshold drops chunks scoring below it (cosine similarity); <= 0 disables the cutoff.
+	RetrievalScoreThreshold float64
+	// LLMTemperature is the sampling temperature sent on every LLM call.
+	LLMTemperature float64
+	// LLMMaxTokens caps the completion length; <= 0 leaves it to the provider.
+	LLMMaxTokens int
 }
 
 func Load() (*Config, error) {
@@ -80,6 +89,12 @@ func Load() (*Config, error) {
 		MaxRetries:         getEnvAsInt("MAX_RETRIES", 3),
 		ChatHistoryLimit:   getEnvAsInt("CHAT_HISTORY_LIMIT", 10),
 		ContextWindowLimit: getEnvAsInt("CONTEXT_WINDOW_LIMIT", 8192),
+
+		RetrievalTopK:           getEnvAsInt("RETRIEVAL_TOP_K", 8),
+		RetrievalScoreThreshold: getFloat64("RETRIEVAL_SCORE_THRESHOLD", 0.30),
+
+		LLMTemperature: getFloat64("LLM_TEMPERATURE", 0.2),
+		LLMMaxTokens:   getEnvAsInt("LLM_MAX_TOKENS", 0),
 	}
 
 	if cfg.OpenRouterKey == "" {

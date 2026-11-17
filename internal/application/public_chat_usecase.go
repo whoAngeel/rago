@@ -126,6 +126,11 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 		return "", ErrGroupInactive
 	}
 
+	if len(group.DocumentIDs) == 0 {
+		uc.Logger.Info("public: chat blocked — group has no documents", "slug", slug, "group_id", group.ID)
+		return "Este grupo no tiene documentos disponibles.", nil
+	}
+
 	user, err := uc.UserRepo.FindById(ctx, group.UserID)
 	if err != nil {
 		return "", fmt.Errorf("finding group owner: %w", err)
@@ -206,37 +211,18 @@ func (uc *PublicChatUsecase) Chat(ctx context.Context, slug, message string) (st
 
 	systemPrompt, err := uc.ConfigRepo.Get(ctx, "system_prompt")
 	if err != nil {
-		systemPrompt = fallbackSystemPrompt
+		systemPrompt = DefaultSystemPrompt
 	}
 
-	var contextStr string
-	for _, r := range searchResults {
-		src := "desconocido"
-		if s, ok := r.Document.Metadata["source"]; ok {
-			src = fmt.Sprintf("%v", s)
-		}
-		contextStr += fmt.Sprintf("[Fuente: %s]\n%s\n\n", src, r.Document.PageContent)
-	}
-
-	var sb strings.Builder
-	sb.WriteString(systemPrompt)
-	sb.WriteString("\n\n")
-	if contextStr == "" {
+	if len(searchResults) == 0 {
 		uc.Logger.Warn("public: no search results — LLM will respond with fallback", "slug", slug, "document_ids", group.DocumentIDs)
-		sb.WriteString("No se encontró información relevante en los documentos.\n\n")
-	} else {
-		if lowConfidence {
-			sb.WriteString("NOTA: La pregunta es muy general. Usá el contexto disponible para describir brevemente de qué tratan los documentos o qué información contienen. Si el usuario quiere saber algo específico, pedile que reformule la pregunta con más detalle.\n\n")
-		}
-		sb.WriteString("CONTEXTO:\n")
-		sb.WriteString(contextStr)
-		sb.WriteString("\n")
 	}
-	sb.WriteString("PREGUNTA: ")
-	sb.WriteString(message)
-	sb.WriteString("\n\nRESPUESTA:")
+	userMessage := BuildUserMessage(searchResults, "", message)
+	if lowConfidence && len(searchResults) > 0 {
+		userMessage += "\n\nNOTA: La pregunta es muy general. Usá el contexto disponible para describir brevemente de qué tratan los documentos o qué información contienen. Si el usuario quiere saber algo específico, pedile que reformule la pregunta con más detalle."
+	}
 
-	llmResult, err := uc.LLM.GenerateAnswer(ctx, sb.String())
+	llmResult, err := uc.LLM.GenerateAnswer(ctx, systemPrompt, userMessage)
 	if err != nil {
 		return "", fmt.Errorf("generating answer: %w", err)
 	}
@@ -308,6 +294,7 @@ var unansweredPatterns = []string{
 	"no se encontró información",
 	"no tengo información",
 	"no encontré información",
+	"no encontré información sobre eso en tus documentos",
 	"sin información suficiente",
 	"i don't have enough information",
 	"insufficient information",

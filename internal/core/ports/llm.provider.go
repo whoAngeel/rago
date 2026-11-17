@@ -10,6 +10,6 @@ type LLMResult struct {
 }
 
 type LLMProvider interface {
-	GenerateAnswer(ctx context.Context, prompt string) (LLMResult, error)
-	Stream(ctx context.Context, prompt string, onToken func(token string) error) (LLMResult, error)
+	GenerateAnswer(ctx context.Context, system, prompt string) (LLMResult, error)
+	Stream(ctx context.Context, system, prompt string, onToken func(token string) error) (LLMResult, error)
 }

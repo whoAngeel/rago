@@ -29,7 +29,8 @@ type ChatUsecase struct {
 	UsageRepo      ports.LLMUsageRepository
 	HistoryLimit   int
 	CollectionName string
-	ContextLimit   int
+	TopK           int
+	ScoreThreshold float64
 }
 
 func NewChatUsecase(
@@ -42,7 +43,8 @@ func NewChatUsecase(
 	logger ports.Logger,
 	historyLimit int,
 	collectionName string,
-	contextLimit int,
+	topK int,
+	scoreThreshold float64,
 	usageRepo ports.LLMUsageRepository,
 ) *ChatUsecase {
 	return &ChatUsecase{
@@ -56,19 +58,10 @@ func NewChatUsecase(
 		UsageRepo:      usageRepo,
 		HistoryLimit:   historyLimit,
 		CollectionName: collectionName,
-		ContextLimit:   contextLimit,
+		TopK:           topK,
+		ScoreThreshold: scoreThreshold,
 	}
 }
-
-const fallbackSystemPrompt = `Eres un asistente experto que responde preguntas basándote ÚNICAMENTE en la sección CONTEXTO de abajo.
-
-Instrucciones:
-1. Usá solo la información del CONTEXTO para responder.
-2. Respondé con TODO lo que el CONTEXTO contenga sobre el tema. Si la info es parcial, decí lo que haya y señalá qué falta.
-3. NO digas que no tenés información si el CONTEXTO tiene datos relevantes. Usalos al máximo.
-4. Solo si el CONTEXTO no tiene NADA útil sobre la pregunta, respondé: "No encontré información sobre eso en los documentos."
-5. No inventes ni uses conocimiento externo.
-6. Si citás datos, mencioná la fuente.`
 
 func (uc *ChatUsecase) SendMessage(
 	ctx context.Context,
@@ -95,7 +88,7 @@ func (uc *ChatUsecase) SendMessage(
 
 	systemPrompt, err := uc.ConfigRepo.Get(ctx, "system_prompt")
 	if err != nil {
-		systemPrompt = fallbackSystemPrompt
+		systemPrompt = DefaultSystemPrompt
 		uc.Logger.Warn("Error getting system prompt, using fallback", "error", err)
 	}
 
@@ -118,13 +111,12 @@ func (uc *ChatUsecase) SendMessage(
 		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
 	}
 
-	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.ContextLimit)
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.TopK)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
-	uc.Logger.Info("search completed", "results", len(searchResults))
+	searchResults = filterByScore(uc.Logger, searchResults, uc.ScoreThreshold)
 
-	var contextStr string
 	for _, r := range searchResults {
 		src := "desconocido"
 		if s, ok := r.Document.Metadata["source"]; ok {
@@ -135,25 +127,12 @@ func (uc *ChatUsecase) SendMessage(
 			Source:  src,
 			Score:   r.Score,
 		})
-		contextStr += fmt.Sprintf("[Fuente: %s]\n%s\n\n", src, r.Document.PageContent)
 	}
 
-	prompt := systemPrompt + "\n\n"
-
-	if len(searchResults) == 0 {
-		prompt += "No se encontró información relevante en los documentos.\n\n"
-	} else {
-		prompt += "CONTEXTO:\n" + contextStr + "\n"
-	}
-
-	if historyStr != "" {
-		prompt += "HISTORIAL:\n" + historyStr + "\n\n"
-	}
-
-	prompt += "PREGUNTA: " + question + "\n\nRESPUESTA:"
+	prompt := BuildUserMessage(searchResults, historyStr, question)
 
 	uc.Logger.Info("Generating answer", "prompt_len", len(prompt))
-	llmResult, err := uc.LLM.GenerateAnswer(ctx, prompt)
+	llmResult, err := uc.LLM.GenerateAnswer(ctx, systemPrompt, prompt)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("generating answer: %w", err)
 	}
@@ -238,7 +217,7 @@ func (uc *ChatUsecase) SendStream(
 
 	systemPrompt, err := uc.ConfigRepo.Get(ctx, "system_prompt")
 	if err != nil {
-		systemPrompt = fallbackSystemPrompt
+		systemPrompt = DefaultSystemPrompt
 	}
 
 	var historyStr string
@@ -260,12 +239,12 @@ func (uc *ChatUsecase) SendStream(
 		return "", nil, int(session.ID), fmt.Errorf("embedding: %w", err)
 	}
 
-	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.ContextLimit)
+	searchResults, err := uc.VectorStore.Search(ctx, uc.CollectionName, queryVector, userID, nil, uc.TopK)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("searching: %w", err)
 	}
+	searchResults = filterByScore(uc.Logger, searchResults, uc.ScoreThreshold)
 
-	var contextStr string
 	for _, r := range searchResults {
 		src := "desconocido"
 		if s, ok := r.Document.Metadata["source"]; ok {
@@ -276,21 +255,11 @@ func (uc *ChatUsecase) SendStream(
 			Source:  src,
 			Score:   r.Score,
 		})
-		contextStr += fmt.Sprintf("[Fuente: %s]\n%s\n\n", src, r.Document.PageContent)
 	}
 
-	prompt := systemPrompt + "\n\n"
-	if len(searchResults) == 0 {
-		prompt += "No se encontró información relevante en los documentos.\n\n"
-	} else {
-		prompt += "CONTEXTO:\n" + contextStr + "\n"
-	}
-	if historyStr != "" {
-		prompt += "HISTORIAL:\n" + historyStr + "\n\n"
-	}
-	prompt += "PREGUNTA: " + question + "\n\nRESPUESTA:"
+	prompt := BuildUserMessage(searchResults, historyStr, question)
 
-	llmStreamResult, err := uc.LLM.Stream(ctx, prompt, onToken)
+	llmStreamResult, err := uc.LLM.Stream(ctx, systemPrompt, prompt, onToken)
 	if err != nil {
 		return "", nil, int(session.ID), fmt.Errorf("streaming answer: %w", err)
 	}

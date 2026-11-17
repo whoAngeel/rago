@@ -30,12 +30,20 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
-const DefaultSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en la sección CONTEXTO proporcionada.
+// legacyDefaultSystemPrompt is the previous seeded prompt. It is kept only to
+// detect rows that were never customised so they can be upgraded.
+const legacyDefaultSystemPrompt = `Eres un asistente experto que responde preguntas basándose ÚNICAMENTE en la sección CONTEXTO proporcionada.
 Instrucciones:
 1. Usa solo la información en la sección CONTEXTO para responder.
 2. Si el CONTEXTO no tiene información suficiente, responde: "No tengo información suficiente en tus documentos para responder a esto."
 3. No inventes ni uses conocimiento general.
 4. Si mencionas datos, cita las fuentes proporcionadas.`
+
+// shouldUpgradeSystemPrompt reports whether the stored prompt is the untouched
+// legacy default and may be replaced by the new one.
+func shouldUpgradeSystemPrompt(stored string) bool {
+	return stored == legacyDefaultSystemPrompt
+}
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -89,8 +97,23 @@ func main() {
 	// seed system prompt
 	gormDB.FirstOrCreate(&domain.SystemConfig{
 		Key:   "system_prompt",
-		Value: DefaultSystemPrompt,
+		Value: application.DefaultSystemPrompt,
 	}, &domain.SystemConfig{Key: "system_prompt"})
+
+	// upgrade the stored prompt only if it is still the untouched legacy default
+	var storedPrompt domain.SystemConfig
+	if err := gormDB.Where("key = ?", "system_prompt").First(&storedPrompt).Error; err != nil {
+		log.Warn("could not read stored system prompt, leaving it as is", "error", err)
+	} else if shouldUpgradeSystemPrompt(storedPrompt.Value) {
+		if err := gormDB.Model(&domain.SystemConfig{}).Where("key = ?", "system_prompt").
+			Update("value", application.DefaultSystemPrompt).Error; err != nil {
+			log.Warn("system prompt upgrade failed, keeping stored value", "error", err)
+		} else {
+			log.Info("system prompt upgraded to the new default")
+		}
+	} else {
+		log.Info("system prompt kept (customised or already up to date)")
+	}
 
 	// Inicializar servicios
 	vStore, err := qdrant.NewQdrantAdapter(cfg.QdrantHost, cfg.QdrantPort)
@@ -111,7 +134,7 @@ func main() {
 	log.Info("MINIO started")
 
 	llm, err := openrouter.NewOpenRouterAdapter(
-		cfg.OpenRouterKey, cfg.OpenRouterBaseUrl, cfg.Model,
+		cfg.OpenRouterKey, cfg.OpenRouterBaseUrl, cfg.Model, cfg.LLMTemperature, cfg.LLMMaxTokens,
 	)
 	if err != nil {
 		log.Fatal("error initializing llm", "error", err)
@@ -146,7 +169,8 @@ func main() {
 		log,
 		cfg.ChatHistoryLimit,
 		cfg.QdrantCollection,
-		cfg.ContextWindowLimit,
+		cfg.RetrievalTopK,
+		cfg.RetrievalScoreThreshold,
 		usageRepo,
 	)
 
