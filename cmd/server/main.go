@@ -174,19 +174,7 @@ func main() {
 		usageRepo,
 	)
 
-	parserRegistry := parserpkg.NewRegistry()
-	parserRegistry.Register("text/plain", parserpkg.NewPlainTextAdapter())
-	parserRegistry.Register("text/markdown", parserpkg.NewPlainTextAdapter())
-	parserRegistry.Register("text/csv", parserpkg.NewCSVParser())
-	parserRegistry.Register("application/json", parserpkg.NewJSONParser())
-	parserRegistry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
-	parserRegistry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parserpkg.NewXLSXParser())
-	parserRegistry.Register("application/pdf", parserpkg.NewPDFParser())
-	imageParser := parserpkg.NewImageParser()
-	parserRegistry.Register("image/png", imageParser)
-	parserRegistry.Register("image/jpeg", imageParser)
-	parserRegistry.Register("image/webp", imageParser)
-	parserRegistry.Register("image/tiff", imageParser)
+	parserRegistry := parserpkg.NewDefaultRegistry()
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 

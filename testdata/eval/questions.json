@@ -209,34 +209,6 @@
     ]
   },
   {
-    "id": "employees-engineering",
-    "question": "Who works in the engineering department and how much do they earn?",
-    "expected_source": "employees.csv",
-    "note": "",
-    "expected_contains": [
-      "department: Engineering"
-    ]
-  },
-  {
-    "id": "reports-security-audit",
-    "question": "What did the security audit find and by when must it be fixed?",
-    "expected_source": "reports.json",
-    "note": "",
-    "expected_contains": [
-      "Security Audit Results",
-      "remediation_deadline: 2026-07-01"
-    ]
-  },
-  {
-    "id": "reports-nps",
-    "question": "What was the NPS score in the customer survey?",
-    "expected_source": "reports.json",
-    "note": "",
-    "expected_contains": [
-      "nps_score: 72"
-    ]
-  },
-  {
     "id": "none-world-cup",
     "question": "Who won the 2022 football World Cup?",
     "expected_source": "",

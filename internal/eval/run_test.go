@@ -79,7 +79,7 @@ type fakeChunker struct{}
 func (fakeChunker) Chunk(text string) ([]string, error) { return strings.Split(text, " "), nil }
 
 func TestBuildChunksSkipsChunkerForStructured(t *testing.T) {
-	chunks, err := BuildChunks(context.Background(), fakeRegistry{}, fakeChunker{}, "x.json", []byte("{}"))
+	chunks, err := BuildChunks(context.Background(), fakeRegistry{}, fakeChunker{}, "x.txt", []byte("{}"))
 	if err != nil {
 		t.Fatal(err)
 	}

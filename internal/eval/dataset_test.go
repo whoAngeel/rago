@@ -128,10 +128,9 @@ func TestExpectedContainsExistInChunks(t *testing.T) {
 
 func TestContentTypeFor(t *testing.T) {
 	tests := map[string]string{
-		"a.txt":  "text/plain",
-		"b.CSV":  "text/csv",
-		"c.json": "application/json",
-		"d.md":   "text/markdown",
+		"a.txt": "text/plain",
+		"b.PDF": "application/pdf",
+		"d.md":  "text/markdown",
 	}
 	for name, want := range tests {
 		got, err := ContentTypeFor(name)
@@ -139,27 +138,9 @@ func TestContentTypeFor(t *testing.T) {
 			t.Errorf("ContentTypeFor(%q) = %q, %v; want %q", name, got, err, want)
 		}
 	}
-	if _, err := ContentTypeFor("x.bin"); err == nil {
-		t.Error("expected error for unsupported extension")
-	}
-}
-
-func TestContentTypeForRealFormats(t *testing.T) {
-	tests := map[string]string{
-		"m.pdf":  "application/pdf",
-		"m.PDF":  "application/pdf",
-		"w.docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-		"s.xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		"i.png":  "image/png",
-		"i.jpg":  "image/jpeg",
-		"i.jpeg": "image/jpeg",
-		"i.webp": "image/webp",
-		"i.tif":  "image/tiff",
-		"i.tiff": "image/tiff",
-	}
-	for name, want := range tests {
-		if got, err := ContentTypeFor(name); err != nil || got != want {
-			t.Errorf("ContentTypeFor(%q) = %q, %v; want %q", name, got, err, want)
+	for _, name := range []string{"x.bin", "a.csv", "a.json", "a.docx", "a.xlsx", "a.png"} {
+		if _, err := ContentTypeFor(name); err == nil {
+			t.Errorf("ContentTypeFor(%q): expected error for unsupported extension", name)
 		}
 	}
 }

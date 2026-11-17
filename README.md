@@ -84,7 +84,7 @@ graph TB
         QD[(Qdrant)]
         MI[(MinIO / S3)]
         OR["OpenRouter\nLLM + Embeddings"]
-        PA["Parsers\nPDF·DOCX·XLSX·CSV·JSON·Imagen+OCR"]
+        PA["Parsers\nPDF (con OCR)·TXT·MD"]
         SSE[SSE Manager]
         JWT[JWT Auth]
     end
@@ -126,7 +126,7 @@ rago/
 │   │   ├── config/       # carga de variables de entorno
 │   │   ├── logger/
 │   │   ├── openrouter/   # LLM + Embedder (langchaingo, API compatible OpenAI)
-│   │   ├── parser/       # texto, csv, json, docx, xlsx, pdf, imagen+OCR (tesseract)
+│   │   ├── parser/       # txt, md, pdf (OCR con tesseract)
 │   │   ├── postgres/     # repositorios GORM
 │   │   ├── qdrant/       # adapter VectorStore
 │   │   ├── rest/         # router, handlers, middleware (Gin)
@@ -438,7 +438,7 @@ RETRIEVAL_SCORE_THRESHOLD=0.25   # descarta chunks con score (similitud coseno) 
 - API REST completa (auth, documentos, grupos, chats, público)
 - Ingesta asíncrona con worker, reintentos y watchdog
 - OCR (tesseract) para imágenes y PDFs escaneados
-- Parsers: TXT, MD, CSV, JSON, DOCX, XLSX, PDF, imágenes
+- Parsers: TXT, MD, PDF (con respaldo de OCR)
 - Vector store Qdrant + storage MinIO
 - Chat con historial y streaming SSE
 - Chat público por grupo (sin cuenta), con umbral de confianza

@@ -77,7 +77,7 @@ Repetir la evaluación antes y después de cada cambio y comparar contra esta ta
 
 ### Paso 1 — seguridad y formatos (Sonnet)
 - [x] **Borrado sin comprobar dueño.** Corregido en `49afc87`: `DeleteDocument` recibe el usuario y devuelve 404 si el documento no existe o es de otro. Desplegado el 2026-11-17.
-- [ ] **Solo `.txt`, `.md` y `.pdf`** (decisión del propietario). Tres listas que cambian juntas: mapa de extensiones en `handlers/document.go`, registro de parsers en `cmd/server/main.go`, y `internal/eval/registry.go`. Quitar csv, json, docx, xlsx e imágenes sueltas.
+- [x] **Solo `.txt`, `.md` y `.pdf`** (decisión del propietario). Tres listas que cambian juntas: mapa de extensiones en `handlers/document.go`, registro de parsers en `cmd/server/main.go`, y `internal/eval/registry.go`. Quitar csv, json, docx, xlsx e imágenes sueltas.
   - No borrar `internal/infrastructure/parser/image.go`: el OCR de PDF lo usa.
   - Fijar el tipo de contenido por extensión en el servidor (hoy se confía en la cabecera del navegador) y comprobar que un `.pdf` empieza por `%PDF-`.
   - Frontend: `frontend/src/components/documents/DropZone.tsx` (añadir `accept` y corregir la etiqueta de formatos).

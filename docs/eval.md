@@ -11,7 +11,7 @@ set -a; . ./scripts/local-env.sh; set +a
 go run ./cmd/eval --out /tmp/eval.json
 ```
 
-En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (texto, CSV, JSON, DOCX, XLSX, PDF con respaldo de OCR e imágenes), el mismo chunker (1000/200) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
+En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (TXT, MD y PDF con respaldo de OCR), el mismo chunker (1000/200) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
 
 ## Documentos y preguntas por defecto
 
