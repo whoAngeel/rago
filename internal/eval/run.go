@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/core/ports"
 )
 
@@ -42,9 +43,8 @@ func RunQuestions(ctx context.Context, emb ports.Embedder, store ports.VectorSto
 	return out, nil
 }
 
-// BuildChunks parses a document and chunks it the way the ingest worker does:
-// parser chosen by content type, structured documents skip the chunker.
-func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Chunker, name string, content []byte) ([]string, error) {
+// ParseDocs parses a document with the parser chosen by its content type.
+func ParseDocs(ctx context.Context, reg ports.ParserRegistry, name string, content []byte) ([]schema.Document, error) {
 	ct, err := ContentTypeFor(name)
 	if err != nil {
 		return nil, err
@@ -59,17 +59,55 @@ func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Ch
 	if err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", name, err)
 	}
+	return docs, nil
+}
+
+// ChunkDocs chunks each parsed page on its own, as the ingest worker does;
+// structured documents skip the chunker. With header set, every chunk is
+// prefixed by a context header line carrying the document title and, for
+// page-based documents, the chunk's own page number.
+func ChunkDocs(docs []schema.Document, chunker ports.Chunker, name string, header bool) ([]string, error) {
+	title := ""
+	if header && len(docs) > 0 {
+		title = DocTitle(docs[0].PageContent, name)
+	}
 	var chunks []string
 	for _, d := range docs {
-		if d.Metadata["chunk_type"] == "structured" {
-			chunks = append(chunks, d.PageContent)
-			continue
+		cs := []string{d.PageContent}
+		if d.Metadata["chunk_type"] != "structured" {
+			var err error
+			if cs, err = chunker.Chunk(d.PageContent); err != nil {
+				return nil, fmt.Errorf("chunking %s: %w", name, err)
+			}
 		}
-		cs, err := chunker.Chunk(d.PageContent)
-		if err != nil {
-			return nil, fmt.Errorf("chunking %s: %w", name, err)
+		for _, c := range cs {
+			if header {
+				c = ContextHeader(title, pageNumber(d.Metadata)) + "\n" + c
+			}
+			chunks = append(chunks, c)
 		}
-		chunks = append(chunks, cs...)
 	}
 	return chunks, nil
+}
+
+// pageNumber reads the page_number metadata, which is an int when freshly
+// parsed and a float64 after a JSON round trip; 0 when absent.
+func pageNumber(md map[string]any) int {
+	switch v := md["page_number"].(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	}
+	return 0
+}
+
+// BuildChunks parses a document and chunks it the way the ingest worker does:
+// parser chosen by content type, structured documents skip the chunker.
+func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Chunker, name string, content []byte) ([]string, error) {
+	docs, err := ParseDocs(ctx, reg, name, content)
+	if err != nil {
+		return nil, err
+	}
+	return ChunkDocs(docs, chunker, name, false)
 }

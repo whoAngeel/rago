@@ -32,6 +32,21 @@ En cada ejecución se vuelven a ingestar los documentos en la colección `rago_e
 - `--force-ocr`: rasteriza y pasa por OCR todas las páginas de los PDF en lugar de usar su capa de texto; aplica a la ingesta y a `--dump-chunks`. Con `--dump-chunks` siempre usa Tesseract; en la ingesta usa el motor de `OCR_ENGINE`.
 - La evaluación sigue `OCR_ENGINE` y `PDF_OCR_MODE`: con los valores por defecto envía las imágenes de las páginas de los PDF a OpenRouter.
 - `--source nombre`: con `--dump-chunks`, limita la salida a un documento.
+- `--chunker fixed|recursive`: estrategia de chunking (por defecto `fixed`, la del servidor). `recursive` corta por párrafo, línea, fin de frase y espacio, en ese orden. Aplica a la ingesta y a `--dump-chunks`.
+- `--chunk-size N` y `--chunk-overlap N`: tamaño y solapamiento en caracteres (por defecto 1000 y 200). Con los valores por defecto los chunks son idénticos a los del servidor.
+- `--context-header`: antepone a cada chunk una línea `[título — p. N]` (`[título]` si el documento no tiene páginas) antes de calcular el embedding. El título es la primera línea no vacía de la primera página, o el nombre del archivo si está vacía.
+- `--parse-cache-dir ruta`: carpeta con las páginas ya parseadas (por defecto `<directorio de caché del usuario>/rago-eval/parse`; una cadena vacía desactiva la caché). La clave combina el contenido del archivo, la versión del parser, el motor y modelo de OCR, el modo de OCR de PDF y `--force-ocr`. Al terminar la ingesta se imprime cuántos archivos se parsearon y cuántos vinieron de la caché. Parsear PDF con un LLM tiene costo, por eso conviene no repetirlo al probar chunking.
+
+## Experimentos de chunking
+
+Cada ejecución imprime en stderr la configuración de chunking que usa. Compara variantes contra el valor base (`fixed` 1000/200) guardando un reporte por variante; la caché de parseo evita volver a llamar al OCR:
+
+```sh
+go run ./cmd/eval --chunker recursive --chunk-size 800 --chunk-overlap 120 --out /tmp/recursive.json
+go run ./cmd/eval --chunker recursive --chunk-size 800 --chunk-overlap 120 --context-header --out /tmp/recursive-header.json
+```
+
+Para revisar los chunks antes de ingestar, añade `--dump-chunks --source nombre` con las mismas opciones.
 
 ## Dos niveles de acierto
 
