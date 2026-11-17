@@ -1,5 +1,7 @@
 # Hoja de ruta RAG (rago)
 
+> Estado actual, changelog y plan vigente de la tanda 3: ver `docs/STATUS.md`. Ese documento manda cuando difiera de este.
+
 Guía para continuar la mejora de la calidad de respuestas del sistema RAG cuando no hay acceso al modelo principal, y reparto de trabajo entre modelos.
 
 Estado de referencia: 2026-11-16. Rama `main`, cambios sin commitear.
