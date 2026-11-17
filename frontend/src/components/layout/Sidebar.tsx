@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   FileText,
   Settings,
-  Fish,
   HardDrive,
   Group,
 } from "lucide-react";
@@ -38,9 +37,7 @@ export const SideBar = () => {
   return (
     <aside className="w-64 h-screen bg-neutral-100 border-r-2 border-neutral-950 p-6 flex flex-col gap-8 font-sans">
       <div className="flex items-center gap-3 px-4">
-        <div className="w-10 h-10 bg-primary-400 border-2 border-neutral-950 flex items-center justify-center rounded-lg shadow-hard-md">
-          <Fish size={24} className="text-black" />
-        </div>
+        <img src="/rago-icon.svg" alt="" className="w-10 h-10 rounded-lg shadow-hard-md" />
         <div>
           <h1 className="text-2xl font-bold text-neutral-950 tracking-tighter">
             Rago

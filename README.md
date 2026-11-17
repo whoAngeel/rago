@@ -32,7 +32,7 @@ sequenceDiagram
     actor U as Usuario
     participant E as Embedder
     participant Q as Qdrant
-    participant L as LLM (OpenRouter)
+    participant L as "LLM (OpenRouter)"
 
     U->>E: "¿qué es Go?"
     E->>E: texto → vector [0.1, 0.8, -0.3...]
@@ -83,7 +83,7 @@ graph TB
         PG[(Postgres / GORM)]
         QD[(Qdrant)]
         MI[(MinIO / S3)]
-        OR[OpenRouter\nLLM + Embeddings]
+        OR["OpenRouter\nLLM + Embeddings"]
         PA["Parsers\nPDF·DOCX·XLSX·CSV·JSON·Imagen+OCR"]
         SSE[SSE Manager]
         JWT[JWT Auth]
@@ -153,7 +153,7 @@ sequenceDiagram
     participant PG as Postgres
     participant MI as MinIO
     participant W as IngestWorker
-    participant P as Parser (+OCR/tesseract)
+    participant P as "Parser (+OCR/tesseract)"
     participant C as Chunker
     participant E as Embedder
     participant Q as Qdrant

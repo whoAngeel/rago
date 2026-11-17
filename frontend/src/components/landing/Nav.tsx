@@ -1,13 +1,11 @@
-import { Bot, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 
 export function Nav() {
   return (
     <header className="w-full px-3 sm:px-6 md:px-8 pt-4 sm:pt-6">
       <nav className="mx-auto max-w-[1376px] bg-white border border-ink rounded-pill shadow-brutal flex items-center justify-between px-4 sm:px-6 md:px-12 h-[60px] sm:h-[68px]">
         <a href="#" className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <span className="grid place-items-center w-8 h-8 sm:w-9 sm:h-9 bg-lime border border-ink rounded-sm shadow-brutal-sm">
-            <Bot className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.25} />
-          </span>
+          <img src="/rago-icon.svg" alt="" className="w-8 h-8 sm:w-9 sm:h-9 shadow-brutal-sm rounded-sm" />
           <span className="text-lg sm:text-xl font-medium tracking-tight">Rago</span>
         </a>
         <div className="hidden md:flex items-center gap-8 text-base">
