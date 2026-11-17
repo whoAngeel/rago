@@ -170,3 +170,22 @@ func (r *DocumentRepository) SumSizeByUserID(ctx context.Context, userID int) (i
 		Scan(&total).Error
 	return total, err
 }
+
+func (r *DocumentRepository) CountByFilePath(ctx context.Context, filePath string, excludeDocID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Document{}).
+		Where("file_path = ? AND id <> ?", filePath, excludeDocID).
+		Count(&count).Error
+	return count, err
+}
+
+// RequeueDocument uses a map update because struct updates skip zero values.
+func (r *DocumentRepository) RequeueDocument(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Model(&domain.Document{}).Where("id = ?", id).
+		Updates(map[string]any{
+			"status":                domain.StatusPending,
+			"retry_count":           0,
+			"error_message":         "",
+			"processing_started_at": nil,
+		}).Error
+}

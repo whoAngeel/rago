@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/core/ports"
+	chunkerpkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 )
 
 // RunQuestions embeds each question and searches the collection with no
@@ -42,9 +44,8 @@ func RunQuestions(ctx context.Context, emb ports.Embedder, store ports.VectorSto
 	return out, nil
 }
 
-// BuildChunks parses a document and chunks it the way the ingest worker does:
-// parser chosen by content type, structured documents skip the chunker.
-func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Chunker, name string, content []byte) ([]string, error) {
+// ParseDocs parses a document with the parser chosen by its content type.
+func ParseDocs(ctx context.Context, reg ports.ParserRegistry, name string, content []byte) ([]schema.Document, error) {
 	ct, err := ContentTypeFor(name)
 	if err != nil {
 		return nil, err
@@ -59,17 +60,15 @@ func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Ch
 	if err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", name, err)
 	}
-	var chunks []string
-	for _, d := range docs {
-		if d.Metadata["chunk_type"] == "structured" {
-			chunks = append(chunks, d.PageContent)
-			continue
-		}
-		cs, err := chunker.Chunk(d.PageContent)
-		if err != nil {
-			return nil, fmt.Errorf("chunking %s: %w", name, err)
-		}
-		chunks = append(chunks, cs...)
+	return docs, nil
+}
+
+// BuildChunks parses a document and chunks it the way the ingest worker does:
+// parser chosen by content type, structured documents skip the chunker.
+func BuildChunks(ctx context.Context, reg ports.ParserRegistry, chunker ports.Chunker, name string, content []byte) ([]string, error) {
+	docs, err := ParseDocs(ctx, reg, name, content)
+	if err != nil {
+		return nil, err
 	}
-	return chunks, nil
+	return chunkerpkg.ChunkPages(docs, name, chunker, false)
 }

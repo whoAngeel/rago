@@ -93,9 +93,10 @@ func (h *DocumentHandler) List(c *gin.Context) {
 }
 
 type UploadResponse struct {
-	ID       int    `json:"id"`
-	Filename string `json:"filename"`
-	Status   string `json:"status"`
+	ID        int    `json:"id"`
+	Filename  string `json:"filename"`
+	Status    string `json:"status"`
+	Duplicate bool   `json:"duplicate,omitempty"`
 }
 
 func (h *DocumentHandler) Upload(c *gin.Context) {
@@ -138,6 +139,13 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 	doc, err := h.uploader.Upload(ctx, userId, file.Filename, src, file.Size, contentType)
 	if err != nil {
 		switch {
+		case errors.Is(err, application.ErrDuplicateDocument) && doc != nil:
+			c.JSON(http.StatusOK, UploadResponse{
+				ID:        doc.ID,
+				Filename:  doc.Filename,
+				Status:    string(doc.Status),
+				Duplicate: true,
+			})
 		case errors.Is(err, application.ErrDuplicateDocument):
 			c.JSON(http.StatusConflict, gin.H{
 				"error":   "duplicate_document",

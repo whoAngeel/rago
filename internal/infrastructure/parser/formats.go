@@ -6,6 +6,11 @@ import (
 	"github.com/whoAngeel/rago/internal/core/ports"
 )
 
+// Version identifies the extraction and cleaning logic; it is part of the parse
+// cache key. Change it whenever extraction or cleaning output changes (for
+// example edits to PDF text extraction, page cleaning or the OCR prompt).
+const Version = "2"
+
 // supportedExtensions is the single source of truth for the document formats
 // the system accepts: file extension to content type.
 var supportedExtensions = map[string]string{

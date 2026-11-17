@@ -38,6 +38,10 @@ type DocumentRepository interface {
 	FindDocumentsForSelect(ctx context.Context, userID int) ([]*domain.Document, error)
 	CountByStatus(ctx context.Context, userID int, status domain.DocumentStatus) (int64, error)
 	SumSizeByUserID(ctx context.Context, userID int) (int64, error)
+	// CountByFilePath counts documents referencing filePath, excluding excludeDocID.
+	CountByFilePath(ctx context.Context, filePath string, excludeDocID int) (int64, error)
+	// RequeueDocument resets a document to pending with no retries and no error.
+	RequeueDocument(ctx context.Context, id int) error
 }
 
 type ChatRepository interface {

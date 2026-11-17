@@ -34,31 +34,43 @@ func NewIngestUsecase(
 	}
 }
 
-func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, metadata map[string]any, chunks []string, recordStep StepFunc) error {
+// embedBatchSize is how many chunks go to the embedder per call.
+const embedBatchSize = 32
 
-	var allDocs []schema.Document
-	var allVectors [][]float32
-	var embedErr error
+// Execute embeds the chunks in batches and replaces the document's vectors.
+// Any failed batch, or a batch returning the wrong number of vectors, fails
+// the document: nothing is deleted or upserted, so the old vectors stay.
+func (iu *IngestUsecase) Execute(ctx context.Context, doc *domain.Document, metadata map[string]any, chunks []string, recordStep StepFunc) error {
+	allDocs := make([]schema.Document, 0, len(chunks))
+	allVectors := make([][]float32, 0, len(chunks))
 
 	doneEmbed := recordStep("embed")
-	for i, chunk := range chunks {
-		preview := chunk
-		if len(preview) > 100 {
-			preview = preview[:100] + "..."
+	embedErr := func() error {
+		for start := 0; start < len(chunks); start += embedBatchSize {
+			end := min(start+embedBatchSize, len(chunks))
+			batch := chunks[start:end]
+			vectors, err := iu.Embedder.ComputeEmbeddings(ctx, batch)
+			if err != nil {
+				iu.Logger.Warn("Error embedding batch", "error", err, "first_chunk_idx", start, "batch_size", len(batch))
+				return fmt.Errorf("embedding chunks %d-%d: %w", start, end-1, err)
+			}
+			if len(vectors) != len(batch) {
+				return fmt.Errorf("embedding chunks %d-%d: got %d vectors for %d texts", start, end-1, len(vectors), len(batch))
+			}
+			for i, chunk := range batch {
+				allVectors = append(allVectors, vectors[i])
+				allDocs = append(allDocs, schema.Document{
+					PageContent: chunk,
+					Metadata:    buildMetadata(doc, metadata),
+				})
+			}
 		}
-		vectors, err := iu.Embedder.EmbedText(ctx, chunk)
-		if err != nil {
-			iu.Logger.Warn("Error embedding text", "error", err, "chunk_idx", i, "chunk_len", len(chunk), "chunk_preview", preview)
-			embedErr = err
-			continue
-		}
-		allVectors = append(allVectors, vectors)
-		allDocs = append(allDocs, schema.Document{
-			PageContent: chunk,
-			Metadata:    buildMetadata(doc, metadata),
-		})
-	}
+		return nil
+	}()
 	doneEmbed(embedErr)
+	if embedErr != nil {
+		return embedErr
+	}
 
 	if len(allDocs) == 0 {
 		return fmt.Errorf("no chunks embedded")

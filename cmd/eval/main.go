@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/eval"
+	"github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
 	"github.com/whoAngeel/rago/internal/infrastructure/ocr"
@@ -57,7 +59,19 @@ func run() error {
 	dump := fs.Bool("dump-chunks", false, "print the chunks ingestion would produce and exit; needs no Qdrant, embedder or API key")
 	dumpSource := fs.String("source", "", "with --dump-chunks, only this document (base file name)")
 	forceOCR := fs.Bool("force-ocr", false, "rasterise and OCR every PDF page instead of using its text layer")
+	// The defaults below apply to --dump-chunks (it never loads config); an
+	// ingest run replaces the ones not set explicitly with the server's config.
+	def := chunker.DefaultSettings()
+	chunkKind := fs.String("chunker", def.Kind, "chunking strategy: fixed or recursive (default: CHUNKER from config)")
+	chunkSize := fs.Int("chunk-size", def.Size, "chunk size in characters (default: CHUNK_SIZE from config)")
+	chunkOverlap := fs.Int("chunk-overlap", def.Overlap, "overlap between consecutive chunks in characters (default: CHUNK_OVERLAP from config)")
+	ctxHeader := fs.Bool("context-header", def.Header, "prepend a [title — p. N] line to every chunk before embedding (default: CHUNK_CONTEXT_HEADER from config)")
+	cacheDir := fs.String("parse-cache-dir", defaultParseCacheDir(), "directory caching parsed pages (empty disables)")
 	fs.Parse(os.Args[1:])
+
+	explicit := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
+	chunkCfg := eval.ChunkConfig{Kind: *chunkKind, Size: *chunkSize, Overlap: *chunkOverlap, Header: *ctxHeader}
 
 	if len(dataDirs) == 0 {
 		dataDirs = DefaultDirs()
@@ -70,7 +84,11 @@ func run() error {
 		fmt.Fprintln(os.Stderr, "warning:", w)
 	}
 	if *dump {
-		return dumpChunks(sources, *dumpSource, *forceOCR)
+		if err := chunkCfg.Validate(); err != nil {
+			return err
+		}
+		fmt.Fprintln(os.Stderr, chunkCfg)
+		return dumpChunks(sources, *dumpSource, *forceOCR, chunkCfg, *cacheDir)
 	}
 	if *dumpSource != "" {
 		return fmt.Errorf("--source only applies with --dump-chunks")
@@ -99,6 +117,27 @@ func run() error {
 	if *topK <= 0 {
 		*topK = cfg.RetrievalTopK
 	}
+	// Chunking follows the server's config; explicit flags override it.
+	serverChunking, warn := chunker.SettingsFromConfig(*cfg)
+	if warn != nil {
+		fmt.Fprintln(os.Stderr, "warning: invalid chunking configuration, using defaults:", warn)
+	}
+	if !explicit["chunker"] {
+		chunkCfg.Kind = serverChunking.Kind
+	}
+	if !explicit["chunk-size"] {
+		chunkCfg.Size = serverChunking.Size
+	}
+	if !explicit["chunk-overlap"] {
+		chunkCfg.Overlap = serverChunking.Overlap
+	}
+	if !explicit["context-header"] {
+		chunkCfg.Header = serverChunking.Header
+	}
+	if err := chunkCfg.Validate(); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, chunkCfg)
 
 	questions, err := eval.LoadQuestionFiles(questionPaths)
 	if err != nil {
@@ -122,7 +161,7 @@ func run() error {
 	}
 
 	if !*skipIngest {
-		if err := ingest(ctx, cfg, log, store, embedder, sources, *forceOCR); err != nil {
+		if err := ingest(ctx, cfg, log, store, embedder, sources, *forceOCR, chunkCfg, *cacheDir); err != nil {
 			return err
 		}
 	}
@@ -151,7 +190,7 @@ func run() error {
 
 // ingest rebuilds the eval collection content with the same parsers, chunker
 // settings and IngestUsecase the server uses, against the dedicated collection.
-func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store ports.VectorStore, embedder ports.Embedder, sources []eval.Source, forceOCR bool) error {
+func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store ports.VectorStore, embedder ports.Embedder, sources []eval.Source, forceOCR bool, chunkCfg eval.ChunkConfig, cacheDir string) error {
 	evalCfg := *cfg
 	evalCfg.QdrantCollection = evalCollection
 	uc := application.NewIngestUsecase(store, embedder, log, evalCfg)
@@ -159,13 +198,17 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 	// Same parsers and chunker settings as cmd/server/main.go, PDF and OCR included.
 	engine := ocr.NewEngine(cfg)
 	registry := eval.NewParserRegistry(engine, ocr.PDFOptions(cfg)...)
-	_, _, mode := ocr.Effective(cfg)
+	engineName, model, mode := ocr.Effective(cfg)
 	fmt.Fprintf(os.Stderr, "OCR: engine %s, PDF OCR mode %s\n", ocrLabel(cfg), mode)
 	if forceOCR {
 		ctx = context.WithValue(ctx, parser.ForceOCRKey, true)
 		fmt.Fprintf(os.Stderr, "force-OCR on: every PDF page goes through OCR (engine: %s)\n", ocrLabel(cfg))
 	}
-	chunker := eval.NewChunker()
+	chunkr, err := chunkCfg.Chunker()
+	if err != nil {
+		return err
+	}
+	cache := &eval.ParseCache{Dir: cacheDir, Signature: eval.ParseSignature(engineName, model, mode, forceOCR)}
 
 	if err := store.CreateCollection(ctx, evalCollection, cfg.EmbeddingDim); err != nil {
 		return fmt.Errorf("creating collection %s: %w", evalCollection, err)
@@ -188,7 +231,11 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 		if err != nil {
 			return err
 		}
-		chunks, err := eval.BuildChunks(ctx, registry, chunker, name, content)
+		docs, err := cache.Docs(ctx, registry, name, content)
+		if err != nil {
+			return err
+		}
+		chunks, err := chunker.ChunkPages(docs, name, chunkr, chunkCfg.Header)
 		if err != nil {
 			return err
 		}
@@ -198,6 +245,7 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 		}
 		fmt.Fprintf(os.Stderr, "ingested %s (%d chunks)\n", name, len(chunks))
 	}
+	fmt.Fprintln(os.Stderr, cache.Summary())
 	return nil
 }
 
@@ -205,11 +253,16 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 func DefaultDirs() []string { return eval.DefaultDataDirs(dataRoot) }
 
 // dumpChunks parses and chunks the sources as ingestion would and prints them.
-func dumpChunks(sources []eval.Source, only string, forceOCR bool) error {
+func dumpChunks(sources []eval.Source, only string, forceOCR bool, chunkCfg eval.ChunkConfig, cacheDir string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	// --dump-chunks needs no config or API key, so it always uses Tesseract.
-	registry, chunker := eval.NewParserRegistry(parser.NewTesseractOCR()), eval.NewChunker()
+	registry := eval.NewParserRegistry(parser.NewTesseractOCR())
+	chunkr, err := chunkCfg.Chunker()
+	if err != nil {
+		return err
+	}
+	cache := &eval.ParseCache{Dir: cacheDir, Signature: eval.ParseSignature("tesseract", "", "auto", forceOCR)}
 	if forceOCR {
 		ctx = context.WithValue(ctx, parser.ForceOCRKey, true)
 		fmt.Fprintln(os.Stderr, "force-OCR on: every PDF page goes through OCR (engine: tesseract)")
@@ -227,12 +280,17 @@ func dumpChunks(sources []eval.Source, only string, forceOCR bool) error {
 		if err != nil {
 			return err
 		}
-		chunks, err := eval.BuildChunks(ctx, registry, chunker, src.Name, content)
+		parsed, err := cache.Docs(ctx, registry, src.Name, content)
+		if err != nil {
+			return err
+		}
+		chunks, err := chunker.ChunkPages(parsed, src.Name, chunkr, chunkCfg.Header)
 		if err != nil {
 			return err
 		}
 		docs = append(docs, eval.DocChunks{Name: src.Name, Chunks: chunks})
 	}
+	fmt.Fprintln(os.Stderr, cache.Summary())
 	return eval.WriteChunkDump(os.Stdout, docs, only)
 }
 
@@ -242,4 +300,14 @@ func ocrLabel(cfg *config.Config) string {
 		return "llm " + model
 	}
 	return "tesseract"
+}
+
+// defaultParseCacheDir is <user cache dir>/rago-eval/parse, or "" (cache
+// disabled) when the platform has no user cache directory.
+func defaultParseCacheDir() string {
+	dir, err := os.UserCacheDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "rago-eval", "parse")
 }
