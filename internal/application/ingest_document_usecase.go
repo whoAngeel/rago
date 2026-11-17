@@ -106,10 +106,13 @@ func (i *IngestDocumentUsecase) Upload(
 	return document, err
 }
 
-func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID int) error {
+// DeleteDocument removes a document owned by userID. A document that does not
+// exist or belongs to another user yields ErrNotFound, so callers cannot tell
+// the two cases apart.
+func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID, userID int) error {
 	doc, err := i.DocRepo.FindByID(ctx, docID)
-	if err != nil {
-		return err
+	if err != nil || doc == nil || doc.UserID != userID {
+		return ErrNotFound
 	}
 	if doc.FilePath != "" {
 		if err := i.BlobStorage.Delete(ctx, doc.FilePath); err != nil {

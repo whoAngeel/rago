@@ -205,7 +205,12 @@ func (h *DocumentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.DeleteDocument(ctx, id); err != nil {
+	userID := c.GetInt("user_id")
+	if err := h.usecase.DeleteDocument(ctx, id, userID); err != nil {
+		if errors.Is(err, application.ErrNotFound) {
+			rest.RespondError(c, http.StatusNotFound, "Document not found", err.Error())
+			return
+		}
 		rest.RespondError(c, 500, "Delete failed", err.Error())
 		return
 	}
