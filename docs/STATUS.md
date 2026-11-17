@@ -96,7 +96,8 @@ Por página:
 OCR detrás de un puerto (interfaz) con dos implementaciones, elegible por configuración:
 - [x] Puerto `ports.OCR` hecho (`internal/core/ports/ocr.go`).
 - [x] Tesseract local hecho (`parser.NewTesseractOCR`, a 300 DPI). Falta el modo de segmentación.
-- [ ] LLM multimodal por OpenRouter (imagen en base64 al endpoint de chat): pendiente.
+- [x] LLM multimodal por OpenRouter hecho (`openrouter.NewOCRAdapter`, imagen en base64 al endpoint de chat; con Tesseract de respaldo si falla).
+- Con `OCR_ENGINE=llm`, las imágenes de las páginas que necesitan OCR se envían a OpenRouter.
 
 Candidatos para el OCR con LLM (precios del catálogo público de OpenRouter, consultados el 2026-11-17 UTC; coste por 1000 páginas estimado):
 
@@ -114,6 +115,21 @@ Prueba local antes de elegir:
 - [ ] Los 6 PDF reales tienen capa de texto, así que nunca pasan por OCR. Rasterizarlos a imagen (`pdftoppm`) para crear versiones escaneadas con texto correcto conocido.
 - [ ] Comparar: capa de texto, Tesseract 300 DPI y cada LLM. Medir aciertos exactos de números y unidades, filas de tabla, texto inventado en zonas en blanco, coste real por página y la evaluación de recuperación.
 - [ ] Caso real a vigilar: la ficha del monitor tiene la fuente rota en el propio PDF (`energéca` sin «ti»); ahí el OCR puede dar mejor resultado que la capa de texto.
+
+Medición en los 6 PDF privados (nivel chunk, 20 preguntas con respuesta, top-k 8, 2026-11-17):
+
+| Fuente del texto | hit@1 | hit@3 | hit@8 | MRR |
+|---|---|---|---|---|
+| Capa de texto | 8 | 12 | 16 | 0.518 |
+| Tesseract forzado | 7 | 11 | 14 | 0.458 |
+| LLM forzado (`google/gemini-2.5-flash-lite`) | 9 | 16 | 20 | 0.637 |
+
+Decisión: por defecto `OCR_ENGINE=llm` con `PDF_OCR_MODE=always`. Cada imagen de página de un PDF se envía a OpenRouter; la capa de texto es el respaldo si el LLM falla o devuelve vacío (Tesseract solo cubre las páginas sin capa de texto). Para mantener las páginas en local: `PDF_OCR_MODE=auto` u `OCR_ENGINE=tesseract`. Límites de la medición: 6 PDF y un solo modelo probado.
+
+Tests pendientes:
+- Ruta `ForceOCR`, OCR nulo, error de OCR, entrada que no es PDF y fallos de `pdftotext`/`pdftoppm`.
+- Tesseract real, `stripCodeFence` y el error "no choices".
+- Selección de `NewEngine`/`PDFOptions` y el flag `--force-ocr`.
 
 Riesgos del OCR con LLM: inventa texto en zonas borrosas, omite filas de tablas, reordena columnas. Pedir transcripción literal, tablas en Markdown y `[ilegible]` cuando no se lea.
 

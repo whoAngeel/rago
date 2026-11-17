@@ -23,10 +23,10 @@ func ContentTypeForExtension(ext string) (string, bool) {
 
 // NewDefaultRegistry returns a registry with a parser for every supported
 // content type.
-func NewDefaultRegistry(ocr ports.OCR) *Registry {
+func NewDefaultRegistry(ocr ports.OCR, pdfOpts ...PDFOption) *Registry {
 	r := NewRegistry()
 	r.Register("text/plain", NewPlainTextAdapter())
 	r.Register("text/markdown", NewPlainTextAdapter())
-	r.Register("application/pdf", NewPDFParser(ocr))
+	r.Register("application/pdf", NewPDFParser(ocr, pdfOpts...))
 	return r
 }

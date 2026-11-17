@@ -3,6 +3,7 @@ package eval
 import (
 	"time"
 
+	"github.com/whoAngeel/rago/internal/core/ports"
 	chunkerpkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 )
@@ -16,8 +17,8 @@ const (
 )
 
 // NewParserRegistry returns the same parser registry the server uses.
-func NewParserRegistry() *parserpkg.Registry {
-	return parserpkg.NewDefaultRegistry(parserpkg.NewTesseractOCR())
+func NewParserRegistry(ocr ports.OCR, pdfOpts ...parserpkg.PDFOption) *parserpkg.Registry {
+	return parserpkg.NewDefaultRegistry(ocr, pdfOpts...)
 }
 
 // NewChunker returns the chunker the server uses.

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/tmc/langchaingo/schema"
 
@@ -24,16 +25,39 @@ const ForceOCRKey contextKey = "force_ocr"
 
 const ocrDPI = "300"
 
+// maxConcurrentOCR bounds the OCR calls in flight for one document.
+const maxConcurrentOCR = 4
+
 // PDFParser extracts text per page with pdftotext, cleans it, and falls back
 // to OCR for pages without a usable text layer.
 type PDFParser struct {
-	ocr ports.OCR
+	ocr    ports.OCR
+	always ports.OCR
+}
+
+// PDFOption customises a PDFParser.
+type PDFOption func(*PDFParser)
+
+// WithAlwaysOCR sends every page, including those with a usable text layer,
+// to engine. When engine fails or returns nothing for such a page, its text
+// layer is kept.
+func WithAlwaysOCR(engine ports.OCR) PDFOption {
+	return func(p *PDFParser) { p.always = engine }
 }
 
 // NewPDFParser builds a PDF parser. ocr may be nil: pages that need OCR are
 // then skipped with a warning.
-func NewPDFParser(ocr ports.OCR) *PDFParser {
-	return &PDFParser{ocr: ocr}
+func NewPDFParser(ocr ports.OCR, opts ...PDFOption) *PDFParser {
+	p := &PDFParser{ocr: ocr}
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
+}
+
+type pageResult struct {
+	text   string
+	source string
 }
 
 func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType string) ([]schema.Document, error) {
@@ -70,23 +94,58 @@ func (p *PDFParser) Parse(ctx context.Context, reader io.Reader, contentType str
 
 	forceOCR, _ := ctx.Value(ForceOCRKey).(bool)
 
-	var docs []schema.Document
+	results := make([]pageResult, pageCount)
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentOCR)
+dispatch:
 	for i, text := range cleaned {
-		pageNum := i + 1
-		source := "text"
-		if forceOCR || needsOCR(text) {
-			text = p.ocrPage(ctx, inputPath, tmpDir, pageNum)
-			source = "ocr"
+		usable := !needsOCR(text)
+		var engine ports.OCR
+		switch {
+		case forceOCR || !usable:
+			engine = p.ocr
+		case p.always != nil:
+			engine = p.always
+		default:
+			results[i] = pageResult{text: text, source: "text"}
+			continue
 		}
-		if text == "" {
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break dispatch
+		}
+		wg.Add(1)
+		go func(i int, text string, usable bool, engine ports.OCR) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			pageNum := i + 1
+			if ocrText := p.ocrPage(ctx, engine, inputPath, tmpDir, pageNum); ocrText != "" {
+				results[i] = pageResult{text: ocrText, source: "ocr"}
+				return
+			}
+			if usable && text != "" {
+				slog.Warn("pdf: OCR gave no text; keeping the text layer", "page", pageNum)
+				results[i] = pageResult{text: text, source: "text"}
+			}
+		}(i, text, usable, engine)
+	}
+	wg.Wait()
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("parse pdf: %w", err)
+	}
+
+	var docs []schema.Document
+	for i, r := range results {
+		if r.text == "" {
 			continue
 		}
 		docs = append(docs, schema.Document{
-			PageContent: text,
+			PageContent: r.text,
 			Metadata: map[string]any{
-				"page_number": pageNum,
+				"page_number": i + 1,
 				"page_count":  pageCount,
-				"source":      source,
+				"source":      r.source,
 			},
 		})
 	}
@@ -118,8 +177,8 @@ func extractPages(ctx context.Context, pdfPath string) ([]string, error) {
 
 // ocrPage rasterises one page and recognises it. It returns "" (after
 // logging) when OCR is unavailable or fails, so the page is skipped.
-func (p *PDFParser) ocrPage(ctx context.Context, pdfPath, tmpDir string, page int) string {
-	if p.ocr == nil {
+func (p *PDFParser) ocrPage(ctx context.Context, engine ports.OCR, pdfPath, tmpDir string, page int) string {
+	if engine == nil {
 		slog.Warn("pdf: page needs OCR but no OCR engine is configured; skipping", "page", page)
 		return ""
 	}
@@ -137,7 +196,7 @@ func (p *PDFParser) ocrPage(ctx context.Context, pdfPath, tmpDir string, page in
 		slog.Warn("pdf: reading rasterised page failed; skipping page", "page", page, "err", err)
 		return ""
 	}
-	text, err := p.ocr.Recognize(ctx, png)
+	text, err := engine.Recognize(ctx, png)
 	if err != nil {
 		slog.Warn("pdf: OCR failed; skipping page", "page", page, "err", err)
 		return ""

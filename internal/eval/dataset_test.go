@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 )
 
 func TestValidateQuestions(t *testing.T) {
@@ -95,7 +97,7 @@ func TestExpectedContainsExistInChunks(t *testing.T) {
 	for _, s := range srcs {
 		byName[s.Name] = s
 	}
-	reg, chunker := NewParserRegistry(), NewChunker()
+	reg, chunker := NewParserRegistry(parserpkg.NewTesseractOCR()), NewChunker()
 	cache := map[string][]string{}
 	for _, q := range qs {
 		src, ok := byName[q.ExpectedSource]

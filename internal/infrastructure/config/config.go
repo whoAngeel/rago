@@ -52,6 +52,13 @@ type Config struct {
 	LLMTemperature float64
 	// LLMMaxTokens caps the completion length; <= 0 leaves it to the provider.
 	LLMMaxTokens int
+	// OCREngine selects the OCR engine: "llm" (default) or "tesseract".
+	OCREngine string
+	// OCRModel is the OpenRouter model used when OCREngine is "llm".
+	OCRModel string
+	// PDFOCRMode is "always" (default: every PDF page goes through the LLM OCR,
+	// the text layer is the fallback) or "auto" (OCR only pages without a text layer).
+	PDFOCRMode string
 }
 
 func Load() (*Config, error) {
@@ -95,6 +102,10 @@ func Load() (*Config, error) {
 
 		LLMTemperature: getFloat64("LLM_TEMPERATURE", 0.2),
 		LLMMaxTokens:   getEnvAsInt("LLM_MAX_TOKENS", 0),
+
+		OCREngine:  getEnv("OCR_ENGINE", "llm"),
+		OCRModel:   getEnv("OCR_MODEL", "google/gemini-2.5-flash-lite"),
+		PDFOCRMode: getEnv("PDF_OCR_MODE", "always"),
 	}
 
 	if cfg.OpenRouterKey == "" {

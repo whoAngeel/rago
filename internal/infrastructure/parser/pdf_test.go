@@ -3,6 +3,7 @@ package parser
 import (
 	"bytes"
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
@@ -94,4 +95,53 @@ func TestPDFParser_MixedPDF(t *testing.T) {
 			t.Errorf("pages 1 and 3 should have source text")
 		}
 	})
+}
+
+func TestPDFParser_AlwaysOCRUsesEngineOnTextPages(t *testing.T) {
+	requireTools(t, "pdftotext", "pdftoppm")
+	always := &fakeOCR{text: "text transcribed by the always engine"}
+	p := NewPDFParser(nil, WithAlwaysOCR(always))
+	docs, err := parsePDF(t, context.Background(), p, buildPDF(12, pageOne, pageThree))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(always.calls) != 2 {
+		t.Fatalf("always engine called %d times; want 2", len(always.calls))
+	}
+	if len(docs) != 2 {
+		t.Fatalf("got %d docs; want 2", len(docs))
+	}
+	for i, d := range docs {
+		if d.PageContent != always.text {
+			t.Errorf("doc %d = %q; want %q", i, d.PageContent, always.text)
+		}
+		if d.Metadata["source"] != "ocr" {
+			t.Errorf("doc %d source = %v; want ocr", i, d.Metadata["source"])
+		}
+		if d.Metadata["page_number"] != i+1 {
+			t.Errorf("doc %d page_number = %v; want %d", i, d.Metadata["page_number"], i+1)
+		}
+	}
+}
+
+func TestPDFParser_AlwaysOCRErrorKeepsTextLayer(t *testing.T) {
+	requireTools(t, "pdftotext", "pdftoppm")
+	always := &fakeOCR{err: errors.New("provider down")}
+	p := NewPDFParser(nil, WithAlwaysOCR(always))
+	docs, err := parsePDF(t, context.Background(), p, buildPDF(12, pageOne, pageThree))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(docs) != 2 {
+		t.Fatalf("got %d docs; want 2", len(docs))
+	}
+	want := []string{pageOne, pageThree}
+	for i, d := range docs {
+		if d.PageContent != want[i] {
+			t.Errorf("doc %d = %q; want %q", i, d.PageContent, want[i])
+		}
+		if d.Metadata["source"] != "text" {
+			t.Errorf("doc %d source = %v; want text", i, d.Metadata["source"])
+		}
+	}
 }

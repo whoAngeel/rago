@@ -18,7 +18,9 @@ import (
 	"github.com/whoAngeel/rago/internal/eval"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
+	"github.com/whoAngeel/rago/internal/infrastructure/ocr"
 	"github.com/whoAngeel/rago/internal/infrastructure/openrouter"
+	"github.com/whoAngeel/rago/internal/infrastructure/parser"
 	"github.com/whoAngeel/rago/internal/infrastructure/qdrant"
 )
 
@@ -54,6 +56,7 @@ func run() error {
 	fs.Var(&dataDirs, "data-dir", "directory with documents (repeatable, non-recursive); default: testdata, plus testdata/manuals and testdata/private if present")
 	dump := fs.Bool("dump-chunks", false, "print the chunks ingestion would produce and exit; needs no Qdrant, embedder or API key")
 	dumpSource := fs.String("source", "", "with --dump-chunks, only this document (base file name)")
+	forceOCR := fs.Bool("force-ocr", false, "rasterise and OCR every PDF page instead of using its text layer")
 	fs.Parse(os.Args[1:])
 
 	if len(dataDirs) == 0 {
@@ -67,7 +70,7 @@ func run() error {
 		fmt.Fprintln(os.Stderr, "warning:", w)
 	}
 	if *dump {
-		return dumpChunks(sources, *dumpSource)
+		return dumpChunks(sources, *dumpSource, *forceOCR)
 	}
 	if *dumpSource != "" {
 		return fmt.Errorf("--source only applies with --dump-chunks")
@@ -119,7 +122,7 @@ func run() error {
 	}
 
 	if !*skipIngest {
-		if err := ingest(ctx, cfg, log, store, embedder, sources); err != nil {
+		if err := ingest(ctx, cfg, log, store, embedder, sources, *forceOCR); err != nil {
 			return err
 		}
 	}
@@ -148,13 +151,20 @@ func run() error {
 
 // ingest rebuilds the eval collection content with the same parsers, chunker
 // settings and IngestUsecase the server uses, against the dedicated collection.
-func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store ports.VectorStore, embedder ports.Embedder, sources []eval.Source) error {
+func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store ports.VectorStore, embedder ports.Embedder, sources []eval.Source, forceOCR bool) error {
 	evalCfg := *cfg
 	evalCfg.QdrantCollection = evalCollection
 	uc := application.NewIngestUsecase(store, embedder, log, evalCfg)
 
 	// Same parsers and chunker settings as cmd/server/main.go, PDF and OCR included.
-	registry := eval.NewParserRegistry()
+	engine := ocr.NewEngine(cfg)
+	registry := eval.NewParserRegistry(engine, ocr.PDFOptions(cfg)...)
+	_, _, mode := ocr.Effective(cfg)
+	fmt.Fprintf(os.Stderr, "OCR: engine %s, PDF OCR mode %s\n", ocrLabel(cfg), mode)
+	if forceOCR {
+		ctx = context.WithValue(ctx, parser.ForceOCRKey, true)
+		fmt.Fprintf(os.Stderr, "force-OCR on: every PDF page goes through OCR (engine: %s)\n", ocrLabel(cfg))
+	}
 	chunker := eval.NewChunker()
 
 	if err := store.CreateCollection(ctx, evalCollection, cfg.EmbeddingDim); err != nil {
@@ -195,10 +205,15 @@ func ingest(ctx context.Context, cfg *config.Config, log ports.Logger, store por
 func DefaultDirs() []string { return eval.DefaultDataDirs(dataRoot) }
 
 // dumpChunks parses and chunks the sources as ingestion would and prints them.
-func dumpChunks(sources []eval.Source, only string) error {
+func dumpChunks(sources []eval.Source, only string, forceOCR bool) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	registry, chunker := eval.NewParserRegistry(), eval.NewChunker()
+	// --dump-chunks needs no config or API key, so it always uses Tesseract.
+	registry, chunker := eval.NewParserRegistry(parser.NewTesseractOCR()), eval.NewChunker()
+	if forceOCR {
+		ctx = context.WithValue(ctx, parser.ForceOCRKey, true)
+		fmt.Fprintln(os.Stderr, "force-OCR on: every PDF page goes through OCR (engine: tesseract)")
+	}
 	var docs []eval.DocChunks
 	for _, src := range sources {
 		if only != "" && src.Name != only {
@@ -219,4 +234,12 @@ func dumpChunks(sources []eval.Source, only string) error {
 		docs = append(docs, eval.DocChunks{Name: src.Name, Chunks: chunks})
 	}
 	return eval.WriteChunkDump(os.Stdout, docs, only)
+}
+
+// ocrLabel names the active OCR engine for log output.
+func ocrLabel(cfg *config.Config) string {
+	if engine, model, _ := ocr.Effective(cfg); engine == "llm" {
+		return "llm " + model
+	}
+	return "tesseract"
 }

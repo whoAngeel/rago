@@ -15,6 +15,7 @@ import (
 	cnunkerPkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
+	"github.com/whoAngeel/rago/internal/infrastructure/ocr"
 	"github.com/whoAngeel/rago/internal/infrastructure/openrouter"
 	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 	"github.com/whoAngeel/rago/internal/infrastructure/postgres"
@@ -174,7 +175,9 @@ func main() {
 		usageRepo,
 	)
 
-	parserRegistry := parserpkg.NewDefaultRegistry(parserpkg.NewTesseractOCR())
+	ocrEngine, ocrModel, pdfOCRMode := ocr.Effective(cfg)
+	log.Info("OCR engine", "engine", ocrEngine, "model", ocrModel, "pdf_ocr_mode", pdfOCRMode)
+	parserRegistry := parserpkg.NewDefaultRegistry(ocr.NewEngine(cfg), ocr.PDFOptions(cfg)...)
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 

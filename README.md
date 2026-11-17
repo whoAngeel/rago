@@ -413,6 +413,9 @@ LLM_MODEL="google/gemini-2.5-flash"
 LLM_TEMPERATURE=0.2         # temperatura de muestreo del LLM
 LLM_MAX_TOKENS=0            # tope de tokens de la respuesta; 0 deja el límite al proveedor
 EMBEDDING_MODEL="text-embedding-3-small"
+OCR_ENGINE="llm"            # motor de OCR: llm (por defecto; modelo multimodal por OpenRouter, con tesseract de respaldo) o tesseract (local)
+PDF_OCR_MODE="always"       # always (por defecto: cada página del PDF va al OCR con LLM; la capa de texto es el respaldo) o auto (OCR solo en páginas sin capa de texto)
+OCR_MODEL="google/gemini-2.5-flash-lite"   # modelo usado cuando OCR_ENGINE=llm
 
 # Auth
 JWT_SECRET="..."
