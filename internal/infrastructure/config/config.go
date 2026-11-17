@@ -91,7 +91,7 @@ func Load() (*Config, error) {
 		ContextWindowLimit: getEnvAsInt("CONTEXT_WINDOW_LIMIT", 8192),
 
 		RetrievalTopK:           getEnvAsInt("RETRIEVAL_TOP_K", 8),
-		RetrievalScoreThreshold: getFloat64("RETRIEVAL_SCORE_THRESHOLD", 0.30),
+		RetrievalScoreThreshold: getFloat64("RETRIEVAL_SCORE_THRESHOLD", 0.25),
 
 		LLMTemperature: getFloat64("LLM_TEMPERATURE", 0.2),
 		LLMMaxTokens:   getEnvAsInt("LLM_MAX_TOKENS", 0),

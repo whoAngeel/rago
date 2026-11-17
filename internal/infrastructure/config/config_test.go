@@ -18,8 +18,8 @@ func TestLoad_RetrievalDefaults(t *testing.T) {
 	if cfg.RetrievalTopK != 8 {
 		t.Errorf("RetrievalTopK = %d; want 8", cfg.RetrievalTopK)
 	}
-	if cfg.RetrievalScoreThreshold != 0.30 {
-		t.Errorf("RetrievalScoreThreshold = %v; want 0.30", cfg.RetrievalScoreThreshold)
+	if cfg.RetrievalScoreThreshold != 0.25 {
+		t.Errorf("RetrievalScoreThreshold = %v; want 0.25", cfg.RetrievalScoreThreshold)
 	}
 }
 
