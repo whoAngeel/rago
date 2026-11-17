@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 )
 
 // Question is one evaluation item. An empty ExpectedSource marks a question
@@ -22,7 +24,7 @@ type Question struct {
 	// ExpectedContains makes the question chunk-level: a retrieved chunk only
 	// counts when it comes from ExpectedSource and contains every string.
 	ExpectedContains []string `json:"expected_contains,omitempty"`
-	// File is the question file the item was loaded from (base name).
+	// File is the question file the item was loaded from (path as given).
 	File string `json:"-"`
 }
 
@@ -40,7 +42,7 @@ func LoadQuestions(path string) ([]Question, error) {
 		return nil, fmt.Errorf("decoding questions %s: %w", path, err)
 	}
 	for i := range qs {
-		qs[i].File = filepath.Base(path)
+		qs[i].File = path
 	}
 	return qs, nil
 }
@@ -137,29 +139,8 @@ func ValidateQuestions(qs []Question, files []string) error {
 // ContentTypeFor maps a file name to the content type the parser registry
 // uses, the same way an upload would be tagged.
 func ContentTypeFor(name string) (string, error) {
-	switch strings.ToLower(filepath.Ext(name)) {
-	case ".txt":
-		return "text/plain", nil
-	case ".md":
-		return "text/markdown", nil
-	case ".csv":
-		return "text/csv", nil
-	case ".json":
-		return "application/json", nil
-	case ".pdf":
-		return "application/pdf", nil
-	case ".docx":
-		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document", nil
-	case ".xlsx":
-		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nil
-	case ".png":
-		return "image/png", nil
-	case ".jpg", ".jpeg":
-		return "image/jpeg", nil
-	case ".webp":
-		return "image/webp", nil
-	case ".tif", ".tiff":
-		return "image/tiff", nil
+	if ct, ok := parserpkg.ContentTypeForExtension(filepath.Ext(name)); ok {
+		return ct, nil
 	}
 	return "", fmt.Errorf("unsupported file extension for %q", name)
 }

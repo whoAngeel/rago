@@ -11,7 +11,7 @@ set -a; . ./scripts/local-env.sh; set +a
 go run ./cmd/eval --out /tmp/eval.json
 ```
 
-En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (texto, CSV, JSON, DOCX, XLSX, PDF con respaldo de OCR e imágenes), el mismo chunker (1000/200) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
+En cada ejecución se vuelven a ingestar los documentos en la colección `rago_eval` con un usuario sintético, con los mismos parsers que el servidor (TXT, MD y PDF con respaldo de OCR), el mismo chunker (1000/200) y `IngestUsecase`. Cada archivo se interpreta con un timeout de 10 minutos, como en el worker. Nunca se toca `QDRANT_COLLECTION`.
 
 ## Documentos y preguntas por defecto
 
@@ -29,6 +29,8 @@ En cada ejecución se vuelven a ingestar los documentos en la colección `rago_e
 - `--data-dir ruta` (repetible): reemplaza la lista de directorios por defecto.
 - `--questions ruta` (repetible): reemplaza la lista de archivos de preguntas por defecto. Los `id` deben ser únicos entre todos los archivos.
 - `--dump-chunks`: parsea y trocea los documentos como lo haría la ingesta e imprime cada chunk (documento, índice y longitud en caracteres). No usa Qdrant, embeddings ni API key.
+- `--force-ocr`: rasteriza y pasa por OCR todas las páginas de los PDF en lugar de usar su capa de texto; aplica a la ingesta y a `--dump-chunks`. Con `--dump-chunks` siempre usa Tesseract; en la ingesta usa el motor de `OCR_ENGINE`.
+- La evaluación sigue `OCR_ENGINE` y `PDF_OCR_MODE`: con los valores por defecto envía las imágenes de las páginas de los PDF a OpenRouter.
 - `--source nombre`: con `--dump-chunks`, limita la salida a un documento.
 
 ## Dos niveles de acierto

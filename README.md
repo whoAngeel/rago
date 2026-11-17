@@ -84,7 +84,7 @@ graph TB
         QD[(Qdrant)]
         MI[(MinIO / S3)]
         OR["OpenRouter\nLLM + Embeddings"]
-        PA["Parsers\nPDF·DOCX·XLSX·CSV·JSON·Imagen+OCR"]
+        PA["Parsers\nPDF (con OCR)·TXT·MD"]
         SSE[SSE Manager]
         JWT[JWT Auth]
     end
@@ -126,7 +126,7 @@ rago/
 │   │   ├── config/       # carga de variables de entorno
 │   │   ├── logger/
 │   │   ├── openrouter/   # LLM + Embedder (langchaingo, API compatible OpenAI)
-│   │   ├── parser/       # texto, csv, json, docx, xlsx, pdf, imagen+OCR (tesseract)
+│   │   ├── parser/       # txt, md, pdf (OCR con tesseract)
 │   │   ├── postgres/     # repositorios GORM
 │   │   ├── qdrant/       # adapter VectorStore
 │   │   ├── rest/         # router, handlers, middleware (Gin)
@@ -413,6 +413,9 @@ LLM_MODEL="google/gemini-2.5-flash"
 LLM_TEMPERATURE=0.2         # temperatura de muestreo del LLM
 LLM_MAX_TOKENS=0            # tope de tokens de la respuesta; 0 deja el límite al proveedor
 EMBEDDING_MODEL="text-embedding-3-small"
+OCR_ENGINE="llm"            # motor de OCR: llm (por defecto; modelo multimodal por OpenRouter, con tesseract de respaldo) o tesseract (local)
+PDF_OCR_MODE="always"       # always (por defecto: cada página del PDF va al OCR con LLM; la capa de texto es el respaldo) o auto (OCR solo en páginas sin capa de texto)
+OCR_MODEL="google/gemini-2.5-flash-lite"   # modelo usado cuando OCR_ENGINE=llm
 
 # Auth
 JWT_SECRET="..."
@@ -438,7 +441,7 @@ RETRIEVAL_SCORE_THRESHOLD=0.25   # descarta chunks con score (similitud coseno) 
 - API REST completa (auth, documentos, grupos, chats, público)
 - Ingesta asíncrona con worker, reintentos y watchdog
 - OCR (tesseract) para imágenes y PDFs escaneados
-- Parsers: TXT, MD, CSV, JSON, DOCX, XLSX, PDF, imágenes
+- Parsers: TXT, MD, PDF (con respaldo de OCR)
 - Vector store Qdrant + storage MinIO
 - Chat con historial y streaming SSE
 - Chat público por grupo (sin cuenta), con umbral de confianza

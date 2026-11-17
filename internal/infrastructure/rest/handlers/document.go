@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
-	"mime"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -15,20 +15,31 @@ import (
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
+	"github.com/whoAngeel/rago/internal/infrastructure/parser"
 	"github.com/whoAngeel/rago/internal/infrastructure/rest"
 )
 
+// pdfMagic is the signature every PDF file starts with.
+const pdfMagic = "%PDF-"
+
+// documentUploader is the part of the ingest usecase the Upload handler needs.
+type documentUploader interface {
+	Upload(ctx context.Context, userID int, filename string, r io.Reader, size int64, contentType string) (*domain.Document, error)
+}
+
 type DocumentHandler struct {
-	usecase *application.IngestDocumentUsecase
-	logger  ports.Logger
-	config  config.Config
+	usecase  *application.IngestDocumentUsecase
+	uploader documentUploader
+	logger   ports.Logger
+	config   config.Config
 }
 
 func NewDocumentHandler(uc *application.IngestDocumentUsecase, log ports.Logger, config config.Config) *DocumentHandler {
 	return &DocumentHandler{
-		usecase: uc,
-		logger:  log,
-		config:  config,
+		usecase:  uc,
+		uploader: uc,
+		logger:   log,
+		config:   config,
 	}
 }
 
@@ -100,9 +111,9 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		rest.RespondError(c, 413, "File too large", "")
 		return
 	}
-	allowedExts := map[string]bool{".txt": true, ".pdf": true, ".csv": true, ".json": true, ".docx": true, ".xlsx": true, ".md": true}
 	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if !allowedExts[ext] {
+	contentType, allowed := parser.ContentTypeForExtension(ext)
+	if !allowed {
 		rest.RespondError(c, 400, "File type not allowed", "")
 		return
 	}
@@ -113,11 +124,18 @@ func (h *DocumentHandler) Upload(c *gin.Context) {
 		return
 	}
 	defer src.Close()
-	contentType := file.Header.Get("Content-Type")
-	if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
-		contentType = mediaType
+	if ext == ".pdf" {
+		magic := make([]byte, len(pdfMagic))
+		if _, err := io.ReadFull(src, magic); err != nil || string(magic) != pdfMagic {
+			rest.RespondError(c, http.StatusBadRequest, "File type not allowed", "")
+			return
+		}
+		if _, err := src.Seek(0, io.SeekStart); err != nil {
+			rest.RespondError(c, http.StatusInternalServerError, "Error reading file", err.Error())
+			return
+		}
 	}
-	doc, err := h.usecase.Upload(ctx, userId, file.Filename, src, file.Size, contentType)
+	doc, err := h.uploader.Upload(ctx, userId, file.Filename, src, file.Size, contentType)
 	if err != nil {
 		switch {
 		case errors.Is(err, application.ErrDuplicateDocument):

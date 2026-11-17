@@ -109,11 +109,12 @@ func TestLoadQuestionFilesDuplicateIDAcrossFiles(t *testing.T) {
 func TestLoadQuestionFilesRecordsOrigin(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, "a.json", `[{"id":"q1","question":"x?","expected_source":"a.txt","expected_contains":["k"]}]`)
-	qs, err := LoadQuestionFiles([]string{filepath.Join(dir, "a.json")})
+	path := filepath.Join(dir, "a.json")
+	qs, err := LoadQuestionFiles([]string{path})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if qs[0].File != "a.json" || len(qs[0].ExpectedContains) != 1 {
+	if qs[0].File != path || len(qs[0].ExpectedContains) != 1 {
 		t.Errorf("question = %+v", qs[0])
 	}
 }

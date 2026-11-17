@@ -3,6 +3,7 @@ package eval
 import (
 	"time"
 
+	"github.com/whoAngeel/rago/internal/core/ports"
 	chunkerpkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 )
@@ -15,21 +16,9 @@ const (
 	ParseTimeout = 10 * time.Minute
 )
 
-// NewParserRegistry registers the same parsers as cmd/server/main.go.
-func NewParserRegistry() *parserpkg.Registry {
-	r := parserpkg.NewRegistry()
-	r.Register("text/plain", parserpkg.NewPlainTextAdapter())
-	r.Register("text/markdown", parserpkg.NewPlainTextAdapter())
-	r.Register("text/csv", parserpkg.NewCSVParser())
-	r.Register("application/json", parserpkg.NewJSONParser())
-	r.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
-	r.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parserpkg.NewXLSXParser())
-	r.Register("application/pdf", parserpkg.NewPDFParser())
-	img := parserpkg.NewImageParser()
-	for _, ct := range []string{"image/png", "image/jpeg", "image/webp", "image/tiff"} {
-		r.Register(ct, img)
-	}
-	return r
+// NewParserRegistry returns the same parser registry the server uses.
+func NewParserRegistry(ocr ports.OCR, pdfOpts ...parserpkg.PDFOption) *parserpkg.Registry {
+	return parserpkg.NewDefaultRegistry(ocr, pdfOpts...)
 }
 
 // NewChunker returns the chunker the server uses.

@@ -15,6 +15,7 @@ import (
 	cnunkerPkg "github.com/whoAngeel/rago/internal/infrastructure/chunker"
 	"github.com/whoAngeel/rago/internal/infrastructure/config"
 	"github.com/whoAngeel/rago/internal/infrastructure/logger"
+	"github.com/whoAngeel/rago/internal/infrastructure/ocr"
 	"github.com/whoAngeel/rago/internal/infrastructure/openrouter"
 	parserpkg "github.com/whoAngeel/rago/internal/infrastructure/parser"
 	"github.com/whoAngeel/rago/internal/infrastructure/postgres"
@@ -174,19 +175,9 @@ func main() {
 		usageRepo,
 	)
 
-	parserRegistry := parserpkg.NewRegistry()
-	parserRegistry.Register("text/plain", parserpkg.NewPlainTextAdapter())
-	parserRegistry.Register("text/markdown", parserpkg.NewPlainTextAdapter())
-	parserRegistry.Register("text/csv", parserpkg.NewCSVParser())
-	parserRegistry.Register("application/json", parserpkg.NewJSONParser())
-	parserRegistry.Register("application/vnd.openxmlformats-officedocument.wordprocessingml.document", parserpkg.NewDOCXParser())
-	parserRegistry.Register("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parserpkg.NewXLSXParser())
-	parserRegistry.Register("application/pdf", parserpkg.NewPDFParser())
-	imageParser := parserpkg.NewImageParser()
-	parserRegistry.Register("image/png", imageParser)
-	parserRegistry.Register("image/jpeg", imageParser)
-	parserRegistry.Register("image/webp", imageParser)
-	parserRegistry.Register("image/tiff", imageParser)
+	ocrEngine, ocrModel, pdfOCRMode := ocr.Effective(cfg)
+	log.Info("OCR engine", "engine", ocrEngine, "model", ocrModel, "pdf_ocr_mode", pdfOCRMode)
+	parserRegistry := parserpkg.NewDefaultRegistry(ocr.NewEngine(cfg), ocr.PDFOptions(cfg)...)
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 

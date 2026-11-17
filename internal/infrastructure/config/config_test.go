@@ -64,3 +64,17 @@ func TestLoad_LLMSamplingOverrides(t *testing.T) {
 		t.Errorf("overrides = %v, %v; want 0.7, 2048", cfg.LLMTemperature, cfg.LLMMaxTokens)
 	}
 }
+
+func TestLoad_OCRDefaults(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("OCR_ENGINE", "")
+	t.Setenv("OCR_MODEL", "")
+	t.Setenv("PDF_OCR_MODE", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OCREngine != "llm" || cfg.OCRModel != "google/gemini-2.5-flash-lite" || cfg.PDFOCRMode != "always" {
+		t.Errorf("defaults = %q, %q, %q", cfg.OCREngine, cfg.OCRModel, cfg.PDFOCRMode)
+	}
+}

@@ -54,12 +54,15 @@ go run ./cmd/eval --dump-chunks --data-dir testdata/private   # ver qué extrae 
 - `--dump-chunks`: muestra los fragmentos sin conectarse a nada.
 - Corpus difícil: 12 manuales sintéticos casi idénticos entre sí (31 preguntas) y 24 preguntas sobre los 6 PDF reales de `testdata/private/`.
 
-## 4. Línea base medida (2026-11-16, top-k 8, 84 preguntas)
+## 4. Línea base medida (2026-11-17, top-k 8, 81 preguntas)
+
+Medición hecha tras restringir los formatos: 69 preguntas con respuesta y 12 sin respuesta.
 
 | Nivel | hit@1 | hit@3 | hit@8 | MRR |
 |---|---|---|---|---|
-| Documento correcto | 60/72 (83 %) | 68/72 | 72/72 | 0.887 |
-| Fragmento correcto | 41/72 (57 %) | 61/72 | 68/72 | 0.709 |
+| Documento correcto | 57/69 (83 %) | 65/69 (94 %) | 69/69 (100 %) | 0.882 |
+| Fragmento correcto | 38/69 (55 %) | 58/69 (84 %) | 65/69 (94 %) | 0.696 |
+| Fragmento correcto, solo PDF reales privados | 7/20 | 13/20 | 16/20 | 0.509 |
 
 Umbral 0.25: conserva 66/72 respuestas; filtra solo 1 de 12 preguntas sin respuesta.
 
@@ -73,11 +76,11 @@ Repetir la evaluación antes y después de cada cambio y comparar contra esta ta
 ## 5. Tanda 3: plan y decisiones
 
 ### Paso 0 (al retomar)
-- [ ] Corregir un defecto menor del informe: las preguntas privadas y las originales se llaman ambas `questions.json` y sus totales por archivo salen sumados. Etiquetar por ruta relativa (`internal/eval/report.go`, `dataset.go`). Modelo: Haiku.
+- [x] Corregir un defecto menor del informe: las preguntas privadas y las originales se llaman ambas `questions.json` y sus totales por archivo salen sumados. Etiquetar por ruta relativa (`internal/eval/report.go`, `dataset.go`). Modelo: Haiku.
 
 ### Paso 1 — seguridad y formatos (Sonnet)
 - [x] **Borrado sin comprobar dueño.** Corregido en `49afc87`: `DeleteDocument` recibe el usuario y devuelve 404 si el documento no existe o es de otro. Desplegado el 2026-11-17.
-- [ ] **Solo `.txt`, `.md` y `.pdf`** (decisión del propietario). Tres listas que cambian juntas: mapa de extensiones en `handlers/document.go`, registro de parsers en `cmd/server/main.go`, y `internal/eval/registry.go`. Quitar csv, json, docx, xlsx e imágenes sueltas.
+- [x] **Solo `.txt`, `.md` y `.pdf`** (decisión del propietario). Tres listas que cambian juntas: mapa de extensiones en `handlers/document.go`, registro de parsers en `cmd/server/main.go`, y `internal/eval/registry.go`. Quitar csv, json, docx, xlsx e imágenes sueltas.
   - No borrar `internal/infrastructure/parser/image.go`: el OCR de PDF lo usa.
   - Fijar el tipo de contenido por extensión en el servidor (hoy se confía en la cabecera del navegador) y comprobar que un `.pdf` empieza por `%PDF-`.
   - Frontend: `frontend/src/components/documents/DropZone.tsx` (añadir `accept` y corregir la etiqueta de formatos).
@@ -86,13 +89,15 @@ Repetir la evaluación antes y después de cada cambio y comparar contra esta ta
 
 ### Paso 2 — extracción de PDF y OCR (Sonnet; diseño ya decidido)
 Por página:
-1. Extraer texto con `pdftotext` (poppler, ya instalado) en lugar de `ledongthuc/pdf`.
-2. Limpiar: unir palabras cortadas con guion, quitar cabeceras y pies repetidos, normalizar NFKC.
-3. Si la página queda vacía o con texto basura, OCR de esa página a 300 DPI.
+1. [x] Extraer texto con `pdftotext` (poppler, ya instalado) en lugar de `ledongthuc/pdf` (dependencia retirada).
+2. [x] Limpiar: unir palabras cortadas con guion, quitar cabeceras y pies repetidos, normalizar NFKC.
+3. [x] Si la página queda vacía o con texto basura, OCR de esa página a 300 DPI.
 
 OCR detrás de un puerto (interfaz) con dos implementaciones, elegible por configuración:
-- Tesseract local (el actual, a 300 DPI y con modo de segmentación).
-- LLM multimodal por OpenRouter (imagen en base64 al endpoint de chat).
+- [x] Puerto `ports.OCR` hecho (`internal/core/ports/ocr.go`).
+- [x] Tesseract local hecho (`parser.NewTesseractOCR`, a 300 DPI). Falta el modo de segmentación.
+- [x] LLM multimodal por OpenRouter hecho (`openrouter.NewOCRAdapter`, imagen en base64 al endpoint de chat; con Tesseract de respaldo si falla).
+- Con `OCR_ENGINE=llm`, las imágenes de las páginas que necesitan OCR se envían a OpenRouter.
 
 Candidatos para el OCR con LLM (precios del catálogo público de OpenRouter, consultados el 2026-11-17 UTC; coste por 1000 páginas estimado):
 
@@ -110,6 +115,21 @@ Prueba local antes de elegir:
 - [ ] Los 6 PDF reales tienen capa de texto, así que nunca pasan por OCR. Rasterizarlos a imagen (`pdftoppm`) para crear versiones escaneadas con texto correcto conocido.
 - [ ] Comparar: capa de texto, Tesseract 300 DPI y cada LLM. Medir aciertos exactos de números y unidades, filas de tabla, texto inventado en zonas en blanco, coste real por página y la evaluación de recuperación.
 - [ ] Caso real a vigilar: la ficha del monitor tiene la fuente rota en el propio PDF (`energéca` sin «ti»); ahí el OCR puede dar mejor resultado que la capa de texto.
+
+Medición en los 6 PDF privados (nivel chunk, 20 preguntas con respuesta, top-k 8, 2026-11-17):
+
+| Fuente del texto | hit@1 | hit@3 | hit@8 | MRR |
+|---|---|---|---|---|
+| Capa de texto | 8 | 12 | 16 | 0.518 |
+| Tesseract forzado | 7 | 11 | 14 | 0.458 |
+| LLM forzado (`google/gemini-2.5-flash-lite`) | 9 | 16 | 20 | 0.637 |
+
+Decisión: por defecto `OCR_ENGINE=llm` con `PDF_OCR_MODE=always`. Cada imagen de página de un PDF se envía a OpenRouter; la capa de texto es el respaldo si el LLM falla o devuelve vacío (Tesseract solo cubre las páginas sin capa de texto). Para mantener las páginas en local: `PDF_OCR_MODE=auto` u `OCR_ENGINE=tesseract`. Límites de la medición: 6 PDF y un solo modelo probado.
+
+Tests pendientes:
+- Ruta `ForceOCR`, OCR nulo, error de OCR, entrada que no es PDF y fallos de `pdftotext`/`pdftoppm`.
+- Tesseract real, `stripCodeFence` y el error "no choices".
+- Selección de `NewEngine`/`PDFOptions` y el flag `--force-ocr`.
 
 Riesgos del OCR con LLM: inventa texto en zonas borrosas, omite filas de tablas, reordena columnas. Pedir transcripción literal, tablas en Markdown y `[ilegible]` cuando no se lea.
 
