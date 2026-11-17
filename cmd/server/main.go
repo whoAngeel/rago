@@ -79,6 +79,8 @@ func main() {
 		&domain.DocumentGroup{},
 		&domain.DocumentGroupItem{},
 		&domain.LLMUsage{},
+		&domain.ParsedContent{},
+		&domain.EmbeddingCacheEntry{},
 	}
 	for _, model := range models {
 		if err := gormDB.AutoMigrate(model); err != nil {
@@ -156,7 +158,12 @@ func main() {
 	systemRepo := postgres.NewSystemConfigRepository(gormDB)
 	usageRepo := postgres.NewLLMUsageRepository(gormDB)
 
-	ingestUC := application.NewIngestUsecase(vStore, embedder, log, *cfg)
+	parseCache := postgres.NewParseCacheRepository(gormDB)
+	embeddingCache := postgres.NewEmbeddingCacheRepository(gormDB)
+
+	// Only ingestion uses the cached embedder; chat queries keep the plain one.
+	ingestEmbedder := application.NewCachedEmbedder(embedder, embeddingCache, cfg.EmbeddingModel, cfg.EmbeddingDim, log)
+	ingestUC := application.NewIngestUsecase(vStore, ingestEmbedder, log, *cfg)
 
 	sseManager := ssePkg.NewManager()
 
@@ -182,6 +189,8 @@ func main() {
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 
 	worker := worker.NewIngestWorker(docRepo, minio, parserRegistry, chunker, embedder, ingestUC, sseManager, 10*time.Second, 3, 3, *cfg)
+	worker.ParseCache = parseCache
+	worker.ParserSignature = parserpkg.Version + "|" + ocrEngine + "|" + ocrModel + "|" + pdfOCRMode
 
 	healthChecks := handlers.HealthChecks{
 		Postgres: func(ctx context.Context) error {

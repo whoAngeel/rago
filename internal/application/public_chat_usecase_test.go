@@ -79,6 +79,11 @@ func (m *mockUserRepoPublic) IncrementChatQuotaUsed(_ context.Context, _ int) er
 type mockDocRepo struct {
 	doc    *domain.Document
 	docErr error
+	// othersByPath is returned by CountByFilePath; requeued records RequeueDocument ids.
+	othersByPath int64
+	requeued     []int
+	// byChecksum is returned by FindByChecksum.
+	byChecksum *domain.Document
 }
 
 func (m *mockDocRepo) FindByID(_ context.Context, _ int) (*domain.Document, error) {
@@ -110,7 +115,7 @@ func (m *mockDocRepo) FindStepsByDocumentID(_ context.Context, _ int) ([]*domain
 	return nil, nil
 }
 func (m *mockDocRepo) FindByChecksum(_ context.Context, _ int, _ string) (*domain.Document, error) {
-	return nil, nil
+	return m.byChecksum, nil
 }
 func (m *mockDocRepo) CountDocumentsByUserID(_ context.Context, _ int) (int64, error) {
 	return 0, nil
@@ -129,6 +134,14 @@ func (m *mockDocRepo) SumSizeByUserID(_ context.Context, _ int) (int64, error) {
 }
 func (m *mockDocRepo) MarkStuckDocuments(_ context.Context, _ time.Duration) ([]*domain.Document, error) {
 	return nil, nil
+}
+
+func (m *mockDocRepo) CountByFilePath(_ context.Context, _ string, _ int) (int64, error) {
+	return m.othersByPath, nil
+}
+func (m *mockDocRepo) RequeueDocument(_ context.Context, id int) error {
+	m.requeued = append(m.requeued, id)
+	return nil
 }
 
 type mockVectorStore struct {

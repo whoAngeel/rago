@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tmc/langchaingo/schema"
 	"github.com/whoAngeel/rago/internal/application"
 	"github.com/whoAngeel/rago/internal/core/domain"
 	"github.com/whoAngeel/rago/internal/core/ports"
@@ -31,8 +32,11 @@ type IngestWorker struct {
 	spotCh         chan struct{}
 	processed      atomic.Int64
 	wg             sync.WaitGroup
-	config         config.Config
-	logger         ports.Logger
+	// ParseCache and ParserSignature are optional; a nil cache disables parse caching.
+	ParseCache      ports.ParseCache
+	ParserSignature string
+	config          config.Config
+	logger          ports.Logger
 }
 
 func NewIngestWorker(
@@ -141,40 +145,34 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	}
 	w.notifyDocumentStatus(doc, string(domain.StatusProcessing))
 
-	finishDownload := w.trackStep(ctx, doc.ID, doc.UserID, "download")
-	reader, err := w.BlobStorage.Download(ctx, doc.FilePath)
-	if err != nil {
-		finishDownload(err)
-		w.handleDocumentError(ctx, doc, fmt.Errorf("download: %w", err))
-		return
+	var parsedDocs []schema.Document
+	cacheable := w.ParseCache != nil && doc.Checksum != nil && !doc.ForceOCR
+	cacheHit := false
+	if cacheable {
+		cached, ok, err := w.ParseCache.Get(ctx, *doc.Checksum, w.ParserSignature)
+		if err != nil {
+			log.Warn("parse cache read failed", "error", err)
+		} else if ok {
+			parsedDocs, cacheHit = cached, true
+		}
 	}
-	defer reader.Close()
 
-	rawBytes, err := io.ReadAll(reader)
-	if err != nil {
-		finishDownload(err)
-		w.handleDocumentError(ctx, doc, fmt.Errorf("reading file: %w", err))
-		return
-	}
-	finishDownload(nil)
-
-	finishParse := w.trackStep(ctx, doc.ID, doc.UserID, "parse")
-	parser, err := w.ParserRegistry.Resolve(doc.ContentType)
-	if err != nil {
-		finishParse(err)
-		w.handleDocumentError(ctx, doc, fmt.Errorf("parser resolve: %w", err))
-		return
-	}
-	parseCtx, parseCancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer parseCancel()
-	if doc.ForceOCR {
-		parseCtx = context.WithValue(parseCtx, parserpkg.ForceOCRKey, true)
-	}
-	parsedDocs, err := parser.Parse(parseCtx, bytes.NewReader(rawBytes), doc.ContentType)
-	finishParse(err)
-	if err != nil {
-		w.handleDocumentError(ctx, doc, fmt.Errorf("parsing: %w", err))
-		return
+	if cacheHit {
+		log.Info("parse cache hit", "pages", len(parsedDocs))
+		w.trackStep(ctx, doc.ID, doc.UserID, "parse")(nil)
+	} else {
+		var err error
+		parsedDocs, err = w.downloadAndParse(ctx, doc)
+		if err != nil {
+			w.handleDocumentError(ctx, doc, err)
+			return
+		}
+		// A forced-OCR result is never stored: it must not replace the default one.
+		if cacheable {
+			if err := w.ParseCache.Put(ctx, *doc.Checksum, w.ParserSignature, parsedDocs); err != nil {
+				log.Warn("parse cache write failed", "error", err)
+			}
+		}
 	}
 
 	var chunks []string
@@ -198,7 +196,7 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 		return
 	}
 
-	err = w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string) func(error) {
+	err := w.IngestUC.Execute(ctx, doc, nil, chunks, func(stepName string) func(error) {
 		return w.trackStep(ctx, doc.ID, doc.UserID, stepName)
 	})
 	if err != nil {
@@ -216,6 +214,43 @@ func (w *IngestWorker) processDocument(ctx context.Context, doc *domain.Document
 	w.notifyDocumentStatus(doc, string(domain.StatusCompleted))
 	w.processed.Add(1)
 	log.Info("document processed successfully")
+}
+
+// downloadAndParse fetches the blob and parses it, recording the download and
+// parse steps. Errors are already wrapped for handleDocumentError.
+func (w *IngestWorker) downloadAndParse(ctx context.Context, doc *domain.Document) ([]schema.Document, error) {
+	finishDownload := w.trackStep(ctx, doc.ID, doc.UserID, "download")
+	reader, err := w.BlobStorage.Download(ctx, doc.FilePath)
+	if err != nil {
+		finishDownload(err)
+		return nil, fmt.Errorf("download: %w", err)
+	}
+	defer reader.Close()
+
+	rawBytes, err := io.ReadAll(reader)
+	if err != nil {
+		finishDownload(err)
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+	finishDownload(nil)
+
+	finishParse := w.trackStep(ctx, doc.ID, doc.UserID, "parse")
+	parser, err := w.ParserRegistry.Resolve(doc.ContentType)
+	if err != nil {
+		finishParse(err)
+		return nil, fmt.Errorf("parser resolve: %w", err)
+	}
+	parseCtx, parseCancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer parseCancel()
+	if doc.ForceOCR {
+		parseCtx = context.WithValue(parseCtx, parserpkg.ForceOCRKey, true)
+	}
+	parsedDocs, err := parser.Parse(parseCtx, bytes.NewReader(rawBytes), doc.ContentType)
+	finishParse(err)
+	if err != nil {
+		return nil, fmt.Errorf("parsing: %w", err)
+	}
+	return parsedDocs, nil
 }
 
 // trackStep records a processing step start, sends SSE, and returns a finish func.

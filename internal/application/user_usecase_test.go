@@ -150,3 +150,11 @@ func TestGetProfile_CountError(t *testing.T) {
 		t.Fatal("esperaba error cuando falla el conteo")
 	}
 }
+
+func (m *stubDocRepo) CountByFilePath(_ context.Context, _ string, _ int) (int64, error) {
+	return 0, nil
+}
+func (m *stubDocRepo) RequeueDocument(_ context.Context, id int) error {
+	
+	return nil
+}

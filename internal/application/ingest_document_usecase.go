@@ -77,7 +77,7 @@ func (i *IngestDocumentUsecase) Upload(
 		return nil, err
 	}
 	if existing != nil {
-		return nil, ErrDuplicateDocument
+		return i.handleDuplicate(ctx, existing, buf)
 	}
 
 	// 4. Crear registro con checksum
@@ -88,15 +88,18 @@ func (i *IngestDocumentUsecase) Upload(
 		ContentType: contentType,
 		Size:        size,
 		Checksum:    &checksum,
+		// Set before the blob is stored so a concurrent delete of another
+		// document with the same content sees this row and keeps the blob.
+		FilePath: blobKey(checksum),
 	}
 	document, err := i.DocRepo.CreateDocument(ctx, doc)
 	if err != nil {
 		return nil, err
 	}
 
-	// 5. Subir desde buffer (fileReader ya fue consumido por TeeReader)
-	objectKey := fmt.Sprintf("%d/%d/%s", userID, document.ID, filename)
-	if _, err = i.BlobStorage.Upload(ctx, objectKey, bytes.NewReader(buf)); err != nil {
+	// 5. Guardar el blob una sola vez por contenido
+	objectKey := blobKey(checksum)
+	if err := i.ensureBlob(ctx, objectKey, buf); err != nil {
 		i.DocRepo.UpdateDocumentStatus(ctx, document.ID, domain.StatusFailed)
 		return nil, err
 	}
@@ -104,6 +107,53 @@ func (i *IngestDocumentUsecase) Upload(
 	document.Status = domain.StatusPending
 	_, err = i.DocRepo.UpdateDocument(ctx, document)
 	return document, err
+}
+
+// blobKey is the content-addressed storage key for a file.
+func blobKey(checksum string) string { return "blobs/" + checksum }
+
+// ensureBlob uploads buf under key unless an object already exists there.
+func (i *IngestDocumentUsecase) ensureBlob(ctx context.Context, key string, buf []byte) error {
+	exists, err := i.BlobStorage.Exists(ctx, key)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	_, err = i.BlobStorage.Upload(ctx, key, bytes.NewReader(buf))
+	return err
+}
+
+// handleDuplicate resolves an upload whose content the user already has. A
+// failed document is requeued and the upload counts as successful; any other
+// status returns the existing document together with ErrDuplicateDocument.
+func (i *IngestDocumentUsecase) handleDuplicate(ctx context.Context, existing *domain.Document, buf []byte) (*domain.Document, error) {
+	if existing.Status != domain.StatusFailed {
+		return existing, ErrDuplicateDocument
+	}
+	// Make sure the blob is there: the earlier upload may have failed before
+	// storing it, or a concurrent delete may have removed a shared blob.
+	key := existing.FilePath
+	if key == "" {
+		key = blobKey(*existing.Checksum)
+	}
+	if err := i.ensureBlob(ctx, key, buf); err != nil {
+		return nil, err
+	}
+	if existing.FilePath == "" {
+		existing.FilePath = key
+		if _, err := i.DocRepo.UpdateDocument(ctx, existing); err != nil {
+			return nil, err
+		}
+	}
+	if err := i.DocRepo.RequeueDocument(ctx, existing.ID); err != nil {
+		return nil, err
+	}
+	existing.Status = domain.StatusPending
+	existing.RetryCount = 0
+	existing.ErrorMessage = ""
+	return existing, nil
 }
 
 // DeleteDocument removes a document owned by userID. A document that does not
@@ -115,8 +165,16 @@ func (i *IngestDocumentUsecase) DeleteDocument(ctx context.Context, docID, userI
 		return ErrNotFound
 	}
 	if doc.FilePath != "" {
-		if err := i.BlobStorage.Delete(ctx, doc.FilePath); err != nil {
+		// Blobs are shared by every document with the same content: keep the
+		// object while another row still references it.
+		others, err := i.DocRepo.CountByFilePath(ctx, doc.FilePath, doc.ID)
+		if err != nil {
 			return err
+		}
+		if others == 0 {
+			if err := i.BlobStorage.Delete(ctx, doc.FilePath); err != nil {
+				return err
+			}
 		}
 	}
 	if err := i.IngestUC.DeleteDocumentVectors(ctx, docID); err != nil {
@@ -145,7 +203,7 @@ func (i *IngestDocumentUsecase) GetDocumentSteps(ctx context.Context, docID, use
 }
 
 type DocumentHealth struct {
-	Document      *domain.Document        `json:"document"`
+	Document      *domain.Document         `json:"document"`
 	Steps         []*domain.ProcessingStep `json:"steps"`
 	ChunksIndexed uint64                   `json:"chunks_indexed"`
 }

@@ -130,6 +130,7 @@ Tests pendientes:
 - Ruta `ForceOCR`, OCR nulo, error de OCR, entrada que no es PDF y fallos de `pdftotext`/`pdftoppm`.
 - Tesseract real, `stripCodeFence` y el error "no choices".
 - Selección de `NewEngine`/`PDFOptions` y el flag `--force-ocr`.
+- Caché (paso 3): acierto/fallo de la caché de parseo en el worker, `ForceOCR` sin escritura, repositorios GORM de ambas cachés, `ComputeEmbeddings` con aciertos parciales, vector de longitud distinta como fallo, respuesta 200 `duplicate` del handler y `RequeueDocument`.
 
 Riesgos del OCR con LLM: inventa texto en zonas borrosas, omite filas de tablas, reordena columnas. Pedir transcripción literal, tablas en Markdown y `[ilegible]` cuando no se lea.
 
@@ -137,12 +138,14 @@ Riesgos del OCR con LLM: inventa texto en zonas borrosas, omite filas de tablas,
 Hoy solo existe un rechazo de duplicados: índice único `(user_id, checksum)`, respuesta 409, clave de MinIO `<usuario>/<doc>/<nombre>`, sin caché; reprocesar repite descarga, parseo, OCR y embeddings.
 
 Diseño elegido: caché por contenido, con filas de documento por usuario.
-- [ ] Blob una sola vez en `blobs/<sha256>`. Los objetos antiguos no se mueven; solo las subidas nuevas usan la clave nueva. Al borrar, eliminar el blob solo si ninguna fila lo referencia.
-- [ ] Tabla de texto extraído por `hash + versión de parser`: el OCR se paga una vez por archivo.
-- [ ] Tabla de embeddings por `hash + versión de chunker + modelo de embeddings`: un segundo documento con el mismo contenido copia los vectores sin llamar a la API.
-- [ ] Duplicado: devolver el documento existente en lugar de 409; si estaba fallido, reencolarlo (hoy un documento fallido bloquea la resubida).
+- [x] Blob una sola vez en `blobs/<sha256>`; se omite la subida si ya existe. Los objetos antiguos no se mueven. Al borrar, el blob se elimina solo si ningún otro documento referencia el mismo `file_path` (`CountByFilePath`).
+- [x] Caché de texto extraído (`ParsedContent`), clave `(content_hash, parser_signature)`; el worker la consulta antes de descargar y parsear. No se guarda el resultado de un parseo con `ForceOCR`.
+- [x] Caché de embeddings (`EmbeddingCacheEntry`), clave `(text_hash, model, dimension)`, solo en la ingesta (`CachedEmbedder`); las consultas de chat no pasan por ella. Se omitió la "versión de chunker": la clave es el texto exacto del fragmento.
+- [x] Duplicado: `Upload` devuelve el documento existente con `ErrDuplicateDocument` y el handler responde 200 con `"duplicate": true`; si estaba fallido, se reencola (pendiente, reintentos 0) y responde 201.
 - [ ] Dos subidas idénticas simultáneas chocan con el índice único y devuelven 500: mapear ese error.
-- [ ] Frontend: mostrar el mensaje de duplicado (`frontend/src/routes/_authenticated.documents.tsx`).
+- [ ] Frontend: mostrar el aviso de duplicado (ahora llega 200 con `duplicate: true`; hoy muestra "subido correctamente") (`frontend/src/routes/_authenticated.documents.tsx`).
+
+Cachés compartidas entre usuarios por hash de contenido (no contienen datos de usuario, solo texto y vectores derivados del archivo). Firma del parser: `parser.Version|motor|modelo|modo`. Para invalidar: subir `parser.Version` (cuando cambie la extracción o limpieza), cambiar la configuración de OCR (motor, modelo o modo) o cambiar el modelo/dimensión de embeddings; las filas antiguas quedan sin uso.
 
 Descartado: guardar los vectores una sola vez con una lista de usuarios autorizados. Ahorra espacio, pero toca los filtros de búsqueda y el borrado; un error ahí es una fuga entre usuarios.
 
