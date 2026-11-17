@@ -48,7 +48,7 @@ Regla: el modelo más capaz decide y revisa; los modelos más económicos escrib
 Todo está en el árbol de trabajo de `main`, sin commit. `go build ./...`, `go vet ./...` y `go test ./...` pasan (63 tests).
 
 - **Tamaño de recuperación.** El chat y `/ask` piden `RETRIEVAL_TOP_K` fragmentos (por defecto 8). Antes, el chat usaba `CONTEXT_WINDOW_LIMIT` (por defecto 8192) como límite de Qdrant, lo que enviaba prácticamente todo el corpus al LLM. `CONTEXT_WINDOW_LIMIT` se conserva solo por compatibilidad.
-- **Umbral de relevancia.** Los resultados por debajo de `RETRIEVAL_SCORE_THRESHOLD` (por defecto 0.30; 0 lo desactiva) se descartan. Lógica en `internal/application/retrieval.go`.
+- **Umbral de relevancia.** Los resultados por debajo de `RETRIEVAL_SCORE_THRESHOLD` (por defecto 0.25; 0 lo desactiva) se descartan. Lógica en `internal/application/retrieval.go`.
 - **Corrección de seguridad.** El chat de grupo público ya no busca sin filtro. Un grupo sin documentos responde "Este grupo no tiene documentos disponibles.". El adaptador de Qdrant rechaza una búsqueda sin filtro (`internal/infrastructure/qdrant/qdrant.go`). Antes, un grupo público sin documentos buscaba en los documentos de todos los usuarios.
 - **Rol de sistema real.** El puerto del LLM recibe el texto de sistema y el de usuario por separado. El adaptador (`internal/infrastructure/openrouter/openrouter.go`) envía un mensaje `system` y un mensaje `user`. Nuevas variables: `LLM_TEMPERATURE` (por defecto 0.2) y `LLM_MAX_TOKENS` (por defecto 0, no se envía).
 - **Prompt único.** Chat, `/ask` y chat público usan el mismo prompt en `internal/application/prompt.go`. Permite respuestas parciales y envuelve el contexto en `<contexto>` y `<documento fuente="...">`.
@@ -66,7 +66,7 @@ Resultado de la verificación: SIN BLOQUEANTES (2026-11-16). Un verificador inde
 - [ ] **3. Variables de `.env`.** Añadir solo si se quieren valores distintos de los por defecto: `RETRIEVAL_TOP_K`, `RETRIEVAL_SCORE_THRESHOLD`, `LLM_TEMPERATURE`, `LLM_MAX_TOKENS`.
 - [ ] **3b. Revisar `.env` existente.** Confirmar los valores reales de `EMBEDDING_MODEL` y `CONTEXT_WINDOW_LIMIT`. Durante la auditoría nadie leyó ese archivo; todo se juzgó con los valores por defecto del código (`text-embedding-3-small`, `google/gemini-2.5-flash`). Si el modelo de embeddings es de la familia e5, bge o nomic, faltan los prefijos de consulta y de pasaje: eso se convierte en una tarea nueva.
 - [ ] **4. Reiniciar el servidor.** Revisar la línea de log que indica si el prompt de sistema fue actualizado o conservado. Si se conservó un prompt personalizado, actualizarlo a mano: la redacción antigua empuja al modelo a rechazar respuestas.
-- [ ] **5. Calibrar el umbral 0.30.** Es un valor inicial no calibrado. Hacer algunas preguntas reales, revisar la línea de log `search completed` (resultados frente a `passed_threshold`) y bajar el umbral si se descartan fragmentos buenos.
+- [x] **5. Calibrar el umbral.** Hecho con `go run ./cmd/eval` (2026-11-16): con 0.30 se perdían 2 de 25 preguntas con respuesta; con 0.25 no se pierde ninguna. El valor por defecto pasó a 0.25. El umbral no distingue bien las preguntas sin respuesta (solo filtra 1 de 4; las cercanas al tema puntúan 0.33-0.46, por encima de respuestas válidas): ese caso depende del prompt y, más adelante, del reranker.
 - [ ] **6. Revisión receipt-driven (`gentle-ai review`).** Está activada globalmente y marca este cambio como revisión pendiente. No pudo evaluarse automáticamente por los archivos sin seguimiento. Decidir si se ejecuta o se omite.
 - [ ] **7. Pruebas manuales.** Los tres puntos siguientes no están cubiertos por tests; comprobarlos a mano una vez:
   - lectura y actualización de la fila del prompt al arrancar;
@@ -77,14 +77,12 @@ Resultado de la verificación: SIN BLOQUEANTES (2026-11-16). Un verificador inde
 
 Cada lote es una lista de verificación. Para cada punto: qué y por qué, archivo de partida y modelo sugerido.
 
-### Lote 2: conjunto de evaluación (hacer antes que nada)
+### Lote 2: conjunto de evaluación (hecho, ampliar)
 
-Sin él no se pueden medir las mejoras.
-
-- [ ] Crear 20-30 pares pregunta / respuesta esperada a partir de los documentos de ejemplo de `testdata/`.
-- [ ] Añadir un script o un test en Go que ejecute los pares e informe cuántos recuperan el documento correcto.
-- Archivo de partida: `testdata/`.
-- Modelo: Sonnet para la implementación. Diseño de qué medir: arquitecto.
+- [x] `go run ./cmd/eval` ingesta `testdata/` en la colección `rago_eval` y ejecuta `testdata/eval/questions.json` (29 preguntas). Uso en `docs/eval.md`.
+- [x] Línea base (2026-11-16, top-k 8): hit@1 25/25, MRR 1.000.
+- [ ] **Limitación:** el corpus es demasiado fácil (9 documentos de temas distintos) y solo se mide si aparece el documento correcto, no el fragmento correcto. Con 100 % de acierto no servirá para comparar cambios de chunking o de recuperación. Ampliar antes del lote 3: añadir documentos propios parecidos entre sí y un campo con el texto que debe aparecer en el fragmento recuperado. Qué medir: **decisión de arquitectura**. Implementación: Sonnet.
+- [ ] Volver a ejecutar la evaluación antes y después de cada cambio de los lotes 3 y 4 y guardar el JSON (`--out`).
 
 ### Lote 3: ingesta (requiere reingestar todos los documentos; agrupar estos cambios)
 
