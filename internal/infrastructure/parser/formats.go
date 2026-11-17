@@ -1,6 +1,10 @@
 package parser
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/whoAngeel/rago/internal/core/ports"
+)
 
 // supportedExtensions is the single source of truth for the document formats
 // the system accepts: file extension to content type.
@@ -19,10 +23,10 @@ func ContentTypeForExtension(ext string) (string, bool) {
 
 // NewDefaultRegistry returns a registry with a parser for every supported
 // content type.
-func NewDefaultRegistry() *Registry {
+func NewDefaultRegistry(ocr ports.OCR) *Registry {
 	r := NewRegistry()
 	r.Register("text/plain", NewPlainTextAdapter())
 	r.Register("text/markdown", NewPlainTextAdapter())
-	r.Register("application/pdf", NewPDFParser())
+	r.Register("application/pdf", NewPDFParser(ocr))
 	return r
 }

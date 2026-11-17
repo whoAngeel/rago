@@ -28,7 +28,7 @@ func TestContentTypeForExtension(t *testing.T) {
 }
 
 func TestNewDefaultRegistry(t *testing.T) {
-	r := NewDefaultRegistry()
+	r := NewDefaultRegistry(nil)
 	for _, ct := range []string{"text/plain", "text/markdown", "application/pdf"} {
 		if _, err := r.Get(ct); err != nil {
 			t.Errorf("Get(%q) failed: %v", ct, err)

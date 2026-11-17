@@ -17,7 +17,7 @@ const (
 
 // NewParserRegistry returns the same parser registry the server uses.
 func NewParserRegistry() *parserpkg.Registry {
-	return parserpkg.NewDefaultRegistry()
+	return parserpkg.NewDefaultRegistry(parserpkg.NewTesseractOCR())
 }
 
 // NewChunker returns the chunker the server uses.

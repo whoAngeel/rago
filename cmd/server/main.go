@@ -174,7 +174,7 @@ func main() {
 		usageRepo,
 	)
 
-	parserRegistry := parserpkg.NewDefaultRegistry()
+	parserRegistry := parserpkg.NewDefaultRegistry(parserpkg.NewTesseractOCR())
 
 	chunker := cnunkerPkg.NewFixedChunker(1000, 200)
 
