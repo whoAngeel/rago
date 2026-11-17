@@ -14,7 +14,7 @@ Para retomar: leer secciones 1 y 2, ejecutar el paso 0 de la sección 5 y seguir
 | 3 | Ingesta: formatos, extracción PDF, OCR, CAS, contexto en chunks | Diseñada, **sin empezar** |
 | 4 | Reescritura de consulta, búsqueda híbrida, reranker | Pendiente |
 
-Nada se ha subido con `git push`. Todo está en la rama `main` local.
+Tandas 1, 2 y 2b subidas a `origin/main` y desplegadas el 2026-11-17 (workflow «Deploy to Homelab» en verde para `49afc87` y `9cd9a8d`).
 
 ### Fuera de los commits (a propósito)
 
@@ -76,7 +76,7 @@ Repetir la evaluación antes y después de cada cambio y comparar contra esta ta
 - [ ] Corregir un defecto menor del informe: las preguntas privadas y las originales se llaman ambas `questions.json` y sus totales por archivo salen sumados. Etiquetar por ruta relativa (`internal/eval/report.go`, `dataset.go`). Modelo: Haiku.
 
 ### Paso 1 — seguridad y formatos (Sonnet)
-- [ ] **Borrado sin comprobar dueño.** `DELETE /documents/:id` pasa solo el ID (`internal/infrastructure/rest/handlers/document.go`, función `Delete`) y `DeleteDocument` (`internal/application/ingest_document_usecase.go`) borra archivo, vectores y fila sin mirar el usuario. Pasar `userID` y devolver 404 si no es suyo, igual que hace `ReprocessDocument`. Falta revisar si un middleware de roles ya lo limita.
+- [x] **Borrado sin comprobar dueño.** Corregido en `49afc87`: `DeleteDocument` recibe el usuario y devuelve 404 si el documento no existe o es de otro. Desplegado el 2026-11-17.
 - [ ] **Solo `.txt`, `.md` y `.pdf`** (decisión del propietario). Tres listas que cambian juntas: mapa de extensiones en `handlers/document.go`, registro de parsers en `cmd/server/main.go`, y `internal/eval/registry.go`. Quitar csv, json, docx, xlsx e imágenes sueltas.
   - No borrar `internal/infrastructure/parser/image.go`: el OCR de PDF lo usa.
   - Fijar el tipo de contenido por extensión en el servidor (hoy se confía en la cabecera del navegador) y comprobar que un `.pdf` empieza por `%PDF-`.
