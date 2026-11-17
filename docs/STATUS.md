@@ -10,31 +10,15 @@ Para retomar: leer secciones 1 y 2, ejecutar el paso 0 de la sección 5 y seguir
 |---|---|---|
 | 1 | Top-k, umbral, fuga del chat público, rol de sistema, prompt único | Hecha, commiteada en `main` |
 | 2 | Evaluación de recuperación (`cmd/eval`) y stack local | Hecha, commiteada en `main` |
-| 2b | Evaluación ampliada: PDF, acierto por fragmento, corpus difícil | Hecha, **sin commitear** |
+| 2b | Evaluación ampliada: PDF, acierto por fragmento, corpus difícil | Hecha, commiteada en `main` (`4136bb3`) |
 | 3 | Ingesta: formatos, extracción PDF, OCR, CAS, contexto en chunks | Diseñada, **sin empezar** |
 | 4 | Reescritura de consulta, búsqueda híbrida, reranker | Pendiente |
 
 Nada se ha subido con `git push`. Todo está en la rama `main` local.
 
-### Sin commitear ahora mismo (tanda 2b)
+### Fuera de los commits (a propósito)
 
-```
- M .gitignore                  (ignora testdata/private/)
- M cmd/eval/main.go  docs/eval.md  testdata/eval/questions.json
- M internal/eval/{dataset,metrics,report,run}.go  dataset_test.go
-?? internal/eval/{text,sources,dump,registry}.go y sus tests
-?? testdata/manuals/           (12 manuales sintéticos, marca ficticia Brevlin)
-?? testdata/eval/manuals.questions.json
-```
-
-`go build ./...`, `go vet ./...` y `go test ./...` pasan con estos cambios. Commit sugerido:
-
-```
-git add .gitignore cmd/eval internal/eval docs/eval.md docs/STATUS.md docs/rag-roadmap.md testdata/eval testdata/manuals
-git commit -m "feat(eval): add PDF support, chunk-level hits and a confusable manuals corpus"
-```
-
-No añadir: `AGENTS.md`, `CLAUDE.md`, `.atl/`, `.cursor/`, `.gemini/` ni los cambios de diagramas Mermaid de `README.md` (son ediciones del propietario, ajenas a este trabajo). `testdata/private/` está ignorada por git y contiene los PDF reales: no commitear nunca.
+`AGENTS.md`, `CLAUDE.md`, `.atl/`, `.cursor/`, `.gemini/` y los cambios de diagramas Mermaid de `README.md` son ediciones del propietario, ajenas a este trabajo. `testdata/private/` está ignorada por git y contiene los PDF reales: no commitear nunca.
 
 ## 2. Cómo arrancar
 
@@ -64,7 +48,7 @@ go run ./cmd/eval --dump-chunks --data-dir testdata/private   # ver qué extrae 
 - Umbral por defecto bajado de 0.30 a 0.25 (0.30 perdía respuestas válidas).
 - Stack local: `scripts/dev-local.sh`, `scripts/local-env.sh`, `docker-compose.local.yml` (imagen de MinIO cambiada a `cgr.dev/chainguard/minio:latest` porque `minio/minio` ya no se puede descargar).
 
-### Tanda 2b — sin commitear
+### Tanda 2b — commits `4136bb3`, `b72972d`
 - La evaluación ingesta PDF con los mismos parsers que el servidor, varias carpetas y varios archivos de preguntas.
 - Campo `expected_contains`: acierto a nivel de fragmento, con normalización NFKC, minúsculas y espacios.
 - `--dump-chunks`: muestra los fragmentos sin conectarse a nada.
@@ -89,7 +73,6 @@ Repetir la evaluación antes y después de cada cambio y comparar contra esta ta
 ## 5. Tanda 3: plan y decisiones
 
 ### Paso 0 (al retomar)
-- [ ] Commitear la tanda 2b (comando en la sección 1).
 - [ ] Corregir un defecto menor del informe: las preguntas privadas y las originales se llaman ambas `questions.json` y sus totales por archivo salen sumados. Etiquetar por ruta relativa (`internal/eval/report.go`, `dataset.go`). Modelo: Haiku.
 
 ### Paso 1 — seguridad y formatos (Sonnet)
