@@ -1,0 +1,176 @@
+[
+  {
+    "id": "handbook-vacation-tenure",
+    "question": "How many vacation days do I get if I've been here for 7 years?",
+    "expected_source": "employee_handbook_leave_benefits.txt",
+    "note": ""
+  },
+  {
+    "id": "handbook-parental-eligibility",
+    "question": "I started three months ago, can I already take parental leave?",
+    "expected_source": "employee_handbook_leave_benefits.txt",
+    "note": ""
+  },
+  {
+    "id": "handbook-401k-match",
+    "question": "How much does the company match on my 401(k)?",
+    "expected_source": "employee_handbook_leave_benefits.txt",
+    "note": ""
+  },
+  {
+    "id": "handbook-remote",
+    "question": "How many days a week am I allowed to work from home?",
+    "expected_source": "employee_handbook_leave_benefits.txt",
+    "note": ""
+  },
+  {
+    "id": "handbook-vague-part-time",
+    "question": "and what about part-time people?",
+    "expected_source": "employee_handbook_leave_benefits.txt",
+    "note": "vague follow-up: assumes the previous topic was vacation accrual"
+  },
+  {
+    "id": "api-token-expiry",
+    "question": "How long is a login token valid before I need a new one?",
+    "expected_source": "api_documentation_users.txt",
+    "note": ""
+  },
+  {
+    "id": "api-delete-last-admin",
+    "question": "What error do I get if I try to delete the only admin account?",
+    "expected_source": "api_documentation_users.txt",
+    "note": ""
+  },
+  {
+    "id": "api-vague-limit",
+    "question": "what happens if I go over the limit?",
+    "expected_source": "api_documentation_users.txt",
+    "note": "vague: the rate limit is never named in the question"
+  },
+  {
+    "id": "ml-classification-regression",
+    "question": "What is the difference between classification and regression?",
+    "expected_source": "ml_introduction.txt",
+    "note": ""
+  },
+  {
+    "id": "ml-random-forest",
+    "question": "Why would I use a random forest instead of a single decision tree?",
+    "expected_source": "ml_introduction.txt",
+    "note": ""
+  },
+  {
+    "id": "ml-overfitting",
+    "question": "My model does great on training data but badly on new data, what is going on and how do I fix it?",
+    "expected_source": "ml_introduction.txt",
+    "note": ""
+  },
+  {
+    "id": "recipes-cookie-chill",
+    "question": "How long should I leave the cookie dough in the fridge before baking?",
+    "expected_source": "recipes_from_techcorp_kitchen.txt",
+    "note": ""
+  },
+  {
+    "id": "recipes-soup-heat",
+    "question": "Which ingredients make the black bean soup spicy?",
+    "expected_source": "recipes_from_techcorp_kitchen.txt",
+    "note": ""
+  },
+  {
+    "id": "recipes-egg-toast",
+    "question": "How do I make avocado toast with an egg?",
+    "expected_source": "recipes_from_techcorp_kitchen.txt",
+    "note": ""
+  },
+  {
+    "id": "recipes-vague-blend",
+    "question": "how long do I blend it for?",
+    "expected_source": "recipes_from_techcorp_kitchen.txt",
+    "note": "vague follow-up: assumes the smoothie was the previous topic"
+  },
+  {
+    "id": "quarterly-revenue",
+    "question": "How much revenue did the company make in the third quarter of 2026?",
+    "expected_source": "quarterly_report_q3_2026.txt",
+    "note": ""
+  },
+  {
+    "id": "quarterly-dividend",
+    "question": "What dividend will shareholders get per share and when is it paid?",
+    "expected_source": "quarterly_report_q3_2026.txt",
+    "note": ""
+  },
+  {
+    "id": "climate-sea-level-rate",
+    "question": "How fast is the sea level rising per year?",
+    "expected_source": "climate_coastal_ecosystems_review.txt",
+    "note": ""
+  },
+  {
+    "id": "climate-blue-carbon",
+    "question": "What does blue carbon mean?",
+    "expected_source": "climate_coastal_ecosystems_review.txt",
+    "note": ""
+  },
+  {
+    "id": "climate-coral-1-5",
+    "question": "How much of the world's coral could we save if warming stays at 1.5 degrees?",
+    "expected_source": "climate_coastal_ecosystems_review.txt",
+    "note": ""
+  },
+  {
+    "id": "quickstart-setup",
+    "question": "What do I need to install before running the project locally?",
+    "expected_source": "quickstart_guide.txt",
+    "note": ""
+  },
+  {
+    "id": "quickstart-vague-next",
+    "question": "what do I do after cloning it?",
+    "expected_source": "quickstart_guide.txt",
+    "note": "vague follow-up: assumes the project is already known"
+  },
+  {
+    "id": "employees-engineering",
+    "question": "Who works in the engineering department and how much do they earn?",
+    "expected_source": "employees.csv",
+    "note": ""
+  },
+  {
+    "id": "reports-security-audit",
+    "question": "What did the security audit find and by when must it be fixed?",
+    "expected_source": "reports.json",
+    "note": ""
+  },
+  {
+    "id": "reports-nps",
+    "question": "What was the NPS score in the customer survey?",
+    "expected_source": "reports.json",
+    "note": ""
+  },
+  {
+    "id": "none-world-cup",
+    "question": "Who won the 2022 football World Cup?",
+    "expected_source": "",
+    "note": "unanswerable: unrelated to every document"
+  },
+  {
+    "id": "none-parking",
+    "question": "Does the company pay for employee parking?",
+    "expected_source": "",
+    "note": "unanswerable near-miss: handbook covers benefits but not parking"
+  },
+  {
+    "id": "none-tikka",
+    "question": "How do I cook chicken tikka masala?",
+    "expected_source": "",
+    "note": "unanswerable near-miss: the recipe book has no such recipe"
+  },
+  {
+    "id": "none-stock-options",
+    "question": "How do employee stock options vest?",
+    "expected_source": "",
+    "note": "unanswerable near-miss: handbook mentions 401(k) vesting only"
+  }
+]
